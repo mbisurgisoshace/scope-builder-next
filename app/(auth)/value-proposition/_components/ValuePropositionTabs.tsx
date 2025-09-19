@@ -11,6 +11,8 @@ import {
   createWorkspaceRoom,
   renameWorkspaceRoom,
 } from "@/services/workspaces";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import KanbanView from "@/components/KanbanModule/KanbanView";
 
 export type SimpleTab = { id: string; title: string; roomId: string };
 
@@ -63,7 +65,7 @@ export default function ValuePropositionTabsView({ rooms }: { rooms: any[] }) {
         {activeRoomId ? (
           <div className="absolute inset-0 w-full h-full">
             <Room roomId={activeRoomId}>
-              <InfiniteCanvas
+              {/* <InfiniteCanvas
                 toolbarOptions={{
                   answer: false,
                   question: false,
@@ -75,7 +77,36 @@ export default function ValuePropositionTabsView({ rooms }: { rooms: any[] }) {
                   interview: false,
                   table: false,
                 }}
-              />
+              /> */}
+              <Tabs defaultValue="canvas-view" className="w-full h-full">
+                <TabsList className="ml-1 mt-2">
+                  <TabsTrigger value="canvas-view">Canvas View</TabsTrigger>
+                  <TabsTrigger value="kanban-view">Kanban View</TabsTrigger>
+                </TabsList>
+                <TabsContent value="canvas-view" className="w-full h-full">
+                  <InfiniteCanvas
+                    toolbarOptions={{
+                      answer: false,
+                      question: false,
+                      card: true,
+                      text: true,
+                      rectangle: true,
+                      ellipse: true,
+                      feature: false,
+                      interview: false,
+                      table: false,
+                    }}
+                  />
+                </TabsContent>
+                <TabsContent value="kanban-view" className="w-full h-full">
+                  <KanbanView
+                    kanbanBoards={[
+                      { label: "Jobs to be Done", key: "jobs_to_be_done_card" },
+                      { label: "Pains", key: "pains_card" },
+                    ]}
+                  />
+                </TabsContent>
+              </Tabs>
             </Room>
           </div>
         ) : (
