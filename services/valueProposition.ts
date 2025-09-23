@@ -18,7 +18,7 @@ export async function getValuePropositionVersions() {
         org_id: orgId,
       },
       orderBy: {
-        created_at: "desc",
+        created_at: "asc",
       },
     });
 
@@ -32,20 +32,95 @@ export async function createValuePropositionVersion() {
 
   if (!orgId) redirect("/pick-startup");
 
-  const versions = await prisma.valuePropositionVersion.count();
-
-  const newVersion = await prisma.valuePropositionVersion.create({
-    data: {
+  const versions = await prisma.valuePropositionVersion.count({
+    where: {
       org_id: orgId,
-      room_id: uuidv4(),
-      version_number: versions + 1,
     },
   });
 
-  revalidatePath(`/value-proposition`);
+  let version;
 
-  return newVersion;
+  if (versions === 0) {
+    version = await prisma.valuePropositionVersion.create({
+      data: {
+        org_id: orgId,
+        room_id: uuidv4(),
+      },
+    });
+  }
+
+  if (versions > 0) {
+    const latestVersion = await prisma.valuePropositionVersion.findFirst({
+      where: { org_id: orgId },
+      orderBy: { created_at: "desc" },
+    });
+
+    const participantsWithCompleteStatus = await prisma.participant.count({
+      where: {
+        org_id: orgId,
+        status: "complete",
+      },
+    });
+
+    if (
+      versions < 2 &&
+      participantsWithCompleteStatus > 4 &&
+      participantsWithCompleteStatus < 10
+    ) {
+      version = await prisma.valuePropositionVersion.create({
+        data: {
+          org_id: orgId,
+          room_id: uuidv4(),
+        },
+      });
+      await prisma.valuePropositionVersion.update({
+        where: { id: latestVersion?.id },
+        data: { switch_at: new Date() },
+      });
+    }
+
+    if (
+      versions < 3 &&
+      participantsWithCompleteStatus > 9 &&
+      participantsWithCompleteStatus < 20
+    ) {
+      version = await prisma.valuePropositionVersion.create({
+        data: {
+          org_id: orgId,
+          room_id: uuidv4(),
+        },
+      });
+      await prisma.valuePropositionVersion.update({
+        where: { id: latestVersion?.id },
+        data: { switch_at: new Date() },
+      });
+    }
+
+    if (versions < 4 && participantsWithCompleteStatus >= 20) {
+      version = await prisma.valuePropositionVersion.create({
+        data: {
+          org_id: orgId,
+          room_id: uuidv4(),
+        },
+      });
+      await prisma.valuePropositionVersion.update({
+        where: { id: latestVersion?.id },
+        data: { switch_at: new Date() },
+      });
+    }
+  }
+
+  //revalidatePath(`/value-proposition`);
+
+  return version;
 }
+
+/**
+  0-4 completed : 1 room
+  5-9 : 2 rooms
+  10-19 : 3 rooms
+  20+ : 4 rooms
+ */
 
 export async function getSegmentsPropData() {
   const { orgId } = await auth();

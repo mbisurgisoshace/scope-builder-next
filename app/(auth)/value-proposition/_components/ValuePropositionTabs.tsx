@@ -17,8 +17,13 @@ export type SimpleTab = { id: string; title: string; roomId: string };
 export default function ValuePropositionTabsView({ rooms }: { rooms: any[] }) {
   const [tabs, setTabs] = useState(rooms);
   const [activeRoomId, setActiveRoom] = useState<string | null>(
-    rooms[0].room_id
+    rooms[rooms.length - 1].room_id
   );
+
+  const isLatestVersion = (activeRoomId: string) => {
+    const latestRoom = rooms[rooms.length - 1];
+    return latestRoom.room_id === activeRoomId;
+  };
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-50">
@@ -47,7 +52,7 @@ export default function ValuePropositionTabsView({ rooms }: { rooms: any[] }) {
               return (
                 <button
                   key={t.id}
-                  onClick={() => setActiveRoom(t.roomId)}
+                  onClick={() => setActiveRoom(t.room_id)}
                   className="font-semibold cursor-pointer text-[10px] text-[#111827]  opacity-60 px-3.5 h-6 rounded-t-sm flex items-center"
                 >
                   {`Version ${t.version_number}`}
@@ -75,6 +80,7 @@ export default function ValuePropositionTabsView({ rooms }: { rooms: any[] }) {
                   interview: false,
                   table: false,
                 }}
+                editable={isLatestVersion(activeRoomId)}
               />
             </Room>
           </div>
