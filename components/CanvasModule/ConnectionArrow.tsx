@@ -1,14 +1,6 @@
-"use client";
-
+// CanvasModule/ConnectionArrow.tsx
 import React, { useMemo } from "react";
-import type { Position, Side } from "./types";
-import type {
-  ArrowDash,
-  ArrowHead,
-  ArrowStyle,
-  ConnectionStyle,
-} from "./hooks/useConnectionManager";
-import { cn } from "@/lib/utils"; // si no tienes un helper de classnames, reemplaza por concatenación
+import { Side, Connection, ArrowHead, ArrowDash } from "./types";
 
 type Pt = { x: number; y: number };
 
@@ -19,9 +11,9 @@ function tangentTowardSide(end: Pt, side: Side, magnitude = 40): Pt {
     case "bottom":
       return { x: end.x, y: end.y - magnitude }; // apunta hacia arriba
     case "left":
-      return { x: end.x + magnitude, y: end.y }; // derecha
+      return { x: end.x + magnitude, y: end.y }; // apunta a derecha
     case "right":
-      return { x: end.x - magnitude, y: end.y }; // izquierda
+      return { x: end.x - magnitude, y: end.y }; // apunta a izquierda
   }
 }
 
@@ -31,6 +23,7 @@ function controlPointsCurve(
   fromSide: Side,
   toSide: Side
 ): [Pt, Pt] {
+  // primeros control points siguiendo la normal al lado
   const c1 = tangentTowardSide(from, fromSide, 80);
   const c2 = tangentTowardSide(to, toSide, 80);
   return [c1, c2];
@@ -42,14 +35,17 @@ function orthogonalRoute(
   fromSide: Side,
   toSide: Side
 ): string {
+  // Ruta en “L”/“┐” simple con codos redondeables por stroke-linejoin/linecap
+  // Heurística: primero salir normal al lado, luego girar.
   const o1 = tangentTowardSide(from, fromSide, 24);
   const o2 = tangentTowardSide(to, toSide, 24);
+  // unir puntos intermedios en rectas
+  // punto de quiebre “medio”:
   const mid: Pt = { x: (o1.x + o2.x) / 2, y: (o1.y + o2.y) / 2 };
   return `M ${from.x},${from.y} L ${o1.x},${o1.y} L ${mid.x},${mid.y} L ${o2.x},${o2.y} L ${to.x},${to.y}`;
 }
 
-function dashToSvg(d: ArrowDash | undefined) {
-  if (!d || d === "solid") return undefined;
+function dashToSvg(d: ArrowDash) {
   if (d === "dashed") return "6 6";
   if (d === "dotted") return "2 6";
   return undefined;
@@ -60,8 +56,10 @@ function headId(h: ArrowHead) {
 }
 
 function HeadDefs({ color }: { color: string }) {
+  // defs reutilizables (usar markerUnits="strokeWidth" para escalar con width)
   return (
     <defs>
+      {/* triangle */}
       <marker
         id={headId("triangle")}
         viewBox="0 0 10 10"
@@ -74,7 +72,7 @@ function HeadDefs({ color }: { color: string }) {
       >
         <path d="M 0 0 L 10 5 L 0 10 z" fill={color} />
       </marker>
-
+      {/* circle */}
       <marker
         id={headId("circle")}
         viewBox="0 0 10 10"
@@ -87,7 +85,7 @@ function HeadDefs({ color }: { color: string }) {
       >
         <circle cx="5" cy="5" r="4" fill={color} />
       </marker>
-
+      {/* diamond */}
       <marker
         id={headId("diamond")}
         viewBox="0 0 10 10"
@@ -100,7 +98,7 @@ function HeadDefs({ color }: { color: string }) {
       >
         <path d="M 5 0 L 10 5 L 5 10 L 0 5 z" fill={color} />
       </marker>
-
+      {/* bar (linea transversal) */}
       <marker
         id={headId("bar")}
         viewBox="0 0 10 10"
@@ -117,27 +115,32 @@ function HeadDefs({ color }: { color: string }) {
   );
 }
 
-export function SelectableConnectionArrow({
-  id,
+export function ConnectionArrow({
   from,
   to,
   fromSide,
   toSide,
+  color,
+  width,
+  rounded,
   style,
-  selected = false,
-  onSelect,
-  zIndex = 25,
+  dash,
+  ends, // { start, end }
+  zIndex = 20,
 }: {
-  id: string;
-  from: Position;
-  to: Position;
+  from: Pt;
+  to: Pt;
   fromSide: Side;
   toSide: Side;
-  style: ConnectionStyle;
-  selected?: boolean;
-  onSelect?: (id: string | null) => void;
+  color: string;
+  width: number;
+  rounded: boolean;
+  style: "curve" | "straight" | "orthogonal";
+  dash: ArrowDash;
+  ends: { start: ArrowHead; end: ArrowHead };
   zIndex?: number;
 }) {
+  // bbox local para no clipear en pan/zoom
   const pad = 60;
   const minX = Math.min(from.x, to.x) - pad;
   const minY = Math.min(from.y, to.y) - pad;
@@ -151,82 +154,40 @@ export function SelectableConnectionArrow({
   const T = { x: to.x - minX, y: to.y - minY };
 
   const pathD = useMemo(() => {
-    if (style.style === "straight") {
+    if (style === "straight") {
       return `M ${F.x},${F.y} L ${T.x},${T.y}`;
     }
-    if (style.style === "orthogonal") {
+    if (style === "orthogonal") {
       return orthogonalRoute(F, T, fromSide, toSide);
     }
+    // curve
     const [c1, c2] = controlPointsCurve(F, T, fromSide, toSide);
     return `M ${F.x},${F.y} C ${c1.x},${c1.y} ${c2.x},${c2.y} ${T.x},${T.y}`;
-  }, [F.x, F.y, T.x, T.y, fromSide, toSide, style.style]);
+  }, [F.x, F.y, T.x, T.y, fromSide, toSide, style]);
 
-  const linecap = style.rounded ? "round" : "butt";
-  const linejoin = style.rounded ? "round" : "miter";
+  const linecap = rounded ? "round" : "butt";
+  const linejoin = rounded ? "round" : "miter";
   const markerStart =
-    style.ends.start !== "none"
-      ? `url(#${headId(style.ends.start)})`
-      : undefined;
+    ends.start !== "none" ? `url(#${headId(ends.start)})` : undefined;
   const markerEnd =
-    style.ends.end !== "none" ? `url(#${headId(style.ends.end)})` : undefined;
-
-  // Área de click: un path transparente y ancho encima del visible
-  const hitWidth = Math.max(12, style.width + 10);
+    ends.end !== "none" ? `url(#${headId(ends.end)})` : undefined;
 
   return (
     <svg
-      className={cn("absolute", selected ? "cursor-default" : "cursor-pointer")}
+      className="absolute pointer-events-none"
       style={{ left: minX, top: minY, width: w, height: h, zIndex }}
-      // IMPORTANTE: permitir eventos en el SVG
-      onPointerDown={(e) => {
-        // evitar que el canvas consuma el drag/pan
-        e.stopPropagation();
-        // seleccionar
-        onSelect?.(id);
-      }}
     >
-      <HeadDefs color={style.color} />
-
-      {/* Path visible */}
+      <HeadDefs color={color} />
       <path
         d={pathD}
         fill="none"
-        stroke={selected ? "#2563EB" : style.color}
-        strokeWidth={selected ? style.width + 1.5 : style.width}
+        stroke={color}
+        strokeWidth={width}
         strokeLinecap={linecap}
         strokeLinejoin={linejoin}
-        strokeDasharray={dashToSvg(style.dash)}
+        strokeDasharray={dashToSvg(dash)}
         markerStart={markerStart}
         markerEnd={markerEnd}
-      />
-
-      {/* Glow/Resalte al estar seleccionado */}
-      {selected && (
-        <path
-          d={pathD}
-          fill="none"
-          stroke="#93C5FD"
-          strokeWidth={style.width + 6}
-          strokeLinecap={linecap}
-          strokeLinejoin={linejoin}
-          opacity={0.25}
-          pointerEvents="none"
-        />
-      )}
-
-      {/* Hit area (transparente) */}
-      <path
-        d={pathD}
-        fill="none"
-        stroke="transparent"
-        strokeWidth={hitWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        // ¡Este SÍ recibe eventos!
-        onPointerDown={(e) => {
-          e.stopPropagation();
-          onSelect?.(id);
-        }}
       />
     </svg>
   );

@@ -1,21 +1,47 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { LiveList, LiveObject } from "@liveblocks/client";
-//import { useStorage, useMutation } from "@/app/liveblocks";
-import { Shape, Position } from "../types";
 import { useMutation, useStorage } from "@liveblocks/react";
+import type { Shape, Position, Side } from "../types";
 
 /** Relative anchor inside a shape (0..1 in both axes) */
 export type Anchor = { x: number; y: number };
 
+/** Arrow visual style */
+export type ArrowStyle = "curve" | "straight" | "orthogonal";
+export type ArrowHead = "none" | "triangle" | "circle" | "diamond" | "bar";
+export type ArrowDash = "solid" | "dashed" | "dotted";
+
+export interface ConnectionStyle {
+  color: string; // stroke color
+  width: number; // stroke width
+  style: ArrowStyle; // curve | straight | orthogonal
+  rounded: boolean; // strokeLinecap/Join
+  dash: ArrowDash; // solid | dashed | dotted
+  ends: { start: ArrowHead; end: ArrowHead }; // heads
+}
+
 /** A persisted connection between two shapes via relative anchors */
 export type Connection = {
   id: string;
-  fromShapeId: Shape["id"]; // matches your Shape id type (number or string)
+  fromShapeId: Shape["id"];
   fromAnchor: Anchor;
+  fromSide: Side; // NEW: lado de salida
   toShapeId: Shape["id"];
   toAnchor: Anchor;
+  toSide: Side; // NEW: lado de entrada
+  style: ConnectionStyle; // NEW: estilos visuales
+};
+
+/** Defaults Miro-like */
+export const DEFAULT_CONNECTION_STYLE: ConnectionStyle = {
+  color: "#111827",
+  width: 2,
+  style: "curve",
+  rounded: true,
+  dash: "solid",
+  ends: { start: "none", end: "triangle" },
 };
 
 /** Helper: absolute pos from a shape + relative anchor */
@@ -33,7 +59,6 @@ export function getAbsoluteAnchorPosition(
 export function computeRelativeAnchor(shape: Shape, point: Position): Anchor {
   const w = shape.width || 1;
   const h = shape.height || 1;
-  // Clamp to [0,1] so arrows stay on edges even on tiny numerical drift
   const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
   return {
     x: clamp01((point.x - shape.x) / w),
@@ -58,52 +83,47 @@ export function useConnectionManager() {
   const storage = useStorage((root) => root);
   const liveConnections = useStorage((root) => root.connections);
 
-  // READ (plain snapshots for render)
-  // const connections: Connection[] =
-  //   useStorage((root) => {
-  //     const list = root.connections as
-  //       | LiveList<LiveObject<Connection>>
-  //       | undefined;
-  //     if (!list) return [];
-  //     // Avoid .toObject() (not present on proxied snapshots). Read fields explicitly.
-  //     const result: Connection[] = [];
-  //     for (let i = 0; i < list.length; i++) {
-  //       const lo = list.get(i)!;
-  //       result.push({
-  //         id: lo.get("id") as string,
-  //         fromShapeId: lo.get("fromShapeId") as Shape["id"],
-  //         fromAnchor: lo.get("fromAnchor") as Anchor,
-  //         toShapeId: lo.get("toShapeId") as Shape["id"],
-  //         toAnchor: lo.get("toAnchor") as Anchor,
-  //       });
-  //     }
-  //     return result;
-  //   }) ?? [];
-
+  /** READ snapshot */
   const connections: Connection[] = useMemo(() => {
     if (!liveConnections) return [];
-    // return liveShapes.map(fromLiveShape);
-
-    return liveConnections as Connection[];
+    // Si tu Storage ya guarda objetos plain, este cast funciona bien.
+    // Si en tu setup son LiveObjects, puedes transformar uno por uno.
+    return liveConnections as unknown as Connection[];
   }, [liveConnections, storage]);
 
-  // WRITE: push a new connection
+  /** WRITE: push a new connection */
   const addConnectionRelative = useMutation(
-    ({ storage }, input: Omit<Connection, "id"> & { id?: string }) => {
-      const list = storage.get("connections") as LiveList<
-        LiveObject<Connection>
-      >;
+    (
+      { storage },
+      input: Omit<Connection, "id" | "style" | "fromSide" | "toSide"> & {
+        id?: string;
+        style?: ConnectionStyle;
+        fromSide: Side;
+        toSide: Side;
+      }
+    ) => {
+      const list = storage.get("connections") as LiveList<any>;
       const id = input.id ?? crypto.randomUUID();
-      const conn: Connection = { id, ...input } as Connection;
+      const conn: Connection = {
+        id,
+        fromShapeId: input.fromShapeId,
+        fromAnchor: input.fromAnchor,
+        fromSide: input.fromSide,
+        toShapeId: input.toShapeId,
+        toAnchor: input.toAnchor,
+        toSide: input.toSide,
+        style: input.style ?? DEFAULT_CONNECTION_STYLE,
+      };
+      //@ts-ignore
       list.push(new LiveObject(conn));
       return id;
     },
     []
   );
 
-  // WRITE: remove by id(s)
+  /** WRITE: remove by id */
   const removeConnection = useMutation(({ storage }, id: string) => {
-    const list = storage.get("connections") as LiveList<LiveObject<Connection>>;
+    const list = storage.get("connections") as LiveList<any>;
     for (let i = list.length - 1; i >= 0; i--) {
       const lo = list.get(i)!;
       if ((lo.get("id") as string) === id) {
@@ -113,33 +133,68 @@ export function useConnectionManager() {
     }
   }, []);
 
+  /** WRITE: remove multiple */
   const removeConnectionsByIds = useMutation(({ storage }, ids: string[]) => {
     const set = new Set(ids);
-    const list = storage.get("connections") as LiveList<LiveObject<Connection>>;
+    const list = storage.get("connections") as LiveList<any>;
     for (let i = list.length - 1; i >= 0; i--) {
       const lo = list.get(i)!;
       if (set.has(lo.get("id") as string)) list.delete(i);
     }
   }, []);
 
-  // WRITE: patch/update by id
+  /** WRITE: patch/update by id — incluye campos nuevos */
   const updateConnection = useMutation(
-    ({ storage }, params: { id: string; patch: Partial<Connection> }) => {
-      const list = storage.get("connections") as LiveList<
-        LiveObject<Connection>
-      >;
+    (
+      { storage },
+      params: {
+        id: string;
+        patch: Partial<
+          Omit<Connection, "id"> & {
+            style?: Partial<ConnectionStyle> & {
+              ends?: Partial<ConnectionStyle["ends"]>;
+            };
+          }
+        >;
+      }
+    ) => {
+      const list = storage.get("connections") as LiveList<any>;
       for (let i = 0; i < list.length; i++) {
         const lo = list.get(i)!;
         if ((lo.get("id") as string) === params.id) {
           const { patch } = params;
-          // set only provided fields
+
           if (patch.fromShapeId !== undefined)
-            lo.set("fromShapeId", patch.fromShapeId);
+            lo.set(
+              "fromShapeId",
+              patch.fromShapeId as Connection["fromShapeId"]
+            );
           if (patch.toShapeId !== undefined)
-            lo.set("toShapeId", patch.toShapeId);
+            lo.set("toShapeId", patch.toShapeId as Connection["toShapeId"]);
           if (patch.fromAnchor !== undefined)
-            lo.set("fromAnchor", patch.fromAnchor);
-          if (patch.toAnchor !== undefined) lo.set("toAnchor", patch.toAnchor);
+            lo.set("fromAnchor", patch.fromAnchor as Anchor);
+          if (patch.toAnchor !== undefined)
+            lo.set("toAnchor", patch.toAnchor as Anchor);
+
+          if (patch.fromSide !== undefined)
+            lo.set("fromSide", patch.fromSide as Side);
+          if (patch.toSide !== undefined)
+            lo.set("toSide", patch.toSide as Side);
+
+          // Style: set parcial y deep-merge para ends
+          if (patch.style !== undefined) {
+            const prev = lo.get("style") as ConnectionStyle | undefined;
+            const next: ConnectionStyle = {
+              ...(prev ?? DEFAULT_CONNECTION_STYLE),
+              ...(patch.style as Partial<ConnectionStyle>),
+              ends: {
+                ...(prev?.ends ?? DEFAULT_CONNECTION_STYLE.ends),
+                ...(patch.style?.ends ?? {}),
+              },
+            };
+            lo.set("style", next);
+          }
+
           break;
         }
       }
@@ -148,18 +203,20 @@ export function useConnectionManager() {
   );
 
   /**
-   * Finalize a connection from your current “connecting” state + a snap result.
-   * Converts absolute points to relative anchors and persists to Liveblocks.
+   * Finalize a connection from the current “connecting” state + a snap result.
+   * Usa `snapResult.side` y `snapResult.anchor` (del hook useBorderSnapping).
    */
   function finalizeFromSnap(args: {
     connecting: {
       fromShapeId: Shape["id"];
-      fromDirection?: "top" | "right" | "bottom" | "left";
-      fromPosition: Position; // world coords where the drag started
+      fromDirection: Side; // lado desde el que salió el conector
+      fromPosition: Position; // world coords where the drag started (preview)
     };
     snapResult: {
       shapeId: Shape["id"];
-      snappedPosition: Position; // world coords where the line snapped
+      snappedPosition: Position; // world coords donde cayó
+      side: Side; // lado donde entró
+      anchor: Anchor; // relativo [0..1] dentro del shape destino
     };
     shapes: Shape[];
   }) {
@@ -169,17 +226,38 @@ export function useConnectionManager() {
     const to = byId(shapes, snapResult.shapeId);
     if (!from || !to) return null;
 
-    const fromAnchor = computeRelativeAnchor(from, connecting.fromPosition);
-    const toAnchor = computeRelativeAnchor(to, snapResult.snappedPosition);
+    // fromAnchor: si tu UI arranca exactamente en el borde según fromDirection,
+    // podés normalizarlo a middle-of-side; si prefieres precisión del punto,
+    // computeRelativeAnchor sobre fromPosition.
+    const fromAnchor = connecting.fromPosition
+      ? computeRelativeAnchor(from, connecting.fromPosition)
+      : middleOfSide(from, connecting.fromDirection);
 
     const id = addConnectionRelative({
       fromShapeId: connecting.fromShapeId,
       fromAnchor,
+      fromSide: connecting.fromDirection,
       toShapeId: snapResult.shapeId,
-      toAnchor,
+      toAnchor: snapResult.anchor,
+      toSide: snapResult.side,
+      // style opcional: usa defaults
     });
 
     return id;
+  }
+
+  /** Punto central del lado (por si no querés usar fromPosition) */
+  function middleOfSide(shape: Shape, side: Side): Anchor {
+    switch (side) {
+      case "top":
+        return { x: 0.5, y: 0 };
+      case "bottom":
+        return { x: 0.5, y: 1 };
+      case "left":
+        return { x: 0, y: 0.5 };
+      case "right":
+        return { x: 1, y: 0.5 };
+    }
   }
 
   /** Compute absolute endpoints for rendering against current shapes */
@@ -195,7 +273,7 @@ export function useConnectionManager() {
               id: c.id,
               from: getAbsoluteAnchorPosition(from, c.fromAnchor),
               to: getAbsoluteAnchorPosition(to, c.toAnchor),
-              connection: c,
+              connection: c, // incluye sides + style
             };
           })
           .filter(Boolean) as Array<{
@@ -208,13 +286,7 @@ export function useConnectionManager() {
     );
   }
 
-  /** Optional helpers */
-  // function getConnectionsForShape(shapeId: Shape["id"]) {
-  //   return connections.filter(
-  //     (c) => c.fromShapeId === shapeId || c.toShapeId === shapeId
-  //   );
-  // }
-
+  /** Reemplazar un endpoint con punto absoluto (drag de extremos) */
   function replaceEndpointWithAbsolute(args: {
     id: string;
     endpoint: "from" | "to";
@@ -225,14 +297,19 @@ export function useConnectionManager() {
     const { id, endpoint, shapeId, absolutePoint, shapes } = args;
     const shape = byId(shapes, shapeId);
     if (!shape) return;
+
     const anchor = computeRelativeAnchor(shape, absolutePoint);
-    updateConnection({
-      id,
-      patch:
-        endpoint === "from"
-          ? { fromShapeId: shapeId, fromAnchor: anchor }
-          : { toShapeId: shapeId, toAnchor: anchor },
-    });
+    if (endpoint === "from") {
+      updateConnection({
+        id,
+        patch: { fromShapeId: shapeId, fromAnchor: anchor },
+      });
+    } else {
+      updateConnection({
+        id,
+        patch: { toShapeId: shapeId, toAnchor: anchor },
+      });
+    }
   }
 
   // Local (non-shared) connection selection
@@ -248,6 +325,14 @@ export function useConnectionManager() {
     setSelectedConnectionId(null);
   }
 
+  const selectedConnection = useMemo(
+    () =>
+      selectedConnectionId
+        ? connections.find((c) => c.id === selectedConnectionId) ?? null
+        : null,
+    [connections, selectedConnectionId]
+  );
+
   return {
     // live snapshots
     connections,
@@ -262,13 +347,13 @@ export function useConnectionManager() {
     // selection (local)
     selectedConnectionId,
     selectConnection,
+    selectedConnection,
     removeSelectedConnection,
 
     // computed endpoints for rendering
     useConnectionEndpoints,
 
     // helpers
-    //getConnectionsForShape,
     replaceEndpointWithAbsolute,
   };
 }

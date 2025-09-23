@@ -1,140 +1,88 @@
-// // hooks/useBorderSnapping.ts
-// import { useMemo } from "react";
-// import { Position, Shape } from "../types";
-
-// export function useBorderSnapping(
-//   connectingMousePos: Position | null,
-//   shapes: Shape[]
-// ) {
-//   const snapThreshold = 15;
-
-//   const snapResult = useMemo(() => {
-//     if (!connectingMousePos) return null;
-
-//     let closest: {
-//       shapeId: number;
-//       snappedPosition: Position;
-//     } | null = null;
-
-//     for (const shape of shapes) {
-//       const { x, y, width, height, id } = shape;
-
-//       const borders = {
-//         top: { x: connectingMousePos.x, y },
-//         bottom: { x: connectingMousePos.x, y: y + height },
-//         left: { x: x, y: connectingMousePos.y },
-//         right: { x: x + width, y: connectingMousePos.y },
-//       };
-
-//       for (const key in borders) {
-//         const pos = borders[key as keyof typeof borders];
-//         const dx = pos.x - connectingMousePos.x;
-//         const dy = pos.y - connectingMousePos.y;
-//         const dist = Math.sqrt(dx * dx + dy * dy);
-
-//         if (dist < snapThreshold) {
-//           closest = {
-//             shapeId: id,
-//             snappedPosition: pos,
-//           };
-//           break;
-//         }
-//       }
-
-//       if (closest) break;
-//     }
-
-//     return closest;
-//   }, [connectingMousePos, shapes]);
-
-//   return { snapResult };
-// }
-
 // hooks/useBorderSnapping.ts
 import { useMemo } from "react";
-import type { Position, Shape } from "../types";
+import type { Position, Shape, Side } from "../types";
 
-type SnapResult = {
+export type SnapResult = {
   shapeId: string;
-  snappedPosition: Position; // world coords
-  side: "top" | "right" | "bottom" | "left";
+  snappedPosition: Position; // coordenadas absolutas (mundo)
+  side: Side; // "top" | "right" | "bottom" | "left"
+  anchor: { x: number; y: number }; // relativas [0..1] dentro del shape
 };
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
+const clamp01 = (v: number) => clamp(v, 0, 1);
 
 /**
- * Snap the pointer (world coords) to the nearest border of any shape.
- * Threshold is applied in *screen pixels*, so it feels consistent across zoom levels.
+ * Snapea el mouse al borde más cercano. El umbral está en píxeles de pantalla (escala-consistente).
  */
 export function useBorderSnapping(
   connectingMousePos: Position | null,
   shapes: Shape[],
-  scale: number, // <-- pass current scale
-  excludeShapeId?: string | null // <-- pass source shape id to avoid self-snap
+  scale: number,
+  excludeShapeId?: string | null
 ) {
   const snapResult = useMemo<SnapResult | null>(() => {
     if (!connectingMousePos) return null;
 
-    // Pixel-constant threshold (feel free to tweak)
     const thresholdPx = 14;
     let best: ({ distPx: number } & SnapResult) | null = null;
 
     for (const s of shapes) {
+      if (!s) continue;
       if (excludeShapeId && s.id === excludeShapeId) continue;
 
       const left = s.x;
       const right = s.x + s.width;
       const top = s.y;
       const bottom = s.y + s.height;
+      const w = Math.max(1, s.width);
+      const h = Math.max(1, s.height);
 
-      // For horizontal sides, clamp X; for vertical sides, clamp Y.
+      // Helpers relativos
+      const relX = (absX: number) => clamp01((absX - left) / w);
+      const relY = (absY: number) => clamp01((absY - top) / h);
+
+      // Candidatos por lado (con anchor relativo)
+      const cx = clamp(connectingMousePos.x, left, right);
+      const cy = clamp(connectingMousePos.y, top, bottom);
+
       const candidates: SnapResult[] = [
         {
-          shapeId: s.id,
+          shapeId: s.id as string,
           side: "top",
-          snappedPosition: {
-            x: clamp(connectingMousePos.x, left, right),
-            y: top,
-          },
+          snappedPosition: { x: cx, y: top },
+          anchor: { x: relX(cx), y: 0 },
         },
         {
-          shapeId: s.id,
+          shapeId: s.id as string,
           side: "bottom",
-          snappedPosition: {
-            x: clamp(connectingMousePos.x, left, right),
-            y: bottom,
-          },
+          snappedPosition: { x: cx, y: bottom },
+          anchor: { x: relX(cx), y: 1 },
         },
         {
-          shapeId: s.id,
+          shapeId: s.id as string,
           side: "left",
-          snappedPosition: {
-            x: left,
-            y: clamp(connectingMousePos.y, top, bottom),
-          },
+          snappedPosition: { x: left, y: cy },
+          anchor: { x: 0, y: relY(cy) },
         },
         {
-          shapeId: s.id,
+          shapeId: s.id as string,
           side: "right",
-          snappedPosition: {
-            x: right,
-            y: clamp(connectingMousePos.y, top, bottom),
-          },
+          snappedPosition: { x: right, y: cy },
+          anchor: { x: 1, y: relY(cy) },
         },
       ];
 
+      // Elegir el más cercano dentro del umbral
       for (const c of candidates) {
         const dx = c.snappedPosition.x - connectingMousePos.x;
         const dy = c.snappedPosition.y - connectingMousePos.y;
-        const distWorld = Math.hypot(dx, dy);
-        const distPx = distWorld * scale; // convert world → screen px
+        const distPx = Math.hypot(dx, dy) * scale;
 
         if (distPx <= thresholdPx) {
-          if (!best || distPx < best.distPx) {
-            best = { distPx, ...c };
-          }
+          if (!best || distPx < best.distPx) best = { distPx, ...c };
         }
       }
     }
@@ -144,6 +92,7 @@ export function useBorderSnapping(
           shapeId: best.shapeId,
           snappedPosition: best.snappedPosition,
           side: best.side,
+          anchor: best.anchor,
         }
       : null;
   }, [connectingMousePos, shapes, scale, excludeShapeId]);

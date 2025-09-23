@@ -142,3 +142,36 @@ export interface Marquee {
   w: number;
   h: number;
 }
+
+// CanvasModule/types.ts
+export type Side = "top" | "right" | "bottom" | "left";
+
+export type ArrowStyle = "curve" | "straight" | "orthogonal";
+export type ArrowHead = "none" | "triangle" | "circle" | "diamond" | "bar";
+
+export type ArrowEnds = {
+  start: ArrowHead; // cabeza en el inicio
+  end: ArrowHead; // cabeza en el fin
+};
+
+export type ArrowDash = "solid" | "dashed" | "dotted";
+
+export interface ConnectionStyle {
+  color: string;
+  width: number;
+  style: ArrowStyle;
+  rounded: boolean;
+  dash: ArrowDash;
+  ends: ArrowEnds;
+}
+
+export interface Connection {
+  id: string;
+  fromShapeId: string;
+  fromAnchor: { x: number; y: number }; // [0..1]
+  fromSide: Side;
+  toShapeId: string;
+  toAnchor: { x: number; y: number }; // [0..1]
+  toSide: Side;
+  style: ConnectionStyle;
+}

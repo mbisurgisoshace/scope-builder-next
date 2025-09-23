@@ -55,6 +55,7 @@ import NextImage from "next/image";
 import { HelperQuestions } from "./CanvasModule/HelperQuestions";
 import { HelperValueProp } from "./CanvasModule/HelperValueProp";
 import { HelperAnalysis } from "./CanvasModule/HelperAnalysis";
+import { ConnectionArrow } from "./CanvasModule/ConnectionArrow";
 
 type RelativeAnchor = {
   x: number; // valor entre 0 y 1, representa el porcentaje del ancho
@@ -186,6 +187,7 @@ export default function InfiniteCanvas({
     useConnectionEndpoints,
     selectConnection,
     selectedConnectionId,
+    selectedConnection: sel,
     removeSelectedConnection,
     removeConnectionsByIds,
     removeConnection, // (for later)
@@ -1352,9 +1354,22 @@ export default function InfiniteCanvas({
           {editable && groupBounds && <SelectionGroup bounds={groupBounds} />}
 
           {connecting && connectingMousePos && (
-            <CurvedArrow
+            // <CurvedArrow
+            //   from={connecting.fromPosition}
+            //   to={snapResult?.snappedPosition ?? connectingMousePos}
+            // />
+            <ConnectionArrow
               from={connecting.fromPosition}
               to={snapResult?.snappedPosition ?? connectingMousePos}
+              fromSide={connecting.fromDirection}
+              toSide={snapResult?.side ?? "right"} // fallback
+              color="#3B82F6"
+              width={2}
+              rounded
+              style="curve"
+              dash="solid"
+              ends={{ start: "none", end: "triangle" }}
+              zIndex={30}
             />
           )}
 
@@ -1402,16 +1417,28 @@ export default function InfiniteCanvas({
 
               return true;
             })
-            .map(({ id, from, to }) => (
+            .map(({ id, from, to, connection }) => (
+              // <SelectableConnectionArrow
+              //   key={id}
+              //   id={id}
+              //   from={from}
+              //   to={to}
+              //   // selected={selectedConnectionId === id}
+              //   // onSelect={selectConnection}
+              //   selected={editable && selectedConnectionId === id}
+              //   onSelect={editable ? selectConnection : undefined}
+              // />
               <SelectableConnectionArrow
                 key={id}
                 id={id}
                 from={from}
                 to={to}
-                // selected={selectedConnectionId === id}
-                // onSelect={selectConnection}
+                fromSide={connection.fromSide}
+                toSide={connection.toSide}
+                style={connection.style}
                 selected={editable && selectedConnectionId === id}
                 onSelect={editable ? selectConnection : undefined}
+                zIndex={25}
               />
             ))}
 
