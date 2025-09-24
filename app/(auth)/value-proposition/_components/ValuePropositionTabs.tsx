@@ -98,11 +98,15 @@ export default function ValuePropositionTabsView({ rooms }: { rooms: any[] }) {
                     }}
                   />
                 </TabsContent>
-                <TabsContent value="kanban-view" className="w-full h-full">
+                <TabsContent
+                  value="kanban-view"
+                  className="w-full h-full flex overflow-hidden"
+                >
                   <KanbanView
                     kanbanBoards={[
                       { label: "Jobs to be Done", key: "jobs_to_be_done_card" },
                       { label: "Pains", key: "pains_card" },
+                      { label: "Gains", key: "gains_card" },
                     ]}
                   />
                 </TabsContent>
