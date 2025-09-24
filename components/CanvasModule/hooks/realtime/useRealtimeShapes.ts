@@ -84,11 +84,11 @@ export function useRealtimeShapes() {
           type === "text"
             ? 120
             : type === "interview"
-            ? 580
+            ? 700
             : type === "question"
-            ? 440
+            ? 600
             : type === "question_answer"
-            ? 880
+            ? 780
             : 160,
         height:
           type === "text"
@@ -132,8 +132,16 @@ export function useRealtimeShapes() {
       if (type === "feature_idea") {
         shape = {
           ...shape,
-          width: 820,
+          width: 780,
           height: 530,
+        };
+      }
+
+      if (type === "question_answer") {
+        shape = {
+          ...shape,
+          width: 800,
+          height: 320,
         };
       }
 

@@ -27,6 +27,8 @@ export type CardType =
   | "end_user_card"
   | "summary_card"
   | "example_segment_card"
+  | "example_industry_market_segment_card"
+  | "example_customer_card"
   | "example_brainstorm_card";
 
 export type Kind = "image" | "video" | "pdf" | "file";
@@ -37,6 +39,10 @@ export interface Shape {
   y: number;
   id: string;
   color: string;
+  textSize?: number;
+  textColor?: string;
+  textWeight?: "normal" | "bold";
+  textStyle?: "normal" | "italic";
   width: number;
   text?: string;
   height: number;
@@ -74,6 +80,7 @@ export interface Shape {
 
   // question
   questionTags?: string[];
+  segmentsTags?: string[];
   questionTitle?: string;
 
   metadata?: any;

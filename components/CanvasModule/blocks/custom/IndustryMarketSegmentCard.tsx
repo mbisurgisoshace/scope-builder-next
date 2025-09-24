@@ -37,12 +37,22 @@ const RteEditor = dynamic(
 export const IndustryMarketSegment: React.FC<IndustryMarketSegmentProps> = (
   props
 ) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      const target = textareaRef.current;
+      target.style.height = "auto";
+      target.style.height = target.scrollHeight + "px";
+    }
+  }, [props.shape.cardTitle]);
+
   const questions = [
     {
       id: "gain_creators_question_1",
       card_type: "card",
       question:
-        "On a scale of 1-10, 10 being highest, what is the significance of this to the customer/user?",
+        "On a scale of 1-10, 10 being highest, in your opinion what is the significance of this to the customer/user?",
       question_options: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
     },
   ];
@@ -77,7 +87,8 @@ export const IndustryMarketSegment: React.FC<IndustryMarketSegmentProps> = (
 
   // Collapsed state: default closed only if already complete;
   // afterwards, user can toggle freely (no auto-collapse).
-  const [collapsed, setCollapsed] = useState<boolean>(allAnswered);
+  // const [collapsed, setCollapsed] = useState<boolean>(allAnswered);
+  const [collapsed, setCollapsed] = useState<boolean>(true);
 
   const userToggledRef = useRef(false);
   useEffect(() => {
@@ -133,13 +144,13 @@ export const IndustryMarketSegment: React.FC<IndustryMarketSegmentProps> = (
         const raw = JSON.parse(shape.draftRaw);
         return EditorState.createWithContent(convertFromRaw(raw));
       }
-    } catch { }
+    } catch {}
     return EditorState.createEmpty();
   }, []);
 
   const [editorState, setEditorState] =
     useState<EditorState>(initialEditorState);
-  const [editingBody, setEditingBody] = useState(true);
+  const [editingBody, setEditingBody] = useState(false);
   const [showToolbar, setShowToolbar] = useState(false);
 
   useEffect(() => {
@@ -165,13 +176,55 @@ export const IndustryMarketSegment: React.FC<IndustryMarketSegmentProps> = (
     return () => clearTimeout(t);
   }, [editorState, editingBody]);
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (editingBody) {
+      const target = e.target as HTMLElement;
+      const isEditorClick =
+        target.closest(".rdw-editor-wrapper") ||
+        target.closest(".rdw-editor-toolbar") ||
+        target.closest('button[class*="text-purple"]');
+
+      if (!isEditorClick) {
+        setEditingBody(false);
+        setShowToolbar(false);
+      }
+    }
+  };
+
+  const editorText = editorState.getCurrentContent().getPlainText().trim();
+  const hasContent =
+    (shape.draftRaw && editorText.length > 0) ||
+    (!shape.draftRaw && editorText.length > 0);
+  const isEmpty = !hasContent && !editingBody;
+
   return (
     <div className="flex-1 overflow-auto">
       <div
-        className="rounded-[8px] "
+        className="shadow-lg bg-[#C2F7FD]"
         onMouseDown={(e) => e.stopPropagation()}
+        onClick={handleCardClick}
       >
-        {/* <div className="flex flex-row gap-2 p-2">
+        <div className="p-6 pt-0">
+          <div className="mb-4">
+            <textarea
+              ref={textareaRef}
+              placeholder={"Type Market Segment here.."}
+              className="w-full bg-transparent border-none outline-none font-manrope font-extrabold text-[24px] leading-[115%] tracking-[0%] text-[#111827] placeholder:text-[#858b9b] placeholder:font-extrabold placeholder:text-[24px] placeholder:leading-[115%] resize-none overflow-hidden"
+              defaultValue={shape.cardTitle || ""}
+              onBlur={(e) => {
+                if (e.target.value !== shape.cardTitle) {
+                  commit({ cardTitle: e.target.value });
+                }
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = "auto";
+                target.style.height = target.scrollHeight + "px";
+              }}
+            />
+          </div>
+          {/* <div className="flex flex-row gap-2 p-2">
           <span>Significance Score:</span>
           {tags.map((t) => (
             <button
@@ -201,25 +254,61 @@ export const IndustryMarketSegment: React.FC<IndustryMarketSegmentProps> = (
             </button>
           ))}
         </div> */}
-        <RteEditor
-          onBlur={() => setShowToolbar(false)}
-          onFocus={() => setShowToolbar(true)}
-          editorState={editorState}
-          onEditorStateChange={setEditorState}
-          toolbar={{
-            options: ["inline", "list", "link", "history"],
-            inline: {
-              options: ["bold", "italic", "underline", "strikethrough"],
-            },
-            list: { options: ["unordered", "ordered"] },
-          }}
-          toolbarHidden={!showToolbar}
-          toolbarClassName={`border-b px-2 text-[14px] ${editingBody ? 'bg-white' : 'bg-transparent'}`}
-          editorClassName={`px-2 py-2 min-h-[120px] text-[14px] ${editingBody ? "bg-white rounded" : "bg-transparent"
-            } placeholder:text-gray-500 `}
-          wrapperClassName=""
-          placeholder="Type your text here..."
-        />
+
+          <div className="mb-6">
+            {isEmpty ? (
+              <div className="flex items-center">
+                <button
+                  onClick={() => {
+                    setEditingBody(true);
+                    setShowToolbar(true);
+                  }}
+                  className="text-black-600 underline hover:text-purple-800 text-sm font-medium transition-colors cursor-pointer"
+                >
+                  + add more details
+                </button>
+              </div>
+            ) : (
+              <RteEditor
+                onBlur={() => {
+                  setShowToolbar(false);
+                  setEditingBody(false);
+                  const contentState = editorState.getCurrentContent();
+                  const hasText = contentState.hasText();
+                  if (!hasText) {
+                    setEditorState(EditorState.createEmpty());
+                    commit({ draftRaw: undefined });
+                  } else {
+                    const raw = convertToRaw(contentState);
+                    commit({ draftRaw: JSON.stringify(raw) });
+                  }
+                }}
+                onFocus={() => {
+                  setShowToolbar(true);
+                  setEditingBody(true);
+                }}
+                editorState={editorState}
+                onEditorStateChange={setEditorState}
+                toolbar={{
+                  options: ["inline", "list", "link"],
+                  inline: {
+                    options: ["bold", "italic", "underline", "strikethrough"],
+                  },
+                  list: { options: ["unordered", "ordered"] },
+                }}
+                //toolbarHidden={!showToolbar}
+                toolbarClassName={`border-b px-2 text-[14px] pb-0 mb-0 ${
+                  editingBody ? "bg-white" : "bg-transparent opacity-0"
+                }`}
+                editorClassName={`px-2 pt-0 pb-2 min-h-[120px] text-[14px] mt-0 font-manrope  font-medium text-[#2E3545] ${
+                  editingBody ? "bg-[#DAFAFE] rounded" : "bg-transparent"
+                }`}
+                wrapperClassName="rdw-editor-wrapper"
+                placeholder="Type your text here..."
+              />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

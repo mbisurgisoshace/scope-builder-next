@@ -13,6 +13,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { LoadingText } from "@/components/ui/loader";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { text } from "stream/consumers";
 
 type QuestionProps = Omit<ShapeFrameProps, "children" | "shape"> & {
   shape: IShape;
@@ -27,8 +35,9 @@ const RteEditor = dynamic(
 
 export const Question: React.FC<QuestionProps> = (props) => {
   const { shape, onCommitInterview } = props;
+  console.log("shape", shape);
 
-  const fallbackTitle = "Double click to edit the question.";
+  const fallbackTitle = "Type question here";
   const title = (shape as any).questionTitle ?? fallbackTitle;
 
   const { valuePropData } = useValueProp();
@@ -251,12 +260,12 @@ export const Question: React.FC<QuestionProps> = (props) => {
   return (
     <ShapeFrame
       {...props}
-      resizable={true}
+      resizable={false}
       showConnectors={props.isSelected && props.selectedCount === 1}
     >
-      <div className="w-full bg-[#DDE1F2] border border-[#B4B9C9] rounded-lg shadow-lg flex flex-col overflow-hidden px-6 py-6 gap-4">
+      <div className="w-full bg-[#E6CFFF] border border-[#B4B9C9] rounded-lg shadow-lg flex flex-col overflow-hidden px-6 py-6 gap-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-blue-600">Question</h3>
+          <h3 className="text-sm font-medium text-black-600">Question</h3>
           <EllipsisIcon className="w-4 h-4 text-gray-600" />
         </div>
         {shape.questionTags && shape.questionTags.length > 0 && (
@@ -318,12 +327,16 @@ export const Question: React.FC<QuestionProps> = (props) => {
           onMouseDown={(e) => e.stopPropagation()}
         >
           <RteEditor
-            onBlur={() => setShowToolbar(false)}
+            onBlur={() => {
+              setShowToolbar(false);
+              const raw = convertToRaw(editorState.getCurrentContent());
+              commit({ draftRaw: JSON.stringify(raw) });
+            }}
             onFocus={() => setShowToolbar(true)}
             editorState={editorState}
             onEditorStateChange={setEditorState}
             toolbar={{
-              options: ["inline", "list", "link", "history"],
+              options: ["inline", "list", "link"],
               inline: {
                 options: ["bold", "italic", "underline", "strikethrough"],
               },
@@ -331,17 +344,17 @@ export const Question: React.FC<QuestionProps> = (props) => {
             }}
             //toolbarHidden={!showToolbar}
             toolbarClassName={`border-b px-2 text-[14px] pb-0 mb-0 ${
-              editingBody ? "bg-white" : "bg-transparent"
+              editingBody ? "bg-white" : "bg-transparent opacity-0"
             }`}
             editorClassName={`px-2 pt-0 pb-2 min-h-[120px] text-[14px] mt-0 font-manrope  font-medium text-[#2E3545] ${
-              editingBody ? "bg-white rounded" : "bg-transparent"
+              editingBody ? "bg-[#F0E2FF] rounded" : "bg-transparent"
             }`}
             wrapperClassName="rdw-editor-wrapper"
             placeholder="Type your text here..."
           />
         </div>
 
-        <div className="border-t border-[#B4B9C9] pt-4">
+        <div className="pt-4">
           <button
             type="button"
             onClick={(e) => {
@@ -357,8 +370,8 @@ export const Question: React.FC<QuestionProps> = (props) => {
                   collapsed ? "-rotate-90" : "rotate-0"
                 }`}
               />
-              Subquestions (
-              {firtQuestionsOrder.length + secondQuestionsOrder.length})
+              Meta questions
+              {/* firtQuestionsOrder.length + secondQuestionsOrder.length + 1 */}
             </span>
             {/* <span className="ml-2 text-gray-400">
               ({answeredCount}/{fiQuestions.length})
@@ -371,6 +384,53 @@ export const Question: React.FC<QuestionProps> = (props) => {
             ref={questionsRef}
             className="mt-4 p-4 rounded-lg border border-[#B4B9C9] bg-[#EDEBFE]"
           >
+            <div className="mb-4 ">
+              <h3 className="font-semibold text-sm text-gray-800 mb-3">
+                (1) Why do you want to ask this question?
+              </h3>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    checked={shape.questionTags?.includes(
+                      "Basic fact-finding / understand context"
+                    )}
+                    className="bg-white border-gray-300"
+                    onCheckedChange={(checked) => {
+                      updateCheckTags(
+                        "Basic fact-finding / understand context",
+                        !!checked
+                      );
+                    }}
+                  />
+                  <Label className="text-sm text-gray-700">
+                    Basic fact-finding / understand context
+                  </Label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    checked={shape.questionTags?.includes(
+                      "Validate my Hypothesis"
+                    )}
+                    className="bg-white border-gray-300"
+                    onCheckedChange={(checked) => {
+                      updateCheckTags("Validate my Hypothesis", !!checked);
+                    }}
+                  />
+                  <Label className="text-sm text-gray-700">
+                    Validate my Hypothesis
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-300 my-4" />
+
+            <h3 className="font-semibold text-sm text-gray-800 mb-3">
+              (2) If relevant, please pick from your Value Proposition assumptions.
+              If you have not added any on the Value Prop canvas yet, they will
+              show up here as empty for now.
+            </h3>
             {firtQuestionsOrder.map(({ key, label }) => {
               const valueProp = formattedValuePropData[key];
 
@@ -380,7 +440,7 @@ export const Question: React.FC<QuestionProps> = (props) => {
                     {getTitle(key)}
                   </h3>
                   <div className="flex flex-col gap-2">
-                    {valueProp.map((item: any) => {
+                    {valueProp?.map((item: any) => {
                       if (!item.draftRaw) return null;
                       const raw = JSON.parse(item.draftRaw);
                       const editor = EditorState.createWithContent(
@@ -424,7 +484,7 @@ export const Question: React.FC<QuestionProps> = (props) => {
                     {getTitle(key)}
                   </h3>
                   <div className="flex flex-col gap-2">
-                    {valueProp.map((item: any) => {
+                    {valueProp?.map((item: any) => {
                       if (!item.draftRaw) return null;
                       const raw = JSON.parse(item.draftRaw);
                       const editor = EditorState.createWithContent(

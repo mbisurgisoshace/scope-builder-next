@@ -32,7 +32,9 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -52,15 +54,28 @@ import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { getSegments } from "@/services/segments";
 import { EditorState, convertFromRaw } from "draft-js";
+import { MultiSelect } from "@/components/ui/multiselect";
 
 interface ParticipantTableActionsProps {
   participant: Participant;
 }
 
+const ROLE_OPTIONS = [
+  { value: "Customer", label: "Customer" },
+  { value: "End-User", label: "End-User" },
+  { value: "Both Customer & End-User", label: "Both Customer & End-User" },
+  { value: "Payer", label: "Payer" },
+  { value: "Influencer", label: "Influencer" },
+  { value: "Recommender", label: "Recommender" },
+  { value: "Saboteur", label: "Saboteur" },
+  { value: "Additional Decision Maker", label: "Additional Decision Maker" },
+  { value: "Additional Stakeholder", label: "Additional Stakeholder" },
+];
+
 export default function ParticipantTableActions({
   participant,
 }: ParticipantTableActionsProps) {
-  const [marketSegments, setMarketSegments] = useState<string[]>([]);
+  const [marketSegments, setMarketSegments] = useState<any[]>([]);
 
   const getMarketSegments = async () => {
     const segments = await getSegments();
@@ -94,6 +109,7 @@ export default function ParticipantTableActions({
       blocking_issues: participant.blocking_issues || "",
       hypothesis_to_validate: participant.hypothesis_to_validate || "",
       learnings: participant.learnings || "",
+      status: participant.status || "need_to_schedule",
       scheduled_date: participant.scheduled_date || undefined,
     },
   });
@@ -118,7 +134,7 @@ export default function ParticipantTableActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem>
-            <SheetTrigger>Edit</SheetTrigger>
+            <SheetTrigger className="w-full text-left">Edit</SheetTrigger>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={markAsComplete}>
             Mark as Complete
@@ -162,10 +178,7 @@ export default function ParticipantTableActions({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
+                    {/* <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select a role" />
@@ -177,23 +190,53 @@ export default function ParticipantTableActions({
                         <SelectItem value="Both Customer & End-User">
                           Both Customer & End-User
                         </SelectItem>
-                        <SelectItem value="Payer">
-                         Payer
-                        </SelectItem>
-                        <SelectItem value="Influencer">
-                         Influencer
-                        </SelectItem>
-                        <SelectItem value="Recommender">
-                         Recommender
-                        </SelectItem>
-                        <SelectItem value="Saboteur">
-                         Saboteur
-                        </SelectItem>
+                        <SelectItem value="Payer">Payer</SelectItem>
+                        <SelectItem value="Influencer">Influencer</SelectItem>
+                        <SelectItem value="Recommender">Recommender</SelectItem>
+                        <SelectItem value="Saboteur">Saboteur</SelectItem>
                         <SelectItem value="Additional Decision Maker">
                           Additional Decision Maker
                         </SelectItem>
                         <SelectItem value="Additional Stakeholder">
                           Additional Stakeholder
+                        </SelectItem>
+                      </SelectContent>
+                    </Select> */}
+                    <FormControl>
+                      <MultiSelect
+                        options={ROLE_OPTIONS}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select a role"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select a status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="complete">Complete</SelectItem>
+                        <SelectItem value="scheduled">Scheduled</SelectItem>
+                        <SelectItem value="incomplete">Incomplete</SelectItem>
+                        <SelectItem value="interviewed">Interviewed</SelectItem>
+                        <SelectItem value="not_available">
+                          Not Available
+                        </SelectItem>
+                        <SelectItem value="need_to_schedule">
+                          Need to Schedule
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -208,21 +251,38 @@ export default function ParticipantTableActions({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Market Segment</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select a market segment" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {marketSegments?.filter( (segment: string)=>segment.trim.length>0 ).map((segment: string) => (
-                          <SelectItem key={segment} value={segment}>
-                            {segment}
-                          </SelectItem>
-                        ))}
+                        {/* {marketSegments
+                          ?.filter(
+                            (segment: string) => segment.trim().length > 0
+                          )
+                          .map((segment: string) => (
+                            <SelectItem key={segment} value={segment}>
+                              {segment}
+                            </SelectItem>
+                          ))} */}
+                        {marketSegments.map((segment) => {
+                          return (
+                            <SelectGroup key={segment.title}>
+                              <SelectLabel>{segment.title}</SelectLabel>
+                              {segment.data
+                                .filter(
+                                  (s: any) => s.cardTitle?.trim().length > 0
+                                )
+                                .map((s: any) => (
+                                  <SelectItem key={s.id} value={s.cardTitle}>
+                                    {s.cardTitle}
+                                  </SelectItem>
+                                ))}
+                            </SelectGroup>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <FormMessage />

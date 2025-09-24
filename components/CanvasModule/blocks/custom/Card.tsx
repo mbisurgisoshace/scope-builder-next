@@ -49,6 +49,8 @@ import { IndustryMarketSegment } from "./IndustryMarketSegmentCard";
 import { Customer } from "./CustomerCard";
 import { EndUser } from "./EndUserCard";
 import { ExampleBrainstormCard } from "./ExampleBrainstormCard";
+import { ExampleCustomerCard } from "./ExampleCustomerCard";
+import { ExampleIndustryMarketSegment } from "./ExampleIndustryMarketSegmentCard";
 
 type CardProps = Omit<ShapeFrameProps, "children" | "shape"> & {
   shape: IShape;
@@ -94,6 +96,10 @@ export const Card: React.FC<CardProps> = (props) => {
         return "Summary";
       case "select_subtype":
         return "Select Card Type";
+      case "example_customer_card":
+        return "Example Customer Card";
+      case "example_industry_market_segment_card":
+        return "Example Industry/Market Segment Card";
       case "example_brainstorm_card":
         return "Example Brainstorm Card";
       default:
@@ -123,6 +129,10 @@ export const Card: React.FC<CardProps> = (props) => {
         return <GainCreators {...props} />;
       case "summary_card":
         return <Summary {...props} />;
+      case "example_customer_card":
+        return <ExampleCustomerCard {...props} />;
+      case "example_industry_market_segment_card":
+        return <ExampleIndustryMarketSegment {...props} />;
       case "example_brainstorm_card":
         return <ExampleBrainstormCard {...props} />;
       case "select_subtype":
@@ -160,6 +170,8 @@ export const Card: React.FC<CardProps> = (props) => {
       case "select_subtype":
         return false;
       case "example_brainstorm_card":
+      case "example_customer_card":
+      case "example_industry_market_segment_card":
         return false;
       default:
         return true;
@@ -168,9 +180,14 @@ export const Card: React.FC<CardProps> = (props) => {
 
   const getColor = () => {
     switch (subtype) {
+      case "example_industry_market_segment_card":
       case "industry_market_segment_card":
+        return "#C2F7FD";
+      case "example_customer_card":
       case "customer_card":
+        return "#C0E7FF";
       case "end_user_card":
+        return "#CECFFF";
       case "jobs_to_be_done_card":
         return "#FDE1B5";
       case "pains_card":
@@ -322,6 +339,130 @@ export const Card: React.FC<CardProps> = (props) => {
         </>
       );
     }
+
+    if (pathname.includes("/examples/laptop")) {
+      return (
+        <>
+          <DropdownMenuItem
+            onClick={() => {
+              onCommitStyle?.(shape.id, {
+                subtype: "industry_market_segment_card",
+              });
+            }}
+            className={`rounded-sm text-xs font-semibold text-[#111827] px-4 py-2 ${
+              subtype === "industry_market_segment_card" ? "bg-[#D5F9D7]" : ""
+            }`}
+          >
+            Industry/Market Segment
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              onCommitStyle?.(shape.id, {
+                subtype: "customer_card",
+              });
+            }}
+            className={`rounded-sm text-xs font-semibold text-[#111827] px-4 py-2 ${
+              subtype === "customer_card" ? "bg-[#D5F9D7]" : ""
+            }`}
+          >
+            Customer
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              onCommitStyle?.(shape.id, {
+                subtype: "end_user_card",
+              });
+            }}
+            className={`rounded-sm text-xs font-semibold text-[#111827] px-4 py-2 ${
+              subtype === "end_user_card" ? "bg-[#D5F9D7]" : ""
+            }`}
+          >
+            End-User
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              onCommitStyle?.(shape.id, {
+                subtype: "jobs_to_be_done_card",
+              });
+            }}
+            className={`rounded-sm text-xs font-semibold text-[#111827] px-4 py-2 ${
+              subtype === "jobs_to_be_done_card" ? "bg-[#D5F9D7]" : ""
+            }`}
+          >
+            Jobs To Be Done
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              onCommitStyle?.(shape.id, { subtype: "pains_card" });
+            }}
+            className={`rounded-sm text-xs font-semibold text-[#111827] px-4 py-2 ${
+              subtype === "pains_card" ? "bg-[#D5F9D7]" : ""
+            }`}
+          >
+            Pains
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              onCommitStyle?.(shape.id, { subtype: "gains_card" });
+            }}
+            className={`rounded-sm text-xs font-semibold text-[#111827] px-4 py-2 ${
+              subtype === "gains_card" ? "bg-[#D5F9D7]" : ""
+            }`}
+          >
+            Gains
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="h-[1px] bg-gray-200" />
+          <DropdownMenuItem
+            onClick={() => {
+              onCommitStyle?.(shape.id, {
+                subtype: "products_services_card",
+              });
+            }}
+            className={`rounded-sm text-xs font-semibold text-[#111827] px-4 py-2 ${
+              subtype === "products_services_card" ? "bg-[#D5F9D7]" : ""
+            }`}
+          >
+            Products & Services
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              onCommitStyle?.(shape.id, {
+                subtype: "pain_relievers_card",
+              });
+            }}
+            className={`rounded-sm text-xs font-semibold text-[#111827] px-4 py-2 ${
+              subtype === "pain_relievers_card" ? "bg-[#D5F9D7]" : ""
+            }`}
+          >
+            Pain Relievers
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              onCommitStyle?.(shape.id, {
+                subtype: "gain_creators_card",
+              });
+            }}
+            className={`rounded-sm text-xs font-semibold text-[#111827] px-4 py-2 ${
+              subtype === "gain_creators_card" ? "bg-[#D5F9D7]" : ""
+            }`}
+          >
+            Gain Creators
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="h-[1px] bg-gray-200" />
+          <DropdownMenuItem
+            onClick={() => {
+              onCommitStyle?.(shape.id, {
+                width: 550,
+                subtype: "summary_card",
+              });
+            }}
+            className={`rounded-sm text-xs font-semibold text-[#111827] px-4 py-2 `}
+          >
+            Ad-Lib
+          </DropdownMenuItem>
+        </>
+      );
+    }
   };
 
   return (
@@ -332,7 +473,7 @@ export const Card: React.FC<CardProps> = (props) => {
       useAttachments={useAttachments()}
       header={
         <div className="w-full flex flex-row items-center justify-between">
-          <span className="font-manrope font-semibold font-weight-600  text-[13px] text-[#2D63E6]">
+          <span className="font-manrope font-semibold font-weight-600  text-[13px] text-[#111827]">
             {getTitle()}
           </span>
           <DropdownMenu defaultOpen={subtype === "select_subtype"}>

@@ -138,12 +138,12 @@ export const QuestionAnswer: React.FC<QuestionAnswerProps> = (props) => {
   return (
     <ShapeFrame
       {...props}
-      resizable={true}
+      resizable={false}
       showConnectors={props.isSelected && props.selectedCount === 1}
     >
       <div className="w-full h-full bg-[#DDE1F2] border border-[#B4B9C9] rounded-lg shadow-lg flex flex-row overflow-hidden">
-        <div className="flex-1/2 h-full flex flex-col overflow-hidden px-6 py-6 gap-4 border-r border-[#B4B9C9]">
-          <h3 className="text-sm font-medium text-blue-600">Question</h3>
+        <div className="flex-[8] h-full flex flex-col overflow-hidden px-6 py-6 gap-4 border-r border-[#B4B9C9]">
+          <h3 className="text-sm font-medium text-black-600">Question</h3>
           <h2 className="text-lg font-bold text-gray-900">
             {shape.questionTitle}
           </h2>
@@ -161,28 +161,36 @@ export const QuestionAnswer: React.FC<QuestionAnswerProps> = (props) => {
               onMouseDown={(e) => e.stopPropagation()}
             >
               <RteEditor
-                onBlur={() => setShowToolbar(false)}
+                onBlur={() => {
+                  setShowToolbar(false);
+                  const raw = convertToRaw(editorState.getCurrentContent());
+                  commit({ draftRaw: JSON.stringify(raw) });
+                }}
                 onFocus={() => setShowToolbar(true)}
                 editorState={editorState}
                 onEditorStateChange={setEditorState}
                 toolbar={{
-                  options: ["inline", "list", "link", "history"],
+                  options: ["inline", "list", "link"],
                   inline: {
                     options: ["bold", "italic", "underline", "strikethrough"],
                   },
                   list: { options: ["unordered", "ordered"] },
                 }}
-                toolbarHidden={!showToolbar}
-                toolbarClassName={`border-b px-2 ${editingBody ? 'bg-white' : 'bg-transparent'}`}
-                editorClassName={`px-2 py-2 min-h-[120px] ${editingBody ? 'bg-white rounded' : 'bg-transparent'}`}
+                //toolbarHidden={!showToolbar}
+                toolbarClassName={`border-b px-2 ${
+                  editingBody ? "bg-white" : "bg-transparent opacity-0"
+                }`}
+                editorClassName={`px-2 py-2 min-h-[120px] ${
+                  editingBody ? "bg-white rounded" : "bg-transparent"
+                }`}
                 wrapperClassName=""
               />
             </div>
           </div>
         </div>
-        <div className="w-full h-full flex flex-col overflow-hidden px-6 py-6 gap-4">
+        <div className="flex-[8] h-full flex flex-col overflow-hidden px-6 py-6 gap-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-blue-600">Answers</h3>
+            <h3 className="text-sm font-medium text-black-600">Answers</h3>
             <div className="flex items-center gap-2">
               {view === "slide" ? (
                 <button
@@ -236,14 +244,14 @@ export const QuestionAnswer: React.FC<QuestionAnswerProps> = (props) => {
               {/* Body */}
               <div className="flex-1 overflow-auto">
                 <div
-                  className="mt-5 rounded-[8px] "
+                  className="mt-5 rounded-[8px] bg-[#FFFFFF66]"
                   onMouseDown={(e) => e.stopPropagation()}
                 >
                   <RteEditor
                     editorState={answerEditorState}
-                    //onEditorStateChange={setAnswerEditorState}
+                    readOnly={true}
                     toolbar={{
-                      options: ["inline", "list", "link", "history"],
+                      options: ["inline", "list", "link"],
                       inline: {
                         options: [
                           "bold",
@@ -305,22 +313,22 @@ export const QuestionAnswer: React.FC<QuestionAnswerProps> = (props) => {
           )}
 
           {view == "board" && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-4 max-h-full overflow-y-auto">
               {question_answers.map((answer, index) => {
                 const raw = JSON.parse(answer.draftRaw);
 
                 return (
                   <div
                     key={index}
-                    className="bg-[#EDEBFE] border border-[#B4B9C9] px-6 py-4 rounded-lg"
+                    className="bg-[#EDEBFE] border border-[#B4B9C9] px-6 py-4 rounded-lg w-full min-h-[200px] flex flex-col"
                   >
-                    <div className="flex items-center">
-                      <div className="h-[40px] w-[40px] bg-[#F4F0FF] rounded-full flex items-center justify-center">
+                    <div className="flex items-center mb-4">
+                      <div className="h-[40px] w-[40px] bg-[#F4F0FF] rounded-full flex items-center justify-center flex-shrink-0">
                         <UserIcon className="h-[26px] w-[26px] text-[#6376F2]" />
                       </div>
 
                       {/* Interviewer */}
-                      <div className="flex flex-col ml-5">
+                      <div className="flex flex-col ml-5 flex-1 min-w-0">
                         <span className="text-[#111827] text-[14px] font-medium">
                           {answer.name || "Interviewee"}
                         </span>
@@ -333,14 +341,12 @@ export const QuestionAnswer: React.FC<QuestionAnswerProps> = (props) => {
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-lg mt-3">
+                    <div className="bg-[#FFFFFF66] rounded-lg flex-1 min-h-[150px]">
                       <RteEditor
-                        editorState={EditorState.createWithContent(
-                          convertFromRaw(raw)
-                        )}
-                        //onEditorStateChange={setAnswerEditorState}
+                        editorState={editorState}
+                        readOnly={true}
                         toolbar={{
-                          options: ["inline", "list", "link", "history"],
+                          options: ["inline", "list", "link"],
                           inline: {
                             options: [
                               "bold",
@@ -353,8 +359,8 @@ export const QuestionAnswer: React.FC<QuestionAnswerProps> = (props) => {
                         }}
                         toolbarHidden
                         toolbarClassName="border-b px-2"
-                        editorClassName="px-2 py-2 min-h-[120px]"
-                        wrapperClassName=""
+                        editorClassName="px-2 py-2 min-h-[1=0px] h-full"
+                        wrapperClassName="h-full"
                       />
                     </div>
                   </div>

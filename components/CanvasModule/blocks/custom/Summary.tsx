@@ -22,6 +22,7 @@ import { CardFrame } from "../CardFrame";
 import { Input } from "@/components/ui/input";
 import { FloatingInput } from "@/components/ui/floating-input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type SummaryProps = Omit<ShapeFrameProps, "children" | "shape"> & {
   shape: IShape;
@@ -37,10 +38,10 @@ const RteEditor = dynamic(
 export const Summary: React.FC<SummaryProps> = (props) => {
   const questions = [
     {
-      id: "gain_creators_question_1",
+      id: "summary_question_1",
       card_type: "card",
       question:
-        "On a scale of 1-10, 10 being highest, what is the significance of this to the customer/user?",
+        "On a scale of 1-10, 10 being highest, in your opinion what is the significance of this to the customer/user?",
       question_options: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
     },
   ];
@@ -171,7 +172,7 @@ export const Summary: React.FC<SummaryProps> = (props) => {
       >
         <div className="flex flex-col gap-6 p-8">
           <div className="flex flex-row items-center gap-1">
-            <h3 
+            <h3
               className="text-3xl font-medium text-gray-300"
               style={{
                 fontFamily: "Manrope",
@@ -184,7 +185,8 @@ export const Summary: React.FC<SummaryProps> = (props) => {
               Our
             </h3>
             <div className="relative">
-              <Input
+              <Textarea
+                style={{}}
                 value={shape.summary?.["our"]}
                 onChange={(e) => {
                   commit({
@@ -199,9 +201,9 @@ export const Summary: React.FC<SummaryProps> = (props) => {
               />
             </div>
           </div>
-        
+
           <div className="flex flex-row items-center gap-1">
-            <h3 
+            <h3
               className="text-3xl font-medium text-gray-300"
               style={{
                 fontFamily: "Manrope",
@@ -214,7 +216,7 @@ export const Summary: React.FC<SummaryProps> = (props) => {
               Help(s)
             </h3>
             <div className="relative">
-              <Input
+              <Textarea
                 value={shape.summary?.["help"]}
                 onChange={(e) => {
                   commit({
@@ -229,9 +231,9 @@ export const Summary: React.FC<SummaryProps> = (props) => {
               />
             </div>
           </div>
-          
+
           <div className="flex flex-row items-center gap-1">
-            <h3 
+            <h3
               className="text-3xl font-medium text-gray-300"
               style={{
                 fontFamily: "Manrope",
@@ -241,10 +243,10 @@ export const Summary: React.FC<SummaryProps> = (props) => {
                 letterSpacing: "0%",
               }}
             >
-              who want to 
+              who want to
             </h3>
             <div className="relative">
-              <Input
+              <Textarea
                 value={shape.summary?.["who"]}
                 onChange={(e) => {
                   commit({
@@ -259,9 +261,9 @@ export const Summary: React.FC<SummaryProps> = (props) => {
               />
             </div>
           </div>
-          
+
           <div className="flex flex-row items-center gap-1">
-            <h3 
+            <h3
               className="text-3xl font-medium text-gray-300"
               style={{
                 fontFamily: "Manrope",
@@ -274,7 +276,7 @@ export const Summary: React.FC<SummaryProps> = (props) => {
               By
             </h3>
             <div className="relative">
-              <Input
+              <Textarea
                 value={shape.summary?.["verb_pain"]}
                 onChange={(e) => {
                   commit({
@@ -289,7 +291,7 @@ export const Summary: React.FC<SummaryProps> = (props) => {
               />
             </div>
             <div className="relative">
-              <Input
+              <Textarea
                 value={shape.summary?.["pain"]}
                 onChange={(e) => {
                   commit({
@@ -304,9 +306,9 @@ export const Summary: React.FC<SummaryProps> = (props) => {
               />
             </div>
           </div>
-          
+
           <div className="flex flex-row items-center gap-1">
-            <h3 
+            <h3
               className="text-3xl font-medium text-gray-300"
               style={{
                 fontFamily: "Manrope",
@@ -319,7 +321,7 @@ export const Summary: React.FC<SummaryProps> = (props) => {
               And
             </h3>
             <div className="relative">
-              <Input
+              <Textarea
                 value={shape.summary?.["verb_gain"]}
                 onChange={(e) => {
                   commit({
@@ -334,7 +336,7 @@ export const Summary: React.FC<SummaryProps> = (props) => {
               />
             </div>
             <div className="relative">
-              <Input
+              <Textarea
                 value={shape.summary?.["gain"]}
                 onChange={(e) => {
                   commit({
@@ -350,7 +352,7 @@ export const Summary: React.FC<SummaryProps> = (props) => {
             </div>
           </div>
           <div className="flex flex-row items-center gap-1">
-            <h3 
+            <h3
               className="text-3xl font-medium text-gray-300"
               style={{
                 fontFamily: "Manrope",
@@ -363,7 +365,7 @@ export const Summary: React.FC<SummaryProps> = (props) => {
               (Unlike
             </h3>
             <div className="relative">
-              <Input
+              <Textarea
                 value={shape.summary?.["unlike"]}
                 onChange={(e) => {
                   commit({
@@ -377,7 +379,7 @@ export const Summary: React.FC<SummaryProps> = (props) => {
                 placeholder="Competing Value Proposition"
               />
             </div>
-            <h3 
+            <h3
               className="text-3xl font-medium text-gray-300"
               style={{
                 fontFamily: "Manrope",

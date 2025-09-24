@@ -32,12 +32,22 @@ const RteEditor = dynamic(
 );
 
 export const ProductsService: React.FC<ProductsServiceProps> = (props) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      const target = textareaRef.current;
+      target.style.height = "auto";
+      target.style.height = target.scrollHeight + "px";
+    }
+  }, [props.shape.cardTitle]);
+
   const questions = [
     {
       id: "products_service_question_1",
       card_type: "card",
       question:
-        "On a scale of 1-10, 10 being highest, what is the significance of this to the customer/user?",
+        "On a scale of 1-10, 10 being highest, in your opinion what is the significance of this to the customer/user?",
       question_options: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
     },
   ];
@@ -72,7 +82,8 @@ export const ProductsService: React.FC<ProductsServiceProps> = (props) => {
 
   // Collapsed state: default closed only if already complete;
   // afterwards, user can toggle freely (no auto-collapse).
-  const [collapsed, setCollapsed] = useState<boolean>(allAnswered);
+  // const [collapsed, setCollapsed] = useState<boolean>(allAnswered);
+  const [collapsed, setCollapsed] = useState<boolean>(true);
 
   const userToggledRef = useRef(false);
   useEffect(() => {
@@ -134,7 +145,7 @@ export const ProductsService: React.FC<ProductsServiceProps> = (props) => {
 
   const [editorState, setEditorState] =
     useState<EditorState>(initialEditorState);
-  const [editingBody, setEditingBody] = useState(true);
+  const [editingBody, setEditingBody] = useState(false);
   const [showToolbar, setShowToolbar] = useState(false);
 
   useEffect(() => {
@@ -160,9 +171,25 @@ export const ProductsService: React.FC<ProductsServiceProps> = (props) => {
     return () => clearTimeout(t);
   }, [editorState, editingBody]);
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (editingBody) {
+      const target = e.target as HTMLElement;
+      const isEditorClick =
+        target.closest(".rdw-editor-wrapper") ||
+        target.closest(".rdw-editor-toolbar") ||
+        target.closest('button[class*="text-purple"]');
+
+      if (!isEditorClick) {
+        setEditingBody(false);
+        setShowToolbar(false);
+      }
+    }
+  };
+
+  const editorText = editorState.getCurrentContent().getPlainText().trim();
   const hasContent =
-    shape.cardTitle ||
-    (shape.draftRaw && editorState.getCurrentContent().hasText());
+    (shape.draftRaw && editorText.length > 0) ||
+    (!shape.draftRaw && editorText.length > 0);
   const isEmpty = !hasContent && !editingBody;
 
   return (
@@ -170,8 +197,28 @@ export const ProductsService: React.FC<ProductsServiceProps> = (props) => {
       <div
         className="shadow-lg bg-[#DDF5B5]"
         onMouseDown={(e) => e.stopPropagation()}
+        onClick={handleCardClick}
       >
         <div className="p-6 pt-0">
+          <div className="mb-4">
+            <textarea
+              ref={textareaRef}
+              placeholder={"Type Products/Services here.."}
+              className="w-full bg-transparent border-none outline-none font-manrope font-extrabold text-[24px] leading-[115%] tracking-[0%] text-[#111827] placeholder:text-[#858b9b] placeholder:font-extrabold placeholder:text-[24px] placeholder:leading-[115%] resize-none overflow-hidden"
+              defaultValue={shape.cardTitle || ""}
+              onBlur={(e) => {
+                if (e.target.value !== shape.cardTitle) {
+                  commit({ cardTitle: e.target.value });
+                }
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = "auto";
+                target.style.height = target.scrollHeight + "px";
+              }}
+            />
+          </div>
           {isEmpty ? (
             <div className="flex items-center">
               <button
@@ -179,7 +226,7 @@ export const ProductsService: React.FC<ProductsServiceProps> = (props) => {
                   setEditingBody(true);
                   setShowToolbar(true);
                 }}
-                className="text-purple-600 hover:text-purple-800 text-sm font-medium transition-colors cursor-pointer"
+                className="text-black-600 underline hover:text-purple-800 text-sm font-medium transition-colors cursor-pointer"
               >
                 + add more details
               </button>
@@ -194,6 +241,9 @@ export const ProductsService: React.FC<ProductsServiceProps> = (props) => {
                 if (!hasText) {
                   setEditorState(EditorState.createEmpty());
                   commit({ draftRaw: undefined });
+                } else {
+                  const raw = convertToRaw(contentState);
+                  commit({ draftRaw: JSON.stringify(raw) });
                 }
               }}
               onFocus={() => {
@@ -203,7 +253,7 @@ export const ProductsService: React.FC<ProductsServiceProps> = (props) => {
               editorState={editorState}
               onEditorStateChange={setEditorState}
               toolbar={{
-                options: ["inline", "list", "link", "history"],
+                options: ["inline", "list", "link"],
                 inline: {
                   options: ["bold", "italic", "underline", "strikethrough"],
                 },
@@ -211,7 +261,7 @@ export const ProductsService: React.FC<ProductsServiceProps> = (props) => {
               }}
               //toolbarHidden={!showToolbar}
               toolbarClassName={`border-b px-2 text-[14px]  ${
-                editingBody ? "bg-white" : "bg-transparent"
+                editingBody ? "bg-white" : "bg-transparent opacity-0"
               }`}
               editorClassName={`px-2 py-2 min-h-[120px]  text-[14px]  ${
                 editingBody ? "bg-[#EBF9D3] rounded" : "bg-[#EBF9D3]"

@@ -2,11 +2,11 @@ import { Room } from "@/components/Room";
 import InfiniteCanvas from "@/components/InfiniteCanvas";
 import { QuestionsProvider } from "@/components/CanvasModule/questions/QuestionsProvider";
 
-export default function LaptopExamplePage() {
+export default function EcosystemMapExamples() {
   return (
     <div className="flex flex-col h-full">
       <div className="h-full">
-        <Room roomId={`example-laptop`}>
+        <Room roomId={`example-ecosystem-map`}>
           <QuestionsProvider segments={[]} questions={[]}>
             <InfiniteCanvas
               editable={false}

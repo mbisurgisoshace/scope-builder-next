@@ -51,6 +51,10 @@ export async function generateAnalysisRoom(roomId: string) {
 
   for (const participant of participants) {
     const participantRoomId = participant.ParticipantRoom?.roomId!;
+    await liveblocks.getOrCreateRoom(participantRoomId, {
+      defaultAccesses: [],
+    });
+
     const participantStorage: any = await liveblocks.getStorageDocument(
       participantRoomId
     );
@@ -104,6 +108,8 @@ export async function generateAnalysisRoom(roomId: string) {
           new LiveObject({
             ...question,
             type: "question_answer",
+            width: 780,
+            height: 320,
             question_answers: answersForQuestion,
           })
         );
@@ -128,6 +134,8 @@ export async function generateAnalysisRoom(roomId: string) {
             new LiveObject({
               ...question,
               type: "question_answer",
+              width: 780,
+              height: 320,
               question_answers: answersForQuestion,
             })
           );
