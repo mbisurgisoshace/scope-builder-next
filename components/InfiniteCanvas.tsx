@@ -162,6 +162,8 @@ export default function InfiniteCanvas({
     liveShapesReady,
   } = useRealtimeShapes();
 
+  console.log("shapes", shapes);
+
   const {
     //shapes,
     setShapes,
@@ -550,6 +552,7 @@ export default function InfiniteCanvas({
 
     const files = Array.from(dt.files || []);
     const imageFile = files.find((f) => f.type && f.type.startsWith("image/"));
+    console.log("files", files, imageFile);
 
     // 1) Local image file dropped
     if (imageFile) {

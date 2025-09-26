@@ -32,17 +32,32 @@ import { Calendar } from "@/components/ui/calendar";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
 } from "@/components/ui/select";
 import { SelectValue } from "@radix-ui/react-select";
 import { EditorState, convertFromRaw } from "draft-js";
 import { participantFormSchema } from "@/schemas/participant";
 import { createParticipant } from "@/services/participants";
+import { MultiSelect } from "@/components/ui/multiselect";
 
 interface AddParticipantProps {
   marketSegments: any[];
 }
+
+const ROLE_OPTIONS = [
+  { value: "Customer", label: "Customer" },
+  { value: "End-User", label: "End-User" },
+  { value: "Both Customer & End-User", label: "Both Customer & End-User" },
+  { value: "Payer", label: "Payer" },
+  { value: "Influencer", label: "Influencer" },
+  { value: "Recommender", label: "Recommender" },
+  { value: "Saboteur", label: "Saboteur" },
+  { value: "Additional Decision Maker", label: "Additional Decision Maker" },
+  { value: "Additional Stakeholder", label: "Additional Stakeholder" },
+];
 
 export default function AddParticipant({
   marketSegments,
@@ -119,7 +134,7 @@ export default function AddParticipant({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    {/* <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select a role" />
@@ -142,7 +157,15 @@ export default function AddParticipant({
                           Additional Stakeholder
                         </SelectItem>
                       </SelectContent>
-                    </Select>
+                    </Select> */}
+                    <FormControl>
+                      <MultiSelect
+                        options={ROLE_OPTIONS}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select a role"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -191,7 +214,7 @@ export default function AddParticipant({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {marketSegmentOptions
+                        {/* {marketSegmentOptions
                           ?.filter(
                             (segment: string) => segment.trim().length > 0
                           )
@@ -201,7 +224,45 @@ export default function AddParticipant({
                                 {segment}
                               </SelectItem>
                             );
-                          })}
+                          })} */}
+                        {/* {marketSegments.map((segment) => {
+                          return (
+                            <SelectGroup key={segment.title}>
+                              <SelectLabel>{segment.title}</SelectLabel>
+                              {segment.data
+                                .filter(
+                                  (s: any) => s.cardTitle?.trim().length > 0
+                                )
+                                .map((s: any) => (
+                                  <SelectItem key={s.id} value={s.cardTitle}>
+                                    {s.cardTitle}
+                                  </SelectItem>
+                                ))}
+                            </SelectGroup>
+                          );
+                        })} */}
+                        {marketSegments.length === 0 ? (
+                          <div className="py-2 px-3 text-sm text-gray-500">
+                            No segments available
+                          </div>
+                        ) : (
+                          marketSegments.map((segment) => {
+                            return (
+                              <SelectGroup key={segment.title}>
+                                <SelectLabel>{segment.title}</SelectLabel>
+                                {segment.data
+                                  .filter(
+                                    (s: any) => s.cardTitle?.trim().length > 0
+                                  )
+                                  .map((s: any) => (
+                                    <SelectItem key={s.id} value={s.cardTitle}>
+                                      {s.cardTitle}
+                                    </SelectItem>
+                                  ))}
+                              </SelectGroup>
+                            );
+                          })
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />

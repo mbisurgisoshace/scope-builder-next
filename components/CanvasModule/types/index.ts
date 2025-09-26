@@ -25,6 +25,14 @@ export type CardType =
   | "industry_market_segment_card"
   | "customer_card"
   | "end_user_card"
+  | "both_customer_end_user_card"
+  | "payer_card"
+  | "influencer_card"
+  | "recommender_card"
+  | "saboteur_card"
+  | "additional_decision_maker_card"
+  | "additional_stakeholder_card"
+  | "feature_idea_card"
   | "summary_card"
   | "example_segment_card"
   | "example_industry_market_segment_card"
@@ -39,6 +47,10 @@ export interface Shape {
   y: number;
   id: string;
   color: string;
+  textSize?: number;
+  textColor?: string;
+  textWeight?: "normal" | "bold";
+  textStyle?: "normal" | "italic";
   width: number;
   text?: string;
   height: number;
@@ -47,6 +59,7 @@ export interface Shape {
 
   // interview block
   draftRaw?: string;
+  analysisRaw?: string;
   images?: string[];
 
   // image block

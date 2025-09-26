@@ -38,6 +38,7 @@ export interface ShapeFrameProps {
   resizable?: boolean; // default true
   selectable?: boolean; // default true
   interactive?: boolean;
+  minHeight?: number;
 
   onChangeTags?: (id: string, tagIds: string[]) => void;
   onCommitStyle?: (id: string, patch: Partial<IShape>) => void;
@@ -51,6 +52,7 @@ export const ShapeFrame: React.FC<ShapeFrameProps> = ({
   onResizeStart,
   onConnectorMouseDown,
   children,
+  minHeight = 120,
   showConnectors = true,
   resizable = true,
   selectable = true,
@@ -63,7 +65,9 @@ export const ShapeFrame: React.FC<ShapeFrameProps> = ({
   });
 
   useEffect(() => {
-    onCommitStyle?.(shape.id, { height });
+    if (!resizable) {
+      onCommitStyle?.(shape.id, { height });
+    }
   }, [height]);
 
   const canInteract = interactive;
@@ -213,7 +217,7 @@ export const ShapeFrame: React.FC<ShapeFrameProps> = ({
         width: shape.width,
         // height: shape.height,
         height: "min-content",
-        minHeight: 120,
+        minHeight,
         zIndex: isSelected ? 50 : 45,
         pointerEvents: canInteract ? "auto" : "none",
       }}

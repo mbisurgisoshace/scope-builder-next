@@ -1,6 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
-import { ChevronDown, EllipsisIcon, MicIcon } from "lucide-react";
+import { ChevronDown, EllipsisIcon, MicIcon, ShieldPlus } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { EditorState, convertFromRaw, convertToRaw } from "draft-js";
 
@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { text } from "stream/consumers";
+import { trimTo50 } from "@/lib/utils";
 
 type QuestionProps = Omit<ShapeFrameProps, "children" | "shape"> & {
   shape: IShape;
@@ -78,8 +79,22 @@ export const Question: React.FC<QuestionProps> = (props) => {
     return EditorState.createEmpty();
   }, []);
 
+  // --- DraftJS editor state ---
+  const initialDetailEditorState = useMemo(() => {
+    try {
+      if (shape.metadata.questionDetails) {
+        const raw = JSON.parse(shape.metadata.questionDetails);
+        return EditorState.createWithContent(convertFromRaw(raw));
+      }
+    } catch {}
+    return EditorState.createEmpty();
+  }, []);
+
   const [editorState, setEditorState] =
     useState<EditorState>(initialEditorState);
+  const [detailEditorState, setDetailEditorState] = useState<EditorState>(
+    initialDetailEditorState
+  );
   const [editingBody, setEditingBody] = useState(true);
   const [showToolbar, setShowToolbar] = useState(false);
 
@@ -144,6 +159,7 @@ export const Question: React.FC<QuestionProps> = (props) => {
   const questionsRef = useRef<HTMLDivElement | null>(null);
 
   const [collapsed, setCollapsed] = useState<boolean>(true);
+  const [detailCollapsed, setDetailCollapsed] = useState<boolean>(false);
 
   function outerHeight(el: HTMLElement | null) {
     if (!el) return 0;
@@ -176,6 +192,25 @@ export const Question: React.FC<QuestionProps> = (props) => {
     } else {
       // Going to expand: first show, then measure and grow
       setCollapsed(false);
+      // wait for layout to flush
+      requestAnimationFrame(() => {
+        const dh = outerHeight(questionsRef.current);
+        adjustHeight(dh);
+      });
+    }
+  }
+
+  function toggleDetailCollapsed() {
+    userToggledRef.current = true;
+    // setCollapsed((c) => !c);
+    if (!detailCollapsed) {
+      // Going to collapse: measure BEFORE hiding and shrink now
+      const dh = -outerHeight(questionsRef.current);
+      adjustHeight(dh);
+      setDetailCollapsed(true);
+    } else {
+      // Going to expand: first show, then measure and grow
+      setDetailCollapsed(false);
       // wait for layout to flush
       requestAnimationFrame(() => {
         const dh = outerHeight(questionsRef.current);
@@ -271,8 +306,13 @@ export const Question: React.FC<QuestionProps> = (props) => {
         {shape.questionTags && shape.questionTags.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {shape.questionTags.map((tag) => (
-              <Badge key={tag} className="bg-indigo-100 text-indigo-800">
-                {tag}
+              <Badge
+                key={tag}
+                className="bg-indigo-100 text-black max-w-[190px]"
+              >
+                <span className="block whitespace-normal break-words leading-tight">
+                  {tag}
+                </span>
               </Badge>
             ))}
           </div>
@@ -312,6 +352,58 @@ export const Question: React.FC<QuestionProps> = (props) => {
             />
           )}
         </h2>
+
+        {shape.metadata?.questionId && (
+          <div className="pt-4">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleDetailCollapsed();
+              }}
+              data-nodrag="true"
+              className="w-full flex items-center justify-between text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform ${
+                    detailCollapsed ? "-rotate-90" : "rotate-0"
+                  }`}
+                />
+                Question details
+                {/* firtQuestionsOrder.length + secondQuestionsOrder.length + 1 */}
+              </span>
+              {/* <span className="ml-2 text-gray-400">
+              ({answeredCount}/{fiQuestions.length})
+            </span> */}
+            </button>
+          </div>
+        )}
+
+        {shape.metadata?.questionDetails && !detailCollapsed && (
+          <RteEditor
+            editorState={detailEditorState}
+            //onEditorStateChange={setEditorState}
+            toolbar={{
+              options: ["inline", "list", "link"],
+              inline: {
+                options: ["bold", "italic", "underline", "strikethrough"],
+              },
+              list: { options: ["unordered", "ordered"] },
+            }}
+            //toolbarHidden={!showToolbar}
+            toolbarHidden
+            toolbarClassName={`border-b px-2 text-[14px] pb-0 mb-0 ${
+              editingBody ? "bg-white" : "bg-transparent opacity-0"
+            }`}
+            editorClassName={`px-2 pt-0 pb-2 min-h-[120px] text-[14px] mt-0 font-manrope  font-medium text-[#2E3545] ${
+              editingBody ? "bg-[#F0E2FF] rounded" : "bg-transparent"
+            }`}
+            wrapperClassName="rdw-editor-wrapper"
+            placeholder="Type your text here..."
+          />
+        )}
+
         {/* Body */}
         {isEmpty && !editingBody && (
           <div className="mt-4 p-4 bg-white border border-red-200 rounded-lg">
@@ -427,9 +519,9 @@ export const Question: React.FC<QuestionProps> = (props) => {
             <div className="border-t border-gray-300 my-4" />
 
             <h3 className="font-semibold text-sm text-gray-800 mb-3">
-              (2) If relevant, please pick from your Value Proposition assumptions.
-              If you have not added any on the Value Prop canvas yet, they will
-              show up here as empty for now.
+              (2) If relevant, please pick from your Value Proposition
+              assumptions. If you have not added any on the Value Prop canvas
+              yet, they will show up here as empty for now.
             </h3>
             {firtQuestionsOrder.map(({ key, label }) => {
               const valueProp = formattedValuePropData[key];
@@ -446,7 +538,14 @@ export const Question: React.FC<QuestionProps> = (props) => {
                       const editor = EditorState.createWithContent(
                         convertFromRaw(raw)
                       );
-                      const text = editor.getCurrentContent().getPlainText();
+                      //const text = editor.getCurrentContent().getPlainText();
+                      const largeText = editor
+                        .getCurrentContent()
+                        .getPlainText();
+
+                      const text = `${item.cardTitle} ${editor
+                        .getCurrentContent()
+                        .getPlainText()}`;
 
                       if (text.trim().length === 0) return null;
 
@@ -463,7 +562,13 @@ export const Question: React.FC<QuestionProps> = (props) => {
                             }}
                           />
                           <Label className="text-sm text-gray-700">
-                            {text}
+                            {/* {text} */}
+                            {item.cardTitle && (
+                              <span className="font-bold">
+                                {item.cardTitle}
+                              </span>
+                            )}
+                            {trimTo50(largeText)}
                           </Label>
                         </div>
                       );
