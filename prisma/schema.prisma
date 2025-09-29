@@ -200,3 +200,13 @@ model OrgTask {
   @@unique([org_id, task_id])
   @@map("org_tasks")
 }
+
+model KanbanBoardCategory {
+  id        Int      @id @default(autoincrement())
+  room_id   String
+  name      String
+  order     Int      @default(0)
+  shape_ids String[]
+
+  @@map("kanban_board_categories")
+}

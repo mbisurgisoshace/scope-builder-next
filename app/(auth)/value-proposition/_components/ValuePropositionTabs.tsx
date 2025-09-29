@@ -12,7 +12,7 @@ import {
   renameWorkspaceRoom,
 } from "@/services/workspaces";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import KanbanView from "@/components/KanbanModule/KanbanView";
+import ValuePropKanbanView from "@/components/KanbanModule/ValuePropKanbanView";
 
 export type SimpleTab = { id: string; title: string; roomId: string };
 
@@ -102,7 +102,7 @@ export default function ValuePropositionTabsView({ rooms }: { rooms: any[] }) {
                   value="kanban-view"
                   className="w-full h-full flex overflow-hidden"
                 >
-                  <KanbanView
+                  <ValuePropKanbanView
                     kanbanBoards={[
                       { label: "Jobs to be Done", key: "jobs_to_be_done_card" },
                       { label: "Pains", key: "pains_card" },
