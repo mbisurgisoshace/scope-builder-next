@@ -33,7 +33,7 @@ export async function getParticipants() {
 
   const participants = await prisma.participant.findMany({
     where: { org_id: orgId },
-    orderBy: [{ scheduled_date: "desc" }, { name: "asc" }],
+    orderBy: [{ scheduled_date: "asc" }, { name: "asc" }],
   });
 
   return participants;
@@ -92,6 +92,18 @@ export async function markParticipantAsComplete(participantId: string) {
   const updatedParticipant = await prisma.participant.update({
     where: { id: participantId, org_id: orgId },
     data: { status: "complete" },
+  });
+
+  revalidatePath(`/participants`);
+}
+
+export async function deleteParticipant(participantId: string) {
+  const { orgId, userId } = await auth();
+
+  if (!orgId || !userId) return redirect("/sign-in");
+
+  await prisma.participant.delete({
+    where: { id: participantId, org_id: orgId },
   });
 
   revalidatePath(`/participants`);

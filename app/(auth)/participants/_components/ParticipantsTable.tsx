@@ -39,12 +39,6 @@ import { useEffect, useState } from "react";
 import { columns } from "./columns";
 
 export default function ParticipantsTable({ data }: { data: any[] }) {
-  // const [tableData, setTableData] = useState(data);
-
-  // useEffect(() => {
-  //   setTableData(data);
-  // }, [data.length]);
-
   const table = useReactTable({
     data,
     columns: columns,
@@ -83,6 +77,11 @@ export default function ParticipantsTable({ data }: { data: any[] }) {
                 {row.getVisibleCells().map((cell) => (
                   <TableCell
                     key={cell.id}
+                    style={{
+                      maxWidth: cell.column.columnDef.maxSize,
+                      width: cell.column.columnDef.size,
+                      minWidth: cell.column.columnDef.minSize,
+                    }}
                     className="text-sm font-medium text-[#111827]"
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}

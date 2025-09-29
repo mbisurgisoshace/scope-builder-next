@@ -7,6 +7,16 @@ import { ColumnDef } from "@tanstack/react-table";
 
 export const columns: ColumnDef<any>[] = [
   {
+    id: "actions",
+    cell: ({ row }) => {
+      const participant = row.original;
+
+      return (
+        <ParticipantTableActions participant={participant as Participant} />
+      );
+    },
+  },
+  {
     accessorKey: "name",
     header: "Participant",
     cell: ({ row }) => {
@@ -22,65 +32,6 @@ export const columns: ColumnDef<any>[] = [
         </div>
       );
     },
-  },
-  {
-    accessorKey: "role",
-    header: "Role",
-    cell: ({ row }) => {
-      const role = row.getValue("role") as "user" | "customer";
-
-      return (
-        <div className="capitalize flex flex-row gap-1">
-          {role.split(",").map((r) => (
-            <Badge
-              key={r}
-              className={`${
-                role === "customer"
-                  ? "bg-[#F4F0FF] text-[#6A35FF]"
-                  : "bg-[#F4F0FF] text-[#6A35FF]"
-              } text-[10px] font-semibold h-6`}
-            >
-              {r}
-            </Badge>
-          ))}
-        </div>
-      );
-    },
-  },
-  {
-    accessorKey: "contact_info",
-    header: "Contact Info",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("contact_info")}</div>
-    ),
-  },
-  {
-    accessorKey: "rationale",
-    header: "Rationale",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("rationale")}</div>
-    ),
-  },
-  {
-    accessorKey: "blocking_issues",
-    header: "Blocking Issues",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("blocking_issues")}</div>
-    ),
-  },
-  {
-    accessorKey: "hypothesis_to_validate",
-    header: "Hypothesis to Validate",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("hypothesis_to_validate")}</div>
-    ),
-  },
-  {
-    accessorKey: "learnings",
-    header: "Learnings",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.getValue("learnings")}</div>
-    ),
   },
   {
     accessorKey: "scheduled_date",
@@ -119,13 +70,87 @@ export const columns: ColumnDef<any>[] = [
     },
   },
   {
-    id: "actions",
+    accessorKey: "role",
+    header: "Role",
     cell: ({ row }) => {
-      const participant = row.original;
+      const role = row.getValue("role") as "user" | "customer";
 
       return (
-        <ParticipantTableActions participant={participant as Participant} />
+        <div className="capitalize flex flex-row gap-1">
+          {role.split(",").map((r) => (
+            <Badge
+              key={r}
+              className={`${
+                role === "customer"
+                  ? "bg-[#F4F0FF] text-[#6A35FF]"
+                  : "bg-[#F4F0FF] text-[#6A35FF]"
+              } text-[10px] font-semibold h-6`}
+            >
+              {r}
+            </Badge>
+          ))}
+        </div>
       );
     },
+  },
+  {
+    accessorKey: "contact_info",
+    header: "Contact Info",
+    cell: ({ row }) => (
+      <div className="capitalize whitespace-normal">
+        {row.getValue("contact_info")}
+      </div>
+    ),
+    size: 350,
+    maxSize: 350,
+    minSize: 350,
+  },
+  {
+    accessorKey: "rationale",
+    header: "Rationale",
+    cell: ({ row }) => (
+      <div className="capitalize whitespace-normal">
+        {row.getValue("rationale")}
+      </div>
+    ),
+    size: 350,
+    maxSize: 350,
+    minSize: 350,
+  },
+  {
+    accessorKey: "blocking_issues",
+    header: "Blocking Issues",
+    cell: ({ row }) => (
+      <div className="capitalize whitespace-normal">
+        {row.getValue("blocking_issues")}
+      </div>
+    ),
+    size: 350,
+    maxSize: 350,
+    minSize: 350,
+  },
+  {
+    accessorKey: "hypothesis_to_validate",
+    header: "Hypothesis to Validate",
+    cell: ({ row }) => (
+      <div className="capitalize whitespace-normal">
+        {row.getValue("hypothesis_to_validate")}
+      </div>
+    ),
+    size: 350,
+    maxSize: 350,
+    minSize: 350,
+  },
+  {
+    accessorKey: "learnings",
+    header: "Learnings",
+    cell: ({ row }) => (
+      <div className="capitalize whitespace-normal">
+        {row.getValue("learnings")}
+      </div>
+    ),
+    size: 350,
+    maxSize: 350,
+    minSize: 350,
   },
 ];
