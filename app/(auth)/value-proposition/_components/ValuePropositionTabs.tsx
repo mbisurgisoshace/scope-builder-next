@@ -19,8 +19,13 @@ export type SimpleTab = { id: string; title: string; roomId: string };
 export default function ValuePropositionTabsView({ rooms }: { rooms: any[] }) {
   const [tabs, setTabs] = useState(rooms);
   const [activeRoomId, setActiveRoom] = useState<string | null>(
-    rooms[0].room_id
+    rooms[rooms.length - 1].room_id
   );
+
+  const isLatestVersion = (activeRoomId: string) => {
+    const latestRoom = rooms[rooms.length - 1];
+    return latestRoom.room_id === activeRoomId;
+  };
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-50">
@@ -49,7 +54,7 @@ export default function ValuePropositionTabsView({ rooms }: { rooms: any[] }) {
               return (
                 <button
                   key={t.id}
-                  onClick={() => setActiveRoom(t.roomId)}
+                  onClick={() => setActiveRoom(t.room_id)}
                   className="font-semibold cursor-pointer text-[10px] text-[#111827]  opacity-60 px-3.5 h-6 rounded-t-sm flex items-center"
                 >
                   {`Version ${t.version_number}`}
@@ -77,40 +82,8 @@ export default function ValuePropositionTabsView({ rooms }: { rooms: any[] }) {
                   interview: false,
                   table: false,
                 }}
-              /> */}
-              <Tabs defaultValue="canvas-view" className="w-full h-full">
-                <TabsList className="ml-1 mt-2">
-                  <TabsTrigger value="canvas-view">Canvas View</TabsTrigger>
-                  <TabsTrigger value="kanban-view">Kanban View</TabsTrigger>
-                </TabsList>
-                <TabsContent value="canvas-view" className="w-full h-full">
-                  <InfiniteCanvas
-                    toolbarOptions={{
-                      answer: false,
-                      question: false,
-                      card: true,
-                      text: true,
-                      rectangle: true,
-                      ellipse: true,
-                      feature: false,
-                      interview: false,
-                      table: false,
-                    }}
-                  />
-                </TabsContent>
-                <TabsContent
-                  value="kanban-view"
-                  className="w-full h-full flex overflow-hidden"
-                >
-                  <ValuePropKanbanView
-                    kanbanBoards={[
-                      { label: "Jobs to be Done", key: "jobs_to_be_done_card" },
-                      { label: "Pains", key: "pains_card" },
-                      { label: "Gains", key: "gains_card" },
-                    ]}
-                  />
-                </TabsContent>
-              </Tabs>
+                editable={isLatestVersion(activeRoomId)}
+              />
             </Room>
           </div>
         ) : (

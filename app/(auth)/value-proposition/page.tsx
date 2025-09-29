@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import {
+  createValuePropositionVersion,
   getSegmentsPropData,
   getValuePropositionVersions,
 } from "@/services/valueProposition";
@@ -17,15 +18,8 @@ export default async function ValuePropositionPage() {
   const versions = await getValuePropositionVersions();
   const segmentsPropData = await getSegmentsPropData();
 
-  if (versions.length === 0) {
-    const newVersion = await prisma.valuePropositionVersion.create({
-      data: {
-        org_id: orgId,
-        room_id: uuidv4(),
-      },
-    });
-    versions.push(newVersion);
-  }
+  const version = await createValuePropositionVersion();
+  if (version) versions.push(version);
 
   const questions = await prisma.cardQuestions.findMany({});
 
