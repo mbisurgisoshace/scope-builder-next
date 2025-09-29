@@ -18,7 +18,7 @@ export async function getValuePropositionVersions() {
         org_id: orgId,
       },
       orderBy: {
-        created_at: "asc",
+        version_number: "asc",
       },
     });
 
@@ -45,6 +45,7 @@ export async function createValuePropositionVersion() {
       data: {
         org_id: orgId,
         room_id: uuidv4(),
+        version_number: 1,
       },
     });
   }
@@ -62,6 +63,21 @@ export async function createValuePropositionVersion() {
       },
     });
 
+    const latestVersionStorage = await liveblocks.getStorageDocument(
+      latestVersion?.room_id!
+    );
+
+    const newVersionRoomId = uuidv4();
+
+    await liveblocks.getOrCreateRoom(newVersionRoomId, {
+      defaultAccesses: [],
+    });
+
+    await liveblocks.initializeStorageDocument(
+      newVersionRoomId,
+      latestVersionStorage
+    );
+
     if (
       versions < 2 &&
       participantsWithCompleteStatus > 4 &&
@@ -70,7 +86,8 @@ export async function createValuePropositionVersion() {
       version = await prisma.valuePropositionVersion.create({
         data: {
           org_id: orgId,
-          room_id: uuidv4(),
+          room_id: newVersionRoomId,
+          version_number: 2,
         },
       });
       await prisma.valuePropositionVersion.update({
@@ -87,7 +104,8 @@ export async function createValuePropositionVersion() {
       version = await prisma.valuePropositionVersion.create({
         data: {
           org_id: orgId,
-          room_id: uuidv4(),
+          room_id: newVersionRoomId,
+          version_number: 3,
         },
       });
       await prisma.valuePropositionVersion.update({
@@ -100,7 +118,8 @@ export async function createValuePropositionVersion() {
       version = await prisma.valuePropositionVersion.create({
         data: {
           org_id: orgId,
-          room_id: uuidv4(),
+          room_id: newVersionRoomId,
+          version_number: 4,
         },
       });
       await prisma.valuePropositionVersion.update({
