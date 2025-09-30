@@ -65,12 +65,11 @@ export default function ValuePropositionTabsView({ rooms }: { rooms: any[] }) {
         </div>
       </div>
 
-      {/* Content area fills the rest of the viewport */}
       <div className="relative flex-1 w-full h-full">
         {activeRoomId ? (
           <div className="absolute inset-0 w-full h-full">
             <Room roomId={activeRoomId}>
-              {/* <InfiniteCanvas
+              <InfiniteCanvas
                 toolbarOptions={{
                   answer: false,
                   question: false,
