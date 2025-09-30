@@ -8,12 +8,16 @@ import { Button } from "../ui/button";
 import { CardType, Shape } from "../CanvasModule/types";
 import {
   DndContext,
-  closestCenter,
+  DragEndEvent,
+  DragMoveEvent,
+  DragStartEvent,
   KeyboardSensor,
   PointerSensor,
+  UniqueIdentifier,
   useSensor,
   useSensors,
-  DragEndEvent,
+  closestCorners,
+  DragOverlay,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -25,12 +29,15 @@ import {
 import { SortableItem } from "./SortableItem";
 import { useCallback, useEffect, useState } from "react";
 import { KanbanBoardCategory } from "@/lib/generated/prisma";
+import Board from "./Board";
+import BoardItem from "./BoardItem";
 
 interface KanbanViewProps {
   kanbanBoards: KanbanBoardCategory[];
 }
 
 export default function KanbanView({ kanbanBoards }: KanbanViewProps) {
+  const [containers, setContainers] = useState<KanbanBoardCategory[]>([]);
   const { shapes, addShape, updateShape } = useRealtimeShapes();
 
   useEffect(() => {}, []);
@@ -95,94 +102,270 @@ export default function KanbanView({ kanbanBoards }: KanbanViewProps) {
     reorderWithinBoard(boardKey, String(active.id), String(over.id));
   };
 
-  return (
-    <div className="flex-1 min-h-0 overflow-hidden">
-      <div className="flex w-full h-full gap-4 px-2 pb-2">
-        {kanbanBoards.map((board) => {
-          const boardItems = getBoardItems(board);
-          const ids = boardItems.map((s) => s.id);
+  function handleDragStart(event: DragStartEvent) {
+    const { active } = event;
+    const { id } = active;
+    //setActiveId(id);
+  }
 
-          return (
-            <DndContext
-              key={board.id}
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              //onDragEnd={handleDragEnd}
-              onDragEnd={makeHandleDragEnd(board.id.toString())}
+  const handleDragMove = (event: DragMoveEvent) => {
+    const { active, over } = event;
+
+    // Handle Items Sorting
+    if (
+      active.id.toString().includes("item") &&
+      over?.id.toString().includes("item") &&
+      active &&
+      over &&
+      active.id !== over.id
+    ) {
+      // Find the active container and over container
+      // const activeContainer = findValueOfItems(active.id, "item");
+      // const overContainer = findValueOfItems(over.id, "item");
+      // // If the active or over container is not found, return
+      // if (!activeContainer || !overContainer) return;
+      // // Find the index of the active and over container
+      // const activeContainerIndex = containers.findIndex(
+      //   (container) => container.id === activeContainer.id
+      // );
+      // const overContainerIndex = containers.findIndex(
+      //   (container) => container.id === overContainer.id
+      // );
+      // // Find the index of the active and over item
+      // const activeitemIndex = activeContainer.items.findIndex(
+      //   (item) => item.id === active.id
+      // );
+      // const overitemIndex = overContainer.items.findIndex(
+      //   (item) => item.id === over.id
+      // );
+      // // In the same container
+      // if (activeContainerIndex === overContainerIndex) {
+      //   let newItems = [...containers];
+      //   newItems[activeContainerIndex].items = arrayMove(
+      //     newItems[activeContainerIndex].items,
+      //     activeitemIndex,
+      //     overitemIndex
+      //   );
+      //   setContainers(newItems);
+      // } else {
+      //   // In different containers
+      //   let newItems = [...containers];
+      //   const [removeditem] = newItems[activeContainerIndex].items.splice(
+      //     activeitemIndex,
+      //     1
+      //   );
+      //   newItems[overContainerIndex].items.splice(
+      //     overitemIndex,
+      //     0,
+      //     removeditem
+      //   );
+      //   setContainers(newItems);
+      // }
+    }
+
+    // Handling Item Drop Into a Container
+    if (
+      active.id.toString().includes("item") &&
+      over?.id.toString().includes("container") &&
+      active &&
+      over &&
+      active.id !== over.id
+    ) {
+      // Find the active and over container
+      // const activeContainer = findValueOfItems(active.id, "item");
+      // const overContainer = findValueOfItems(over.id, "container");
+      // // If the active or over container is not found, return
+      // if (!activeContainer || !overContainer) return;
+      // // Find the index of the active and over container
+      // const activeContainerIndex = containers.findIndex(
+      //   (container) => container.id === activeContainer.id
+      // );
+      // const overContainerIndex = containers.findIndex(
+      //   (container) => container.id === overContainer.id
+      // );
+      // // Find the index of the active and over item
+      // const activeitemIndex = activeContainer.items.findIndex(
+      //   (item) => item.id === active.id
+      // );
+      // // Remove the active item from the active container and add it to the over container
+      // let newItems = [...containers];
+      // const [removeditem] = newItems[activeContainerIndex].items.splice(
+      //   activeitemIndex,
+      //   1
+      // );
+      // newItems[overContainerIndex].items.push(removeditem);
+      // setContainers(newItems);
+    }
+  };
+
+  // This is the function that handles the sorting of the containers and items when the user is done dragging.
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    // Handling Container Sorting
+    if (
+      active.id.toString().includes("container") &&
+      over?.id.toString().includes("container") &&
+      active &&
+      over &&
+      active.id !== over.id
+    ) {
+      // Find the index of the active and over container
+      const activeContainerIndex = containers.findIndex(
+        (container) => container.id === active.id
+      );
+      const overContainerIndex = containers.findIndex(
+        (container) => container.id === over.id
+      );
+      // Swap the active and over container
+      let newItems = [...containers];
+      newItems = arrayMove(newItems, activeContainerIndex, overContainerIndex);
+      setContainers(newItems);
+    }
+
+    function findValueOfItems(id: UniqueIdentifier | undefined, type: string) {
+      if (type === "container") {
+        return containers.find((item) => item.id === id);
+      }
+      if (type === "item") {
+        // return containers.find((container) =>
+        //   container.items.find((item) => item.id === id)
+        // );
+      }
+    }
+
+    // Handling item Sorting
+    if (
+      active.id.toString().includes("item") &&
+      over?.id.toString().includes("item") &&
+      active &&
+      over &&
+      active.id !== over.id
+    ) {
+      // Find the active and over container
+      const activeContainer = findValueOfItems(active.id, "item");
+      const overContainer = findValueOfItems(over.id, "item");
+
+      // If the active or over container is not found, return
+      if (!activeContainer || !overContainer) return;
+      // Find the index of the active and over container
+      const activeContainerIndex = containers.findIndex(
+        (container) => container.id === activeContainer.id
+      );
+      const overContainerIndex = containers.findIndex(
+        (container) => container.id === overContainer.id
+      );
+      // Find the index of the active and over item
+      // const activeitemIndex = activeContainer.items.findIndex(
+      //   (item) => item.id === active.id
+      // );
+      // const overitemIndex = overContainer.items.findIndex(
+      //   (item) => item.id === over.id
+      // );
+
+      // In the same container
+      // if (activeContainerIndex === overContainerIndex) {
+      //   let newItems = [...containers];
+      //   newItems[activeContainerIndex].items = arrayMove(
+      //     newItems[activeContainerIndex].items,
+      //     activeitemIndex,
+      //     overitemIndex
+      //   );
+      //   setContainers(newItems);
+      // } else {
+      //   // In different containers
+      //   let newItems = [...containers];
+      //   const [removeditem] = newItems[activeContainerIndex].items.splice(
+      //     activeitemIndex,
+      //     1
+      //   );
+      //   newItems[overContainerIndex].items.splice(
+      //     overitemIndex,
+      //     0,
+      //     removeditem
+      //   );
+      //   setContainers(newItems);
+      // }
+    }
+    // Handling item dropping into Container
+    if (
+      active.id.toString().includes("item") &&
+      over?.id.toString().includes("container") &&
+      active &&
+      over &&
+      active.id !== over.id
+    ) {
+      // Find the active and over container
+      //   const activeContainer = findValueOfItems(active.id, "item");
+      //   const overContainer = findValueOfItems(over.id, "container");
+      //   // If the active or over container is not found, return
+      //   if (!activeContainer || !overContainer) return;
+      //   // Find the index of the active and over container
+      //   const activeContainerIndex = containers.findIndex(
+      //     (container) => container.id === activeContainer.id
+      //   );
+      //   const overContainerIndex = containers.findIndex(
+      //     (container) => container.id === overContainer.id
+      //   );
+      //   // Find the index of the active and over item
+      //   const activeitemIndex = activeContainer.items.findIndex(
+      //     (item) => item.id === active.id
+      //   );
+      //   let newItems = [...containers];
+      //   const [removeditem] = newItems[activeContainerIndex].items.splice(
+      //     activeitemIndex,
+      //     1
+      //   );
+      //   newItems[overContainerIndex].items.push(removeditem);
+      //   setContainers(newItems);
+      // }
+      // setActiveId(null);
+    }
+
+    return (
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="flex w-full h-full gap-4 px-2 pb-2">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            // onDragStart={handleDragStart}
+            // onDragMove={handleDragMove}
+            // onDragEnd={handleDragEnd}
+          >
+            {/* @ts-ignore */}
+            <SortableContext
+              items={kanbanBoards.map(
+                (b) => b.id.toString() as UniqueIdentifier
+              )}
             >
-              <div
-                key={board.id}
-                className="w-[440px] bg-white p-1 rounded-lg shadow-md flex min-h-0 flex-col"
-              >
-                <h2 className="px-2 text-xl text-muted-foreground mb-2 flex items-center justify-between">
-                  {board.name}
-                  <Button
-                    size={"icon"}
-                    variant={"ghost"}
-                    //onClick={() => add(board.id)}
-                    className="cursor-pointer"
+              {kanbanBoards.map((board) => {
+                const boardItems = getBoardItems(board);
+                const ids = boardItems.map((s) => s.id);
+                return (
+                  <Board
+                    id={board.id}
+                    title={board.name}
+                    key={board.id}
+                    // onAddItem={() => {
+                    //   setShowAddItemModal(true);
+                    //   setCurrentContainerId(container.id);
+                    // }}
                   >
-                    <PlusCircleIcon size={18} className="text-[#6A35FF]" />
-                  </Button>
-                </h2>
-                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-1 space-y-2">
-                  {/* @ts-ignore */}
-                  <SortableContext
-                    items={ids}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {boardItems.map((shape) => {
-                      const Component = shapeRegistry[shape.type];
-                      if (!Component) return null;
-                      return (
-                        <SortableItem key={shape.id} id={shape.id}>
-                          <Component
-                            key={shape.id}
-                            shape={shape}
-                            isSelected={false}
-                            selectedCount={0}
-                            onResizeStart={() => {}}
-                            onMouseDown={() => {}}
-                            kanbanView={true}
-                            //@ts-ignore
-                            onCommitText={(id, text) =>
-                              updateShape(id, (s) => ({
-                                ...s,
-                                // keep empty strings if user clears the text; Liveblocks adapter already null-coalesces
-                                text,
-                              }))
-                            }
-                            //@ts-ignore
-                            onCommitInterview={(id, patch) =>
-                              updateShape(id, (s) => ({ ...s, ...patch }))
-                            }
-                            //@ts-ignore
-                            onCommitTable={(id, patch) =>
-                              updateShape(id, (s) => ({ ...s, ...patch }))
-                            }
-                            //@ts-ignore
-                            onChangeTags={(id, names) => {
-                              updateShape(id, (s) => ({ ...s, tags: names }));
-                            }}
-                            //@ts-ignore
-                            onCommitStyle={(id, patch) => {
-                              updateShape(id, (s) => ({ ...s, ...patch })); // your existing immutable updater
-                            }}
-                          />
-                        </SortableItem>
-                      );
-                    })}
-                  </SortableContext>
-                </div>
-              </div>
-            </DndContext>
-          );
-        })}
-        <Button>
-          <PlusIcon className="mr-2" />
-          Add new board
-        </Button>
+                    {/* @ts-ignore */}
+                    <SortableContext items={ids}>
+                      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-1 space-y-2">
+                        {boardItems.map((shape) => (
+                          <BoardItem key={shape.id} shape={shape} />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </Board>
+                );
+              })}
+            </SortableContext>
+          </DndContext>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 }
