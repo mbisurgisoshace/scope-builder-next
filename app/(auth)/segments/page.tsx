@@ -7,7 +7,7 @@ import {
 } from "@/services/rooms";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KanbanView from "@/components/KanbanModule/KanbanView";
-import getRoomKanbanBoards from "@/services/kanbanBoards";
+import { getRoomKanbanBoards } from "@/services/kanbanBoards";
 
 export default async function SegmentsPage() {
   const { orgId } = await auth();

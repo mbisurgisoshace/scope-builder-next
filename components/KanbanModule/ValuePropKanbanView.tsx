@@ -162,41 +162,6 @@ export default function ValuePropKanbanView({ kanbanBoards }: KanbanViewProps) {
                             }}
                           />
                         </SortableItem>
-                        // <div className="mb-2">
-                        //   <Component
-                        //     key={shape.id}
-                        //     shape={shape}
-                        //     isSelected={false}
-                        //     selectedCount={0}
-                        //     onResizeStart={() => {}}
-                        //     onMouseDown={() => {}}
-                        //     kanbanView={true}
-                        //     //@ts-ignore
-                        //     onCommitText={(id, text) =>
-                        //       updateShape(id, (s) => ({
-                        //         ...s,
-                        //         // keep empty strings if user clears the text; Liveblocks adapter already null-coalesces
-                        //         text,
-                        //       }))
-                        //     }
-                        //     //@ts-ignore
-                        //     onCommitInterview={(id, patch) =>
-                        //       updateShape(id, (s) => ({ ...s, ...patch }))
-                        //     }
-                        //     //@ts-ignore
-                        //     onCommitTable={(id, patch) =>
-                        //       updateShape(id, (s) => ({ ...s, ...patch }))
-                        //     }
-                        //     //@ts-ignore
-                        //     onChangeTags={(id, names) => {
-                        //       updateShape(id, (s) => ({ ...s, tags: names }));
-                        //     }}
-                        //     //@ts-ignore
-                        //     onCommitStyle={(id, patch) => {
-                        //       updateShape(id, (s) => ({ ...s, ...patch })); // your existing immutable updater
-                        //     }}
-                        //   />
-                        // </div>
                       );
                     })}
                   </SortableContext>
