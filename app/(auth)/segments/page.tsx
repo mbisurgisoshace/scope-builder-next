@@ -8,6 +8,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import KanbanView from "@/components/KanbanModule/KanbanView";
 import { getRoomKanbanBoards } from "@/services/kanbanBoards";
+import KanbanDemo from "@/components/KanbanModule/KanbanDemo";
 
 export default async function SegmentsPage() {
   const { orgId } = await auth();
@@ -59,7 +60,8 @@ export default async function SegmentsPage() {
               value="kanban-view"
               className="w-full h-full flex overflow-hidden"
             >
-              <KanbanView kanbanBoards={kanbanBoards} />
+              {/* <KanbanView kanbanBoards={kanbanBoards} /> */}
+              <KanbanDemo kanbanBoards={kanbanBoards} />
             </TabsContent>
           </Tabs>
         </Room>

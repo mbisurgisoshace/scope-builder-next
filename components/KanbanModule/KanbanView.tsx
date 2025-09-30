@@ -178,6 +178,10 @@ export default function KanbanView({ kanbanBoards }: KanbanViewProps) {
             </DndContext>
           );
         })}
+        <Button>
+          <PlusIcon className="mr-2" />
+          Add new board
+        </Button>
       </div>
     </div>
   );
