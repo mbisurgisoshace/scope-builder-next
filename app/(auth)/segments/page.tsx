@@ -6,9 +6,9 @@ import {
   initializeExampleCards,
 } from "@/services/rooms";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import KanbanView from "@/components/KanbanModule/KanbanView";
 import { getRoomKanbanBoards } from "@/services/kanbanBoards";
 import KanbanDemo from "@/components/KanbanModule/KanbanDemo";
+import KanbanView from "@/components/KanbanModule/KanbanView";
 
 export default async function SegmentsPage() {
   const { orgId } = await auth();

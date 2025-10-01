@@ -27,7 +27,7 @@ import {
 } from "@dnd-kit/sortable";
 
 import { SortableItem } from "./SortableItem";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { KanbanBoardCategory } from "@/lib/generated/prisma";
 import Board from "./Board";
 import BoardItem from "./BoardItem";
@@ -37,8 +37,20 @@ interface KanbanViewProps {
 }
 
 export default function KanbanView({ kanbanBoards }: KanbanViewProps) {
-  const [containers, setContainers] = useState<KanbanBoardCategory[]>([]);
   const { shapes, addShape, updateShape } = useRealtimeShapes();
+  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+  const [containers, setContainers] = useState<
+    (KanbanBoardCategory & { shapes: Shape[] })[]
+  >(
+    kanbanBoards.map((b) => {
+      const boardShapes = [];
+      for (const id of b.shape_ids) {
+        const shape = shapes.find((s) => s.id === id);
+        if (shape) boardShapes.push(shape);
+      }
+      return { ...b, shapes: boardShapes };
+    })
+  );
 
   useEffect(() => {}, []);
 
@@ -69,30 +81,57 @@ export default function KanbanView({ kanbanBoards }: KanbanViewProps) {
     [shapes]
   );
 
+  const findBoardKeyForShape = useCallback(
+    (shapeId: string): string | null => {
+      for (const b of kanbanBoards) {
+        if (b.shape_ids.includes(shapeId)) return String(b.id);
+      }
+      return null;
+    },
+    [kanbanBoards]
+  );
+
+  const boardIdSet = useMemo(
+    () => new Set(kanbanBoards.map((b) => String(b.id))),
+    [kanbanBoards]
+  );
+  const itemIdSet = useMemo(
+    () => new Set(kanbanBoards.flatMap((b) => b.shape_ids.map(String))),
+    [kanbanBoards]
+  );
+  const isBoardId = useCallback(
+    (id?: UniqueIdentifier | null) => !!id && boardIdSet.has(String(id)),
+    [boardIdSet]
+  );
+  const isItemId = useCallback(
+    (id?: UniqueIdentifier | null) => !!id && itemIdSet.has(String(id)),
+    [itemIdSet]
+  );
+
   // Reorder within a single board: rewrite kanbanOrder sequentially (robust & smooth)
   const reorderWithinBoard = useCallback(
     (boardKey: string, fromId: string, toId: string) => {
-      const board = kanbanBoards.find((b) => b.id.toString() === boardKey);
-      const boardItems = getBoardItems(board!);
-      const ids = boardItems.map((s) => s.id);
+      const board = kanbanBoards.find((b) => String(b.id) === boardKey);
+      if (!board) return;
 
-      const oldIndex = ids.indexOf(fromId);
-      const newIndex = ids.indexOf(toId);
-      if (oldIndex === -1 || newIndex === -1) return;
+      const ordered = getBoardItems(board);
+      const ids = ordered.map((s) => s.id);
 
-      const newIds = arrayMove(ids, oldIndex, newIndex);
+      const fromIdx = ids.indexOf(fromId);
+      const toIdx = ids.indexOf(toId);
+      if (fromIdx === -1 || toIdx === -1) return;
 
-      // write back normalized order (index * 1000)
-      newIds.forEach((id, idx) => {
-        //const target = shapes.find((s) => s.id === id);
-        const target = boardItems.find((s) => s.id === id);
+      const moved = arrayMove(ids, fromIdx, toIdx);
+
+      // Normalizamos kanbanOrder (espaciado 1000)
+      moved.forEach((id, idx) => {
         const nextOrder = (idx + 1) * 1000;
-
-        if (!target || target.kanbanOrder === nextOrder) return;
+        const current = ordered.find((s) => s.id === id);
+        if (!current || current.kanbanOrder === nextOrder) return;
         updateShape(id, (s) => ({ ...s, kanbanOrder: nextOrder }));
       });
     },
-    [getBoardItems, updateShape]
+    [kanbanBoards, getBoardItems, updateShape]
   );
 
   // Drag end handler (per-board because each board has its own DndContext)
@@ -105,7 +144,7 @@ export default function KanbanView({ kanbanBoards }: KanbanViewProps) {
   function handleDragStart(event: DragStartEvent) {
     const { active } = event;
     const { id } = active;
-    //setActiveId(id);
+    setActiveId(id);
   }
 
   const handleDragMove = (event: DragMoveEvent) => {
@@ -228,46 +267,57 @@ export default function KanbanView({ kanbanBoards }: KanbanViewProps) {
         return containers.find((item) => item.id === id);
       }
       if (type === "item") {
-        // return containers.find((container) =>
-        //   container.items.find((item) => item.id === id)
-        // );
+        return containers.find((container) =>
+          container.shapes.find((item) => item.id === id)
+        );
       }
     }
 
+    console.log("active, over", active, over);
+
     // Handling item Sorting
     if (
-      active.id.toString().includes("item") &&
-      over?.id.toString().includes("item") &&
+      isItemId(active?.id) &&
+      isItemId(over?.id) &&
       active &&
       over &&
       active.id !== over.id
     ) {
-      // Find the active and over container
-      const activeContainer = findValueOfItems(active.id, "item");
-      const overContainer = findValueOfItems(over.id, "item");
+      const fromId = String(active.id);
+      const toId = String(over.id);
 
-      // If the active or over container is not found, return
-      if (!activeContainer || !overContainer) return;
-      // Find the index of the active and over container
-      const activeContainerIndex = containers.findIndex(
-        (container) => container.id === activeContainer.id
-      );
-      const overContainerIndex = containers.findIndex(
-        (container) => container.id === overContainer.id
-      );
-      // Find the index of the active and over item
-      // const activeitemIndex = activeContainer.items.findIndex(
+      const fromBoardKey = findBoardKeyForShape(fromId);
+      const toBoardKey = findBoardKeyForShape(toId);
+      if (!fromBoardKey || !toBoardKey) return;
+      if (fromBoardKey === toBoardKey) {
+        reorderWithinBoard(fromBoardKey, fromId, toId);
+      }
+      // Find the active and over container
+      // const activeContainer = findValueOfItems(active.id, "item");
+      // const overContainer = findValueOfItems(over.id, "item");
+
+      // // If the active or over container is not found, return
+      // if (!activeContainer || !overContainer) return;
+      // // Find the index of the active and over container
+      // const activeContainerIndex = containers.findIndex(
+      //   (container) => container.id === activeContainer.id
+      // );
+      // const overContainerIndex = containers.findIndex(
+      //   (container) => container.id === overContainer.id
+      // );
+      // // Find the index of the active and over item
+      // const activeitemIndex = activeContainer.shapes.findIndex(
       //   (item) => item.id === active.id
       // );
-      // const overitemIndex = overContainer.items.findIndex(
+      // const overitemIndex = overContainer.shapes.findIndex(
       //   (item) => item.id === over.id
       // );
 
-      // In the same container
+      // // In the same container
       // if (activeContainerIndex === overContainerIndex) {
       //   let newItems = [...containers];
-      //   newItems[activeContainerIndex].items = arrayMove(
-      //     newItems[activeContainerIndex].items,
+      //   newItems[activeContainerIndex].shapes = arrayMove(
+      //     newItems[activeContainerIndex].shapes,
       //     activeitemIndex,
       //     overitemIndex
       //   );
@@ -275,11 +325,11 @@ export default function KanbanView({ kanbanBoards }: KanbanViewProps) {
       // } else {
       //   // In different containers
       //   let newItems = [...containers];
-      //   const [removeditem] = newItems[activeContainerIndex].items.splice(
+      //   const [removeditem] = newItems[activeContainerIndex].shapes.splice(
       //     activeitemIndex,
       //     1
       //   );
-      //   newItems[overContainerIndex].items.splice(
+      //   newItems[overContainerIndex].shapes.splice(
       //     overitemIndex,
       //     0,
       //     removeditem
@@ -321,51 +371,51 @@ export default function KanbanView({ kanbanBoards }: KanbanViewProps) {
       // }
       // setActiveId(null);
     }
-
-    return (
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <div className="flex w-full h-full gap-4 px-2 pb-2">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCorners}
-            // onDragStart={handleDragStart}
-            // onDragMove={handleDragMove}
-            // onDragEnd={handleDragEnd}
-          >
-            {/* @ts-ignore */}
-            <SortableContext
-              items={kanbanBoards.map(
-                (b) => b.id.toString() as UniqueIdentifier
-              )}
-            >
-              {kanbanBoards.map((board) => {
-                const boardItems = getBoardItems(board);
-                const ids = boardItems.map((s) => s.id);
-                return (
-                  <Board
-                    id={board.id}
-                    title={board.name}
-                    key={board.id}
-                    // onAddItem={() => {
-                    //   setShowAddItemModal(true);
-                    //   setCurrentContainerId(container.id);
-                    // }}
-                  >
-                    {/* @ts-ignore */}
-                    <SortableContext items={ids}>
-                      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-1 space-y-2">
-                        {boardItems.map((shape) => (
-                          <BoardItem key={shape.id} shape={shape} />
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </Board>
-                );
-              })}
-            </SortableContext>
-          </DndContext>
-        </div>
-      </div>
-    );
   }
+
+  console.log("containers", containers);
+
+  return (
+    <div className="min-h-0">
+      <div className="flex w-full h-full gap-4 px-2 pb-2">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragMove={handleDragMove}
+          onDragEnd={handleDragEnd}
+        >
+          {/* @ts-ignore */}
+          <SortableContext
+            items={containers.map((b) => b.id.toString() as UniqueIdentifier)}
+          >
+            {containers.map((board) => {
+              const boardItems = getBoardItems(board);
+              const ids = boardItems.map((s) => s.id);
+              return (
+                <Board
+                  id={board.id}
+                  title={board.name}
+                  key={board.id}
+                  // onAddItem={() => {
+                  //   setShowAddItemModal(true);
+                  //   setCurrentContainerId(container.id);
+                  // }}
+                >
+                  {/* @ts-ignore */}
+                  <SortableContext items={ids}>
+                    <div className="flex-1 min-h-0  p-1 space-y-2">
+                      {boardItems.map((shape) => (
+                        <BoardItem key={shape.id} shape={shape} />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </Board>
+              );
+            })}
+          </SortableContext>
+        </DndContext>
+      </div>
+    </div>
+  );
 }
