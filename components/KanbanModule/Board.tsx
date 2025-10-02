@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { UniqueIdentifier } from "@dnd-kit/core/dist/types/other";
 import { MoveIcon } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
+import { Input } from "../ui/input";
+import { updateKanbanBoard } from "@/services/kanbanBoards";
 
 interface BoardProps {
   id: UniqueIdentifier;
@@ -38,6 +40,14 @@ BoardProps) => {
     },
   });
 
+  const [value, setValue] = useState(title);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const updateBoardTitle = async () => {
+    setIsEditing(false);
+    await updateKanbanBoard(Number(id), { name: value });
+  };
+
   return (
     <div
       {...attributes}
@@ -53,7 +63,23 @@ BoardProps) => {
     >
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-y-1">
-          <h1 className="text-gray-800 text-xl">{title}</h1>
+          {isEditing ? (
+            <Input
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onBlur={() => {
+                updateBoardTitle();
+              }}
+              autoFocus
+            />
+          ) : (
+            <h1
+              className="text-gray-800 text-xl"
+              onDoubleClick={() => setIsEditing(true)}
+            >
+              {value}
+            </h1>
+          )}
         </div>
         <Button
           size={"icon"}

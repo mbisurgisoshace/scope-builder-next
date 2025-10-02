@@ -19,6 +19,16 @@ export async function createKanbanBoard(
   return newBoard;
 }
 
+export async function updateKanbanBoard(boardId: number, values: any) {
+  const updatedBoard = await prisma.kanbanBoardCategory.update({
+    where: { id: boardId },
+    data: {
+      ...values,
+    },
+  });
+  return updatedBoard;
+}
+
 export async function getRoomKanbanBoards(roomId: string) {
   const shapes = await getKanbanBoardShapes(roomId);
 
