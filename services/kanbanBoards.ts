@@ -3,6 +3,22 @@
 import liveblocks from "@/lib/liveblocks";
 import { prisma } from "@/lib/prisma";
 
+export async function createKanbanBoard(
+  roomId: string,
+  name: string,
+  order: number
+) {
+  const newBoard = await prisma.kanbanBoardCategory.create({
+    data: {
+      room_id: roomId,
+      name,
+      order,
+      shape_ids: [],
+    },
+  });
+  return newBoard;
+}
+
 export async function getRoomKanbanBoards(roomId: string) {
   const shapes = await getKanbanBoardShapes(roomId);
 

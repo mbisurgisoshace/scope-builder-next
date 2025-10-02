@@ -33,13 +33,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KanbanBoardCategory } from "@/lib/generated/prisma";
 import Board from "./Board";
 import BoardItem from "./BoardItem";
-import { updateKanbanBoards } from "@/services/kanbanBoards";
+import { createKanbanBoard, updateKanbanBoards } from "@/services/kanbanBoards";
 
 interface KanbanViewProps {
+  roomId: string;
   kanbanBoards: KanbanBoardCategory[];
 }
 
-export default function KanbanView({ kanbanBoards }: KanbanViewProps) {
+export default function KanbanView({ roomId, kanbanBoards }: KanbanViewProps) {
   const { shapes, addShape, updateShape } = useRealtimeShapes();
   const [activeId, setActiveId] = useState<string | null>(null);
   const boardsSnapshotRef = useRef<Record<string, string[]>>({});
@@ -97,6 +98,38 @@ export default function KanbanView({ kanbanBoards }: KanbanViewProps) {
     addShape("card", 20, 20, id);
     updateShape(id, (s) => ({ ...s, subtype: type as CardType }));
   };
+
+  function nextBoardOrder(): number {
+    // if you persist order, space them by BOARD_ORDER_STEP
+    const maxOrder =
+      containers.reduce((m, c) => Math.max(m, c.order ?? 0), 0) || 0;
+    return maxOrder + 1;
+  }
+
+  async function onAddBoardClick() {
+    const name = "Unnamed Board"; // or open a modal and get the name
+
+    try {
+      // Persist to DB → returns real id (number) and maybe order
+      const newBoard = await createKanbanBoard(roomId, name, nextBoardOrder());
+
+      // Replace temp id with real id
+      // setContainers((prev) =>
+      //   prev.map((b) =>
+      //     String(b.id) === String(tempId)
+      //       ? { ...b, id: created.id, order: created.order ?? newBoard.order }
+      //       : b
+      //   )
+      // );
+      setContainers((prev) => [...prev, { ...newBoard, shapes: [] }]);
+    } catch (e) {
+      console.error("Failed to create board:", e);
+      // Rollback optimistic
+      // setContainers((prev) =>
+      //   prev.filter((b) => String(b.id) !== String(tempId))
+      // );
+    }
+  }
 
   // 🔁 CHANGED: find board for a shape from *containers* (live UI), not props
   const findBoardKeyForShape = useCallback(
@@ -316,16 +349,11 @@ export default function KanbanView({ kanbanBoards }: KanbanViewProps) {
               );
             })}
           </SortableContext>
-
-          {/* Overlay (optional). Keep simple/static if you use it. */}
-          {/* <DragOverlay adjustScale={false} dropAnimation={null}>
-            {activeId ? (
-              <div className="w-[420px] rounded-lg bg-white shadow p-2">
-                {(shapeById(activeId)?.text as any) ?? "Card"}
-              </div>
-            ) : null}
-          </DragOverlay> */}
         </DndContext>
+        <Button variant={"outline"} onClick={onAddBoardClick}>
+          <PlusCircleIcon />
+          Add Board
+        </Button>
       </div>
     </div>
   );

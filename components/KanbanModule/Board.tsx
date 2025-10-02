@@ -47,7 +47,7 @@ BoardProps) => {
         transform: CSS.Translate.toString(transform),
       }}
       className={clsx(
-        "w-[440px] bg-white p-1 rounded-lg shadow-md flex min-h-0 flex-col",
+        "w-[440px] bg-white p-1 rounded-lg shadow-md flex min-h-0 flex-col overflow-y-scroll",
         isDragging && "opacity-50"
       )}
     >

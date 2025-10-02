@@ -58,9 +58,12 @@ export default async function SegmentsPage() {
             </TabsContent>
             <TabsContent
               value="kanban-view"
-              className="w-full h-full flex overflow-hidden"
+              className="w-full h-full flex overflow-x-scroll"
             >
-              <KanbanView kanbanBoards={kanbanBoards} />
+              <KanbanView
+                roomId={`segments-${orgId}`}
+                kanbanBoards={kanbanBoards}
+              />
               {/* <KanbanDemo kanbanBoards={kanbanBoards} /> */}
             </TabsContent>
           </Tabs>
