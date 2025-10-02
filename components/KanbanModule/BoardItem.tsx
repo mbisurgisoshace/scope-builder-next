@@ -9,9 +9,10 @@ import { useRealtimeShapes } from "../CanvasModule/hooks/realtime/useRealtimeSha
 
 type BoardItemTypeProps = {
   shape: Shape;
+  boardKey: string;
 };
 
-const BoardItem = ({ shape }: BoardItemTypeProps) => {
+const BoardItem = ({ shape, boardKey }: BoardItemTypeProps) => {
   const { updateShape } = useRealtimeShapes();
   const {
     attributes,
@@ -24,6 +25,8 @@ const BoardItem = ({ shape }: BoardItemTypeProps) => {
     id: shape.id,
     data: {
       type: "item",
+      boardKey: boardKey,
+      shapeId: shape.id,
     },
   });
 

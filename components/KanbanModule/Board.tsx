@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { Button } from "@/components/ui/button";
 import { UniqueIdentifier } from "@dnd-kit/core/dist/types/other";
 import { MoveIcon } from "lucide-react";
+import { useDroppable } from "@dnd-kit/core";
 
 interface BoardProps {
   id: UniqueIdentifier;
@@ -32,9 +33,11 @@ BoardProps) => {
   } = useSortable({
     id: id,
     data: {
-      type: "container",
+      type: "board",
+      boardKey: String(id), // opcional, por si querés leerlo en handlers
     },
   });
+
   return (
     <div
       {...attributes}
