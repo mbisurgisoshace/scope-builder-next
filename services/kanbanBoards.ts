@@ -1,3 +1,5 @@
+"use server";
+
 import liveblocks from "@/lib/liveblocks";
 import { prisma } from "@/lib/prisma";
 
@@ -51,4 +53,15 @@ export async function getKanbanBoardShapes(roomId: string) {
       (shape) => !["rect", "text", "ellipse"].includes(shape.type)
     ) || []
   );
+}
+
+export async function updateKanbanBoards(
+  kanbanBoards: { boardId: number; shapeIds: string[] }[]
+) {
+  for (const board of kanbanBoards) {
+    await prisma.kanbanBoardCategory.update({
+      where: { id: board.boardId },
+      data: { shape_ids: board.shapeIds },
+    });
+  }
 }
