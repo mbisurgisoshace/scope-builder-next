@@ -29,6 +29,12 @@ export async function updateKanbanBoard(boardId: number, values: any) {
   return updatedBoard;
 }
 
+export async function deleteKanbanBoard(boardId: number) {
+  await prisma.kanbanBoardCategory.delete({
+    where: { id: boardId },
+  });
+}
+
 export async function getRoomKanbanBoards(roomId: string) {
   const shapes = await getKanbanBoardShapes(roomId);
 

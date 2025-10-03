@@ -5,16 +5,17 @@ import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
 import { Button } from "@/components/ui/button";
 import { UniqueIdentifier } from "@dnd-kit/core/dist/types/other";
-import { MoveIcon } from "lucide-react";
+import { DeleteIcon, MoveIcon, Trash2Icon } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import { Input } from "../ui/input";
 import { updateKanbanBoard } from "@/services/kanbanBoards";
 
 interface BoardProps {
-  id: UniqueIdentifier;
-  children: React.ReactNode;
   title?: string;
+  id: UniqueIdentifier;
   description?: string;
+  children: React.ReactNode;
+  onDeleteBoard: () => void;
   //onAddItem?: () => void;
 }
 
@@ -23,6 +24,7 @@ const Board = ({
   children,
   title,
   description,
+  onDeleteBoard,
 }: //onAddItem,
 BoardProps) => {
   const {
@@ -84,10 +86,11 @@ BoardProps) => {
         <Button
           size={"icon"}
           variant={"ghost"}
+          onClick={onDeleteBoard}
           //className="border p-2 text-xs rounded-xl shadow-lg hover:shadow-xl"
-          {...listeners}
+          // {...listeners}
         >
-          <MoveIcon />
+          <Trash2Icon />
         </Button>
       </div>
 

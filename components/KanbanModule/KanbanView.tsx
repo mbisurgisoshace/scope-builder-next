@@ -1,7 +1,7 @@
 "use client";
 
 import { v4 as uuidv4 } from "uuid";
-import { PlusCircleIcon, PlusIcon } from "lucide-react";
+import { CircleAlertIcon, PlusCircleIcon, PlusIcon } from "lucide-react";
 import { shapeRegistry } from "../CanvasModule/blocks/blockRegistry";
 import { useRealtimeShapes } from "../CanvasModule/hooks/realtime/useRealtimeShapes";
 import { Button } from "../ui/button";
@@ -33,7 +33,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KanbanBoardCategory } from "@/lib/generated/prisma";
 import Board from "./Board";
 import BoardItem from "./BoardItem";
-import { createKanbanBoard, updateKanbanBoards } from "@/services/kanbanBoards";
+import {
+  createKanbanBoard,
+  deleteKanbanBoard,
+  updateKanbanBoards,
+} from "@/services/kanbanBoards";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../ui/alert-dialog";
 
 interface KanbanViewProps {
   roomId: string;
@@ -41,6 +54,7 @@ interface KanbanViewProps {
 }
 
 export default function KanbanView({ roomId, kanbanBoards }: KanbanViewProps) {
+  const [openAlert, setOpenAlert] = useState(false);
   const { shapes, addShape, updateShape } = useRealtimeShapes();
   const [activeId, setActiveId] = useState<string | null>(null);
   const boardsSnapshotRef = useRef<Record<string, string[]>>({});
@@ -308,9 +322,33 @@ export default function KanbanView({ roomId, kanbanBoards }: KanbanViewProps) {
     }
   }
 
+  const onDeleteBoard = async (boardId: number, hasShapes: boolean) => {
+    if (hasShapes) {
+      setOpenAlert(true);
+    } else {
+      await deleteKanbanBoard(boardId);
+      setContainers((prev) => prev.filter((b) => b.id !== boardId));
+    }
+  };
+
   // ===== Render directly from *containers* (🔁 CHANGED) =====
   return (
     <div className="min-h-0">
+      <AlertDialog open={openAlert} onOpenChange={setOpenAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Board</AlertDialogTitle>
+            <AlertDialogDescription className="flex items-center gap-2">
+              You still have cards in this board. Please move them to a
+              different board or remove them before deleting this board.
+              <CircleAlertIcon className="text-orange-300 size-10" />
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>Ok</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="flex w-full h-full gap-4 px-2 pb-2">
         <DndContext
           sensors={sensors}
@@ -329,7 +367,14 @@ export default function KanbanView({ roomId, kanbanBoards }: KanbanViewProps) {
               const boardItems = board.shapes;
               const ids = boardItems.map((s) => s.id);
               return (
-                <Board id={board.id} title={board.name} key={board.id}>
+                <Board
+                  id={board.id}
+                  title={board.name}
+                  key={board.id}
+                  onDeleteBoard={() =>
+                    onDeleteBoard(board.id, boardItems.length > 0)
+                  }
+                >
                   {/* @ts-ignore */}
                   <SortableContext
                     items={ids}
