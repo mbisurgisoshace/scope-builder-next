@@ -94,12 +94,13 @@ model WorkspaceRoom {
 }
 
 model ValuePropositionVersion {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   org_id         String
-  room_id        String   @unique
-  version_number Int      @default(1)
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
+  room_id        String    @unique
+  version_number Int       @default(autoincrement())
+  switch_at      DateTime?
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
 
   @@map("value_proposition_versions")
 }
