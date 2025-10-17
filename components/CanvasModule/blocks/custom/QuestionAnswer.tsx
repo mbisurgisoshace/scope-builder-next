@@ -459,7 +459,7 @@ export const QuestionAnswer: React.FC<QuestionAnswerProps> = (props) => {
 
                     <div className="bg-[#FFFFFF66] rounded-lg flex-1 min-h-[150px]">
                       <RteEditor
-                        editorState={editorState}
+                        editorState={answerEditorState}
                         readOnly={true}
                         toolbar={{
                           options: ["inline", "list", "link"],
