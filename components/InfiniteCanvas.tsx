@@ -942,6 +942,12 @@ export default function InfiniteCanvas({
     };
   }
 
+  const onBgPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!editable) return;
+    if (e.button !== 0) return; // left click only
+    clearSelection?.();
+  };
+
   return (
     <div className="w-full h-full overflow-hidden bg-[#EFF0F4] relative flex">
       <div className="absolute top-4 right-4 z-20 flex flex-row gap-6 bg-black p-2 rounded-md text-white">
@@ -1332,6 +1338,8 @@ export default function InfiniteCanvas({
             transformOrigin: "0 0",
           }}
         >
+          <div className="absolute inset-0" onPointerDown={onBgPointerDown} />
+
           {/* Marquee selection */}
           {editable && marquee && (
             <div
