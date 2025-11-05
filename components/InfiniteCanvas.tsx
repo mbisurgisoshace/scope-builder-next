@@ -948,6 +948,20 @@ export default function InfiniteCanvas({
     clearSelection?.();
   };
 
+  const handleCanvasPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    // convert client → world
+    const x = (e.clientX - rect.left - position.x) / scale;
+    const y = (e.clientY - rect.top - position.y) / scale;
+    setCanvasMousePos({ x, y });
+  };
+
+  const handleCanvasPointerLeave = () => {
+    // so paste falls back to viewport center when cursor is outside
+    setCanvasMousePos({ x: NaN, y: NaN }); // or set to null if you prefer
+  };
+
   return (
     <div className="w-full h-full overflow-hidden bg-[#EFF0F4] relative flex">
       <div className="absolute top-4 right-4 z-20 flex flex-row gap-6 bg-black p-2 rounded-md text-white">
@@ -1323,6 +1337,8 @@ export default function InfiniteCanvas({
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragStart={handleDragStart}
+        onPointerMove={handleCanvasPointerMove}
+        onPointerLeave={handleCanvasPointerLeave}
       >
         {showGrid && (
           <div
