@@ -123,6 +123,10 @@ const data = {
           title: "Ecosystem Maps",
           url: "/examples/ecosystem-maps",
         },
+        {
+          title: "Hypothesize",
+          url: "/examples/hypothesize",
+        },
       ],
     },
     // {
