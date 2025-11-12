@@ -8,6 +8,7 @@ import { useMutation, useStorage } from "@liveblocks/react";
 
 /** Relative anchor inside a shape (0..1 in both axes) */
 export type Anchor = { x: number; y: number };
+type Side = "top" | "right" | "bottom" | "left";
 
 /** A persisted connection between two shapes via relative anchors */
 export type Connection = {
@@ -27,6 +28,21 @@ export function getAbsoluteAnchorPosition(
     x: shape.x + shape.width * anchor.x,
     y: shape.y + shape.height * anchor.y,
   };
+}
+
+function sideFromAnchor(a: { x: number; y: number }, tol = 0.15): Side {
+  const { x, y } = a;
+  const dTop = y; // distance to top
+  const dBottom = 1 - y; // distance to bottom
+  const dLeft = x; // distance to left
+  const dRight = 1 - x; // distance to right
+
+  const best = Math.min(dTop, dBottom, dLeft, dRight);
+
+  if (best === dTop && dTop <= tol) return "top";
+  if (best === dBottom && dBottom <= tol) return "bottom";
+  if (best === dLeft && dLeft <= tol) return "left";
+  return "right"; // default/fallback
 }
 
 /** Helper: convert absolute point to relative anchor for a given shape */
@@ -191,10 +207,19 @@ export function useConnectionManager() {
             const from = byId(shapes, c.fromShapeId);
             const to = byId(shapes, c.toShapeId);
             if (!from || !to) return null;
+
+            const fromPt = getAbsoluteAnchorPosition(from, c.fromAnchor);
+            const toPt = getAbsoluteAnchorPosition(to, c.toAnchor);
+
+            const fromSide = sideFromAnchor(c.fromAnchor);
+            const toSide = sideFromAnchor(c.toAnchor);
+
             return {
               id: c.id,
-              from: getAbsoluteAnchorPosition(from, c.fromAnchor),
-              to: getAbsoluteAnchorPosition(to, c.toAnchor),
+              from: fromPt,
+              to: toPt,
+              fromSide,
+              toSide,
               connection: c,
             };
           })
@@ -202,6 +227,8 @@ export function useConnectionManager() {
           id: string;
           from: Position;
           to: Position;
+          fromSide: Side;
+          toSide: Side;
           connection: Connection;
         }>,
       [connections, shapes]

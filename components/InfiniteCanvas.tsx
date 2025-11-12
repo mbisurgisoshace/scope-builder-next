@@ -7,7 +7,7 @@ import {
   useHistory,
   useCanRedo,
 } from "@liveblocks/react";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 
 import {
   writeClipboard,
@@ -962,6 +962,23 @@ export default function InfiniteCanvas({
     setCanvasMousePos({ x: NaN, y: NaN }); // or set to null if you prefer
   };
 
+  type Side = "top" | "right" | "bottom" | "left";
+
+  function sideFromAnchor(a: {
+    x: number;
+    y: number;
+  }): "top" | "right" | "bottom" | "left" {
+    const dTop = a.y;
+    const dBottom = 1 - a.y;
+    const dLeft = a.x;
+    const dRight = 1 - a.x;
+    const min = Math.min(dTop, dBottom, dLeft, dRight);
+    if (min === dTop) return "top";
+    if (min === dBottom) return "bottom";
+    if (min === dLeft) return "left";
+    return "right";
+  }
+
   return (
     <div className="w-full h-full overflow-hidden bg-[#EFF0F4] relative flex">
       <div className="absolute top-4 right-4 z-20 flex flex-row gap-6 bg-black p-2 rounded-md text-white">
@@ -1379,6 +1396,8 @@ export default function InfiniteCanvas({
           {connecting && connectingMousePos && (
             <CurvedArrow
               from={connecting.fromPosition}
+              fromSide={connecting.fromDirection}
+              toSide={snapResult?.side}
               to={snapResult?.snappedPosition ?? connectingMousePos}
             />
           )}
@@ -1427,18 +1446,24 @@ export default function InfiniteCanvas({
 
               return true;
             })
-            .map(({ id, from, to }) => (
-              <SelectableConnectionArrow
-                key={id}
-                id={id}
-                from={from}
-                to={to}
-                // selected={selectedConnectionId === id}
-                // onSelect={selectConnection}
-                selected={editable && selectedConnectionId === id}
-                onSelect={editable ? selectConnection : undefined}
-              />
-            ))}
+            .map(({ id, from, to, connection }) => {
+              const fromSide = sideFromAnchor(connection.fromAnchor);
+              const toSide = sideFromAnchor(connection.toAnchor);
+
+              return (
+                <SelectableConnectionArrow
+                  key={id}
+                  id={id}
+                  from={from}
+                  to={to}
+                  zIndex={400}
+                  fromSide={fromSide} // <- pass through
+                  toSide={toSide} // <- pass through
+                  selected={editable && selectedConnectionId === id}
+                  onSelect={editable ? selectConnection : undefined}
+                />
+              );
+            })}
 
           {shapes
             .filter((shape) => {
@@ -1561,26 +1586,32 @@ export default function InfiniteCanvas({
     </div>
   );
 }
-interface CurvedArrowProps {
+type Side = "top" | "right" | "bottom" | "left";
+
+type CurvedArrowProps = {
   from: { x: number; y: number };
   to: { x: number; y: number };
+  /** Optional: which side of the source/target shape the arrow attaches to */
+  fromSide?: Side;
+  toSide?: Side;
   color?: string;
   strokeWidth?: number;
-  zIndex?: number; // optional, defaults below
-}
+  zIndex?: number;
+  /** How “curvy” the line is in px. Defaults to 40. */
+  bend?: number;
+};
 
-/**
- * An SVG that auto-sizes to the arrow's bounding box so it never clips
- * when the canvas is heavily panned/zoomed.
- */
 export const CurvedArrow: React.FC<CurvedArrowProps> = ({
   from,
   to,
+  fromSide,
+  toSide,
   color = "#3B82F6",
   strokeWidth = 2,
-  zIndex = 30,
+  zIndex = 50,
+  bend = 40,
 }) => {
-  // Compute a padded bounding box around the two points
+  // Bounding box (with padding) so the SVG is small & absolutely positioned
   const pad = 40;
   const minX = Math.min(from.x, to.x) - pad;
   const minY = Math.min(from.y, to.y) - pad;
@@ -1590,20 +1621,61 @@ export const CurvedArrow: React.FC<CurvedArrowProps> = ({
   const width = Math.max(1, maxX - minX);
   const height = Math.max(1, maxY - minY);
 
-  // Convert world points to local coords within this svg
+  // Local coords
   const fx = from.x - minX;
   const fy = from.y - minY;
   const tx = to.x - minX;
   const ty = to.y - minY;
 
-  // Curve control points (same logic as before, but in local coords)
-  const dx = tx - fx;
-  const dy = ty - fy;
-  const curveFactor = 0.3;
-  const cp1 = { x: fx + dx * curveFactor, y: fy };
-  const cp2 = { x: tx - dx * curveFactor, y: ty };
+  // Unit normals for each side (pointing outward from shape border)
+  const normalFor = (side?: Side) => {
+    switch (side) {
+      case "top":
+        return { nx: 0, ny: -1 };
+      case "bottom":
+        return { nx: 0, ny: 1 };
+      case "left":
+        return { nx: -1, ny: 0 };
+      case "right":
+        return { nx: 1, ny: 0 };
+      default:
+        return null;
+    }
+  };
+
+  // Control points: if we know the side, push the control point along that side’s normal
+  // so the tangent at the endpoint points in/out of the border.
+  const fromN = normalFor(fromSide);
+  const toN = normalFor(toSide);
+
+  let cp1: { x: number; y: number };
+  let cp2: { x: number; y: number };
+
+  if (fromN) {
+    cp1 = { x: fx + fromN.nx * bend, y: fy + fromN.ny * bend };
+  } else {
+    // fallback: your previous heuristic
+    const dx = tx - fx;
+    cp1 = { x: fx + dx * 0.3, y: fy };
+  }
+
+  if (toN) {
+    // Pull back from the endpoint along the *opposite* of the target normal
+    // so the path arrives perpendicular to that border.
+    cp2 = { x: tx + toN.nx * bend, y: ty + toN.ny * bend };
+  } else {
+    // fallback: your previous heuristic
+    const dx = tx - fx;
+    cp2 = { x: tx - dx * 0.3, y: ty };
+  }
 
   const d = `M ${fx},${fy} C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${tx},${ty}`;
+
+  // Unique marker id per instance (so multiple arrows don't collide)
+  const markerId = useMemo(
+    () => `arrowhead-${Math.random().toString(36).slice(2)}`,
+    []
+  );
 
   return (
     <svg
@@ -1618,24 +1690,24 @@ export const CurvedArrow: React.FC<CurvedArrowProps> = ({
     >
       <defs>
         <marker
-          id="arrowhead-preview"
+          id={markerId}
           markerWidth="10"
           markerHeight="7"
           refX="10"
           refY="3.5"
-          orient="auto"
+          orient="auto-start-reverse"
+          markerUnits="strokeWidth"
         >
           <polygon points="0 0, 10 3.5, 0 7" fill={color} />
         </marker>
       </defs>
 
-      {/* wide transparent hit area not needed for preview; keep only visible path */}
       <path
         d={d}
         stroke={color}
         strokeWidth={strokeWidth}
         fill="none"
-        markerEnd="url(#arrowhead-preview)"
+        markerEnd={`url(#${markerId})`}
       />
     </svg>
   );
