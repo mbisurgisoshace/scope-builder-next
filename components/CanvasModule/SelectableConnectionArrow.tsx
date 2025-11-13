@@ -10,11 +10,53 @@ export interface SelectableConnectionArrowProps {
   strokeWidth?: number;
   zIndex?: number;
   bend?: number;
+
+  layout?: "curved" | "orthogonal";
 }
+
+type Side = "top" | "right" | "bottom" | "left";
 
 function norm(vx: number, vy: number) {
   const m = Math.hypot(vx, vy) || 1;
   return { x: vx / m, y: vy / m };
+}
+
+function computeOrthogonalPoints(
+  fx: number,
+  fy: number,
+  tx: number,
+  ty: number,
+  fromSide?: Side,
+  toSide?: Side
+): { x: number; y: number }[] {
+  const pts: { x: number; y: number }[] = [];
+  pts.push({ x: fx, y: fy });
+
+  const dx = tx - fx;
+  const dy = ty - fy;
+
+  // If already almost aligned horizontally or vertically, just go straight
+  if (Math.abs(dx) < 4 || Math.abs(dy) < 4 || !fromSide || !toSide) {
+    pts.push({ x: tx, y: ty });
+    return pts;
+  }
+
+  const firstIsHorizontal = fromSide === "left" || fromSide === "right";
+
+  if (firstIsHorizontal) {
+    // from → midX → midX,ty → to
+    const midX = fx + dx / 2;
+    pts.push({ x: midX, y: fy });
+    pts.push({ x: midX, y: ty });
+  } else {
+    // from → fx,midY → tx,midY → to
+    const midY = fy + dy / 2;
+    pts.push({ x: fx, y: midY });
+    pts.push({ x: tx, y: midY });
+  }
+
+  pts.push({ x: tx, y: ty });
+  return pts;
 }
 
 export const SelectableConnectionArrow: React.FC<
@@ -31,6 +73,7 @@ export const SelectableConnectionArrow: React.FC<
   strokeWidth = 2,
   zIndex = 400,
   bend = 40,
+  layout = "curved",
 }) => {
   const OUT = 6;
 
@@ -70,46 +113,64 @@ export const SelectableConnectionArrow: React.FC<
   const tx1 = toN ? tx + toN.nx * OUT : tx;
   const ty1 = toN ? ty + toN.ny * OUT : ty;
 
-  // --- Control points (slightly stronger push near endpoints) ---
-  const approach = bend * 1.2;
-  // const cp1 = fromN
-  //   ? { x: fx + fromN.nx * approach, y: fy + fromN.ny * approach }
-  //   : { x: fx + (tx - fx) * 0.3, y: fy };
-  const cp1 = fromN
-    ? { x: fx1 + fromN.nx * approach, y: fy1 + fromN.ny * approach }
-    : { x: fx1 + (tx1 - fx1) * 0.3, y: fy1 };
+  let d: string;
 
-  // We'll compute cp2 after we find the trimmed end
+  if (layout === "orthogonal") {
+    // ─────────────────────────────────────────
+    // ORTHOGONAL / RECTANGULAR PATH
+    // ─────────────────────────────────────────
+    const pts = computeOrthogonalPoints(fx1, fy1, tx1, ty1, fromSide, toSide);
 
-  // --- Trim the end so the shaft meets the base of the arrowhead ---
-  // Length to trim in *px of the local SVG*, roughly matching your marker size.
-  const HEAD_LEN = 12; // ← was 10
-  const headBaseOffset = HEAD_LEN;
-
-  // If we know the side, trim along the side's outward normal; otherwise along the current tangent
-  let endX = tx,
-    endY = ty;
-  if (toN) {
-    endX = tx - toN.nx * headBaseOffset;
-    endY = ty - toN.ny * headBaseOffset;
+    d =
+      pts.length > 0
+        ? `M ${pts[0].x},${pts[0].y}` +
+          pts
+            .slice(1)
+            .map((p) => ` L ${p.x},${p.y}`)
+            .join("")
+        : `M ${fx1},${fy1} L ${tx1},${ty1}`;
   } else {
-    // fallback: compute tangent from a provisional cp2
-    const provisional = { x: tx - (tx - fx) * 0.3, y: ty };
-    const t = norm(tx - provisional.x, ty - provisional.y);
-    endX = tx - t.x * headBaseOffset;
-    endY = ty - t.y * headBaseOffset;
+    // --- Control points (slightly stronger push near endpoints) ---
+    const approach = bend * 1.2;
+    // const cp1 = fromN
+    //   ? { x: fx + fromN.nx * approach, y: fy + fromN.ny * approach }
+    //   : { x: fx + (tx - fx) * 0.3, y: fy };
+    const cp1 = fromN
+      ? { x: fx1 + fromN.nx * approach, y: fy1 + fromN.ny * approach }
+      : { x: fx1 + (tx1 - fx1) * 0.3, y: fy1 };
+
+    // We'll compute cp2 after we find the trimmed end
+
+    // --- Trim the end so the shaft meets the base of the arrowhead ---
+    // Length to trim in *px of the local SVG*, roughly matching your marker size.
+    const HEAD_LEN = 12; // ← was 10
+    const headBaseOffset = HEAD_LEN;
+
+    // If we know the side, trim along the side's outward normal; otherwise along the current tangent
+    let endX = tx,
+      endY = ty;
+    if (toN) {
+      endX = tx - toN.nx * headBaseOffset;
+      endY = ty - toN.ny * headBaseOffset;
+    } else {
+      // fallback: compute tangent from a provisional cp2
+      const provisional = { x: tx - (tx - fx) * 0.3, y: ty };
+      const t = norm(tx - provisional.x, ty - provisional.y);
+      endX = tx - t.x * headBaseOffset;
+      endY = ty - t.y * headBaseOffset;
+    }
+
+    // Now choose cp2 so the curve approaches perpendicular to the border
+    // const cp2 = toN
+    //   ? { x: endX + toN.nx * approach, y: endY + toN.ny * approach }
+    //   : { x: endX - (endX - fx) * 0.3, y: endY };
+    const cp2 = toN
+      ? { x: tx1 + toN.nx * approach, y: ty1 + toN.ny * approach }
+      : { x: tx1 - (tx1 - fx1) * 0.3, y: ty1 };
+
+    // const d = `M ${fx},${fy} C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${endX},${endY}`;
+    d = `M ${fx1},${fy1} C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${tx1},${ty1}`;
   }
-
-  // Now choose cp2 so the curve approaches perpendicular to the border
-  // const cp2 = toN
-  //   ? { x: endX + toN.nx * approach, y: endY + toN.ny * approach }
-  //   : { x: endX - (endX - fx) * 0.3, y: endY };
-  const cp2 = toN
-    ? { x: tx1 + toN.nx * approach, y: ty1 + toN.ny * approach }
-    : { x: tx1 - (tx1 - fx1) * 0.3, y: ty1 };
-
-  // const d = `M ${fx},${fy} C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${endX},${endY}`;
-  const d = `M ${fx1},${fy1} C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${tx1},${ty1}`;
 
   const markerId = `arrowhead-${id}`;
 

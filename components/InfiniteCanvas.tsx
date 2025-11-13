@@ -1461,6 +1461,7 @@ export default function InfiniteCanvas({
                   toSide={toSide} // <- pass through
                   selected={editable && selectedConnectionId === id}
                   onSelect={editable ? selectConnection : undefined}
+                  layout="orthogonal"
                 />
               );
             })}
