@@ -297,7 +297,7 @@ export const Rect: React.FC<RectBlockProps> = (props) => {
         {/* View mode: centered display (no caret) */}
         {!isEditing && (
           <div
-            className="flex flex-row items-center justify-center p-2 text-center pointer-events-none whitespace-pre-wrap break-words flex-wrap"
+            className="flex flex-row items-center justify-center p-2 text-center pointer-events-none whitespace-pre-wrap wrap-anywhere  flex-wrap"
             style={{
               color: shape.textColor || "#0f172a",
               lineHeight: 1.25,

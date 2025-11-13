@@ -289,7 +289,7 @@ export const Ellipse: React.FC<EllipseBlockProps> = (props) => {
         {/* View mode: centered display (no caret) */}
         {!isEditing && (
           <div
-            className=" flex h-full items-center justify-center p-2 text-center pointer-events-none whitespace-pre-wrap break-words"
+            className=" flex h-full items-center justify-center p-2 text-center pointer-events-none whitespace-pre-wrap wrap-anywhere"
             style={{
               color: shape.textColor || "#0f172a",
               lineHeight: 1.25,
