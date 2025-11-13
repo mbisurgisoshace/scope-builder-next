@@ -1602,6 +1602,42 @@ type CurvedArrowProps = {
   bend?: number;
 };
 
+function computePreviewOrthogonalPoints(
+  fx: number,
+  fy: number,
+  tx: number,
+  ty: number,
+  fromSide?: Side,
+  toSide?: Side
+): { x: number; y: number }[] {
+  const pts: { x: number; y: number }[] = [];
+  pts.push({ x: fx, y: fy });
+
+  const dx = tx - fx;
+  const dy = ty - fy;
+
+  // If almost aligned or we don't know sides, go straight
+  if (Math.abs(dx) < 4 || Math.abs(dy) < 4 || !fromSide || !toSide) {
+    pts.push({ x: tx, y: ty });
+    return pts;
+  }
+
+  const firstIsHorizontal = fromSide === "left" || fromSide === "right";
+
+  if (firstIsHorizontal) {
+    const midX = fx + dx / 2;
+    pts.push({ x: midX, y: fy });
+    pts.push({ x: midX, y: ty });
+  } else {
+    const midY = fy + dy / 2;
+    pts.push({ x: fx, y: midY });
+    pts.push({ x: tx, y: midY });
+  }
+
+  pts.push({ x: tx, y: ty });
+  return pts;
+}
+
 export const CurvedArrow: React.FC<CurvedArrowProps> = ({
   from,
   to,
@@ -1612,6 +1648,8 @@ export const CurvedArrow: React.FC<CurvedArrowProps> = ({
   zIndex = 50,
   bend = 40,
 }) => {
+  const OUT = 6;
+
   // Bounding box (with padding) so the SVG is small & absolutely positioned
   const pad = 40;
   const minX = Math.min(from.x, to.x) - pad;
@@ -1649,32 +1687,34 @@ export const CurvedArrow: React.FC<CurvedArrowProps> = ({
   const fromN = normalFor(fromSide);
   const toN = normalFor(toSide);
 
-  let cp1: { x: number; y: number };
-  let cp2: { x: number; y: number };
+  // Small offset out of the shapes, same idea as final arrow
+  const fx1 = fromN ? fx + fromN.nx * OUT : fx;
+  const fy1 = fromN ? fy + fromN.ny * OUT : fy;
+  const tx1 = toN ? tx + toN.nx * OUT : tx;
+  const ty1 = toN ? ty + toN.ny * OUT : ty;
 
-  if (fromN) {
-    cp1 = { x: fx + fromN.nx * bend, y: fy + fromN.ny * bend };
-  } else {
-    // fallback: your previous heuristic
-    const dx = tx - fx;
-    cp1 = { x: fx + dx * 0.3, y: fy };
-  }
+  // ORTHOGONAL preview path
+  const pts = computePreviewOrthogonalPoints(
+    fx1,
+    fy1,
+    tx1,
+    ty1,
+    fromSide,
+    toSide
+  );
 
-  if (toN) {
-    // Pull back from the endpoint along the *opposite* of the target normal
-    // so the path arrives perpendicular to that border.
-    cp2 = { x: tx + toN.nx * bend, y: ty + toN.ny * bend };
-  } else {
-    // fallback: your previous heuristic
-    const dx = tx - fx;
-    cp2 = { x: tx - dx * 0.3, y: ty };
-  }
+  const d =
+    pts.length > 0
+      ? `M ${pts[0].x},${pts[0].y}` +
+        pts
+          .slice(1)
+          .map((p) => ` L ${p.x},${p.y}`)
+          .join("")
+      : `M ${fx1},${fy1} L ${tx1},${ty1}`;
 
-  const d = `M ${fx},${fy} C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${tx},${ty}`;
-
-  // Unique marker id per instance (so multiple arrows don't collide)
+  // Unique marker id per instance so previews don't conflict
   const markerId = useMemo(
-    () => `arrowhead-${Math.random().toString(36).slice(2)}`,
+    () => `arrowhead-preview-${Math.random().toString(36).slice(2)}`,
     []
   );
 
