@@ -12,6 +12,11 @@ export interface SelectableConnectionArrowProps {
   bend?: number;
 }
 
+function norm(vx: number, vy: number) {
+  const m = Math.hypot(vx, vy) || 1;
+  return { x: vx / m, y: vy / m };
+}
+
 export const SelectableConnectionArrow: React.FC<
   SelectableConnectionArrowProps
 > = ({
@@ -27,6 +32,8 @@ export const SelectableConnectionArrow: React.FC<
   zIndex = 400,
   bend = 40,
 }) => {
+  const OUT = 6;
+
   const pad = 40;
   const minX = Math.min(from.x, to.x) - pad;
   const minY = Math.min(from.y, to.y) - pad;
@@ -58,19 +65,56 @@ export const SelectableConnectionArrow: React.FC<
   const fromN = normalFor(fromSide);
   const toN = normalFor(toSide);
 
-  let cp1: { x: number; y: number };
-  let cp2: { x: number; y: number };
+  const fx1 = fromN ? fx + fromN.nx * OUT : fx;
+  const fy1 = fromN ? fy + fromN.ny * OUT : fy;
+  const tx1 = toN ? tx + toN.nx * OUT : tx;
+  const ty1 = toN ? ty + toN.ny * OUT : ty;
 
-  // same idea as preview: push cp1 OUT of the source, cp2 OUT of the target,
-  // so the curve enters/exits perpendicular to borders.
-  if (fromN) cp1 = { x: fx + fromN.nx * bend, y: fy + fromN.ny * bend };
-  else cp1 = { x: fx + (tx - fx) * 0.3, y: fy };
+  // --- Control points (slightly stronger push near endpoints) ---
+  const approach = bend * 1.2;
+  // const cp1 = fromN
+  //   ? { x: fx + fromN.nx * approach, y: fy + fromN.ny * approach }
+  //   : { x: fx + (tx - fx) * 0.3, y: fy };
+  const cp1 = fromN
+    ? { x: fx1 + fromN.nx * approach, y: fy1 + fromN.ny * approach }
+    : { x: fx1 + (tx1 - fx1) * 0.3, y: fy1 };
 
-  if (toN) cp2 = { x: tx + toN.nx * bend, y: ty + toN.ny * bend }; // ✅ plus
-  else cp2 = { x: tx - (tx - fx) * 0.3, y: ty };
+  // We'll compute cp2 after we find the trimmed end
 
-  const d = `M ${fx},${fy} C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${tx},${ty}`;
+  // --- Trim the end so the shaft meets the base of the arrowhead ---
+  // Length to trim in *px of the local SVG*, roughly matching your marker size.
+  const HEAD_LEN = 12; // ← was 10
+  const headBaseOffset = HEAD_LEN;
+
+  // If we know the side, trim along the side's outward normal; otherwise along the current tangent
+  let endX = tx,
+    endY = ty;
+  if (toN) {
+    endX = tx - toN.nx * headBaseOffset;
+    endY = ty - toN.ny * headBaseOffset;
+  } else {
+    // fallback: compute tangent from a provisional cp2
+    const provisional = { x: tx - (tx - fx) * 0.3, y: ty };
+    const t = norm(tx - provisional.x, ty - provisional.y);
+    endX = tx - t.x * headBaseOffset;
+    endY = ty - t.y * headBaseOffset;
+  }
+
+  // Now choose cp2 so the curve approaches perpendicular to the border
+  // const cp2 = toN
+  //   ? { x: endX + toN.nx * approach, y: endY + toN.ny * approach }
+  //   : { x: endX - (endX - fx) * 0.3, y: endY };
+  const cp2 = toN
+    ? { x: tx1 + toN.nx * approach, y: ty1 + toN.ny * approach }
+    : { x: tx1 - (tx1 - fx1) * 0.3, y: ty1 };
+
+  // const d = `M ${fx},${fy} C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${endX},${endY}`;
+  const d = `M ${fx1},${fy1} C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${tx1},${ty1}`;
+
   const markerId = `arrowhead-${id}`;
+
+  const HEAD_W = 12; // length of the head
+  const HEAD_H = 8;
 
   return (
     <svg
@@ -86,13 +130,20 @@ export const SelectableConnectionArrow: React.FC<
     >
       <defs>
         <marker
+          // id={markerId}
+          // markerWidth={HEAD_W}
+          // markerHeight={HEAD_H}
+          // refX={0} // <-- endpoint is the BASE center
+          // refY={HEAD_H / 2}
+          // orient="auto-start-reverse"
+          // markerUnits="userSpaceOnUse" //
           id={markerId}
-          markerWidth="10"
-          markerHeight="7"
-          refX="10"
-          refY="3.5"
-          orient="auto-start-reverse" // ✅ fixes head orientation
-          markerUnits="strokeWidth"
+          markerWidth={HEAD_W}
+          markerHeight={HEAD_H}
+          refX={0} // base of head = path endpoint
+          refY={HEAD_H / 2}
+          orient="auto-start-reverse"
+          markerUnits="userSpaceOnUse" // sizes are in world px
         >
           <polygon
             points="0 0, 10 3.5, 0 7"
@@ -101,7 +152,7 @@ export const SelectableConnectionArrow: React.FC<
         </marker>
       </defs>
 
-      {/* fat hit area */}
+      {/* fat, invisible hit area */}
       <path
         d={d}
         stroke="transparent"
@@ -114,10 +165,12 @@ export const SelectableConnectionArrow: React.FC<
         }}
       />
 
+      {/* visible shaft (ends at the arrowhead base) */}
       <path
         d={d}
         stroke={selected ? "#2563EB" : color}
         strokeWidth={selected ? strokeWidth + 1 : strokeWidth}
+        strokeLinecap="round" // ← small polish
         fill="none"
         markerEnd={`url(#${markerId})`}
         pointerEvents="none"
