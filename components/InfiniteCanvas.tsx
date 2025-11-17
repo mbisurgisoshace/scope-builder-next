@@ -1446,9 +1446,9 @@ export default function InfiniteCanvas({
 
               return true;
             })
-            .map(({ id, from, to, connection }) => {
-              const fromSide = sideFromAnchor(connection.fromAnchor);
-              const toSide = sideFromAnchor(connection.toAnchor);
+            .map(({ id, from, to, fromSide, toSide, connection }) => {
+              // const fromSide = sideFromAnchor(connection.fromAnchor);
+              // const toSide = sideFromAnchor(connection.toAnchor);
 
               return (
                 <SelectableConnectionArrow
@@ -1616,22 +1616,44 @@ function computePreviewOrthogonalPoints(
   const dx = tx - fx;
   const dy = ty - fy;
 
-  // If almost aligned or we don't know sides, go straight
-  if (Math.abs(dx) < 4 || Math.abs(dy) < 4 || !fromSide || !toSide) {
+  const axisOf = (side?: Side): "h" | "v" | null => {
+    if (!side) return null;
+    if (side === "left" || side === "right") return "h";
+    return "v"; // top / bottom
+  };
+
+  const fromAxis = axisOf(fromSide);
+  const toAxis = axisOf(toSide);
+
+  if (!fromAxis || !toAxis || Math.abs(dx) < 4 || Math.abs(dy) < 4) {
     pts.push({ x: tx, y: ty });
     return pts;
   }
 
-  const firstIsHorizontal = fromSide === "left" || fromSide === "right";
+  if (fromAxis === toAxis) {
+    if (fromAxis === "h") {
+      const midX = fx + dx / 2;
+      pts.push({ x: midX, y: fy });
+      pts.push({ x: midX, y: ty });
+    } else {
+      const midY = fy + dy / 2;
+      pts.push({ x: fx, y: midY });
+      pts.push({ x: tx, y: midY });
+    }
+    pts.push({ x: tx, y: ty });
+    return pts;
+  }
 
-  if (firstIsHorizontal) {
-    const midX = fx + dx / 2;
-    pts.push({ x: midX, y: fy });
-    pts.push({ x: midX, y: ty });
-  } else {
-    const midY = fy + dy / 2;
-    pts.push({ x: fx, y: midY });
-    pts.push({ x: tx, y: midY });
+  if (fromAxis === "h" && toAxis === "v") {
+    pts.push({ x: tx, y: fy });
+    pts.push({ x: tx, y: ty });
+    return pts;
+  }
+
+  if (fromAxis === "v" && toAxis === "h") {
+    pts.push({ x: fx, y: ty });
+    pts.push({ x: tx, y: ty });
+    return pts;
   }
 
   pts.push({ x: tx, y: ty });
