@@ -145,6 +145,19 @@ export function useRealtimeShapes() {
         };
       }
 
+      if (type === "table_card") {
+        shape = {
+          ...shape,
+          width: 440,
+          height: 320,
+          tableCardValues: {
+            title: "",
+            subtitle: "",
+            description: "",
+          },
+        };
+      }
+
       list.push(toLiveShape(shape));
     },
     []

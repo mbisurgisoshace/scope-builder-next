@@ -7,6 +7,7 @@ export type ShapeType =
   | "ellipse"
   | "question"
   | "interview"
+  | "table_card"
   | "feature_idea"
   | "question_answer";
 
@@ -104,6 +105,14 @@ export interface Shape {
     questionId: string;
     draftRaw: string;
   }[];
+
+  tableCardRows?: any[];
+
+  tableCardValues?: {
+    title?: string;
+    subtitle?: string;
+    description?: string;
+  };
 }
 
 export type Attachment = {

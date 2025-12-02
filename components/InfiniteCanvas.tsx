@@ -1344,6 +1344,27 @@ export default function InfiniteCanvas({
               </span>
             </button>
           )}
+
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("shape-type", "table_card");
+            }}
+            className="w-10 h-10 gap-1 flex flex-col items-center "
+            title="Table Card"
+          >
+            {/* <SquarePlus className="text-[#111827] pointer-events-none" /> */}
+            <NextImage
+              src={"/ellipse.svg"}
+              alt="Table Card"
+              width={20}
+              height={20}
+              className="pointer-events-none"
+            />
+            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
+              Table Card
+            </span>
+          </button>
         </div>
       )}
 
