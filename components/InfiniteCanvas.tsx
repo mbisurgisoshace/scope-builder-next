@@ -7,7 +7,7 @@ import {
   useHistory,
   useCanRedo,
 } from "@liveblocks/react";
-import { useRef, useState, useEffect, useMemo } from "react";
+import { useRef, useState, useEffect, useMemo, JSX } from "react";
 
 import {
   writeClipboard,
@@ -55,6 +55,10 @@ import NextImage from "next/image";
 import { HelperQuestions } from "./CanvasModule/HelperQuestions";
 import { HelperValueProp } from "./CanvasModule/HelperValueProp";
 import { HelperAnalysis } from "./CanvasModule/HelperAnalysis";
+import { useDbSchema } from "./CanvasModule/db/DbSchemaContext";
+import { useLogicGraph } from "./CanvasModule/logic-builder/LogicGraphContext";
+import { NodeInstanceId, PortId } from "./CanvasModule/logic-builder/types";
+import { LogicConnectionsLayer } from "./CanvasModule/logic-builder/LogicConnectionsLayer";
 
 type RelativeAnchor = {
   x: number; // valor entre 0 y 1, representa el porcentaje del ancho
@@ -93,6 +97,68 @@ interface InfiniteCanvasProps {
   };
 }
 
+type RectShape = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+//type Side = "left" | "right" | "top" | "bottom";
+
+function getCenter(shape: RectShape) {
+  return {
+    cx: shape.x + shape.width / 2,
+    cy: shape.y + shape.height / 2,
+  };
+}
+
+function pickOrthogonalSides(
+  fromShape: RectShape,
+  toShape: RectShape
+): { fromSide: Side; toSide: Side } {
+  const { cx: fx, cy: fy } = getCenter(fromShape);
+  const { cx: tx, cy: ty } = getCenter(toShape);
+
+  const dx = tx - fx;
+  const dy = ty - fy;
+
+  // Decide whether the connection is "more horizontal" or "more vertical"
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    // Horizontal connection
+    if (dx >= 0) {
+      // target is to the right
+      return { fromSide: "right", toSide: "left" };
+    } else {
+      // target is to the left
+      return { fromSide: "left", toSide: "right" };
+    }
+  } else {
+    // Vertical connection
+    if (dy >= 0) {
+      // target is below
+      return { fromSide: "bottom", toSide: "top" };
+    } else {
+      // target is above
+      return { fromSide: "top", toSide: "bottom" };
+    }
+  }
+}
+
+function getAnchorForSide(shape: RectShape, side: Side) {
+  switch (side) {
+    case "left":
+      return { x: shape.x, y: shape.y + shape.height / 2 };
+    case "right":
+      return { x: shape.x + shape.width, y: shape.y + shape.height / 2 };
+    case "top":
+      return { x: shape.x + shape.width / 2, y: shape.y };
+    case "bottom":
+    default:
+      return { x: shape.x + shape.width / 2, y: shape.y + shape.height };
+  }
+}
+
 export default function InfiniteCanvas({
   editable = true,
   toolbarOptions = {
@@ -116,6 +182,8 @@ export default function InfiniteCanvas({
   const isQuestionsCanvas = pathname.includes("/questions");
   const isMarketSegmentsCanvas = pathname.includes("/segments");
   const isValuePropCanvas = pathname.includes("/value-proposition");
+
+  const { service: logicService, refresh: logicRefresh } = useLogicGraph();
 
   const [problems, setProblems] = useState(true);
   const [examples, setExamples] = useState(true);
@@ -669,55 +737,6 @@ export default function InfiniteCanvas({
 
     if (!type) return;
 
-    // if (type === "feature_idea") {
-    //   const SMALL_W = 140,
-    //     SMALL_H = 64;
-    //   const MAIN_W = 260,
-    //     MAIN_H = 140;
-    //   const GAP = 24;
-
-    //   const labelId = uuidv4();
-    //   const mainId = uuidv4();
-
-    //   const labelX = x - GAP - SMALL_W;
-    //   const labelY = y - SMALL_H / 2;
-
-    //   const mainX = x + GAP;
-    //   const mainY = y - MAIN_H / 2;
-
-    //   pause();
-
-    //   // create label
-    //   addShape("rect", labelX, labelY, labelId);
-    //   updateShape(labelId, (s) => ({
-    //     ...s,
-    //     width: SMALL_W,
-    //     height: SMALL_H,
-    //     text: "Trigger", // editable with your existing Rect text behavior
-    //     color: "bg-blue-100", // optional default fill
-    //   }));
-    //   // create main
-    //   addShape("feature_idea", mainX, mainY, mainId);
-    //   updateShape(mainId, (s) => ({
-    //     ...s,
-    //     width: MAIN_W,
-    //     height: MAIN_H,
-    //   }));
-    //   resume();
-
-    //   addConnectionRelative({
-    //     fromShapeId: labelId,
-    //     toShapeId: mainId,
-    //     fromAnchor: { x: 1, y: 0.5 }, // right middle
-    //     toAnchor: { x: 0, y: 0.5 }, // left middle
-    //     //fromSide: "right",
-    //     //toSide: "left",
-    //     //style: "curve", // or "orthogonal" if you added that toggle
-    //   });
-
-    //   return;
-    // }
-
     addShape(type, x, y, uuidv4());
   };
 
@@ -806,6 +825,15 @@ export default function InfiniteCanvas({
     if (showDeleteConfirm.length === 0) return;
 
     const selectedShapeIds = showDeleteConfirm;
+
+    selectedShapeIds.forEach((id) => {
+      const shape = shapes.find((s) => s.id === id);
+      if (shape && shape.type === "db_table") {
+        const tableId = (shape as any).data.dbTableId as string;
+        schema.removeTable(tableId);
+        refresh();
+      }
+    });
 
     // 1) Remove all arrows attached to any of these shapes
     removeConnectionsByIds(selectedShapeIds);
@@ -977,6 +1005,127 @@ export default function InfiniteCanvas({
     if (min === dBottom) return "bottom";
     if (min === dLeft) return "left";
     return "right";
+  }
+
+  // Subscribe to schema to re-render when it changes
+  const { schema, refresh } = useDbSchema();
+
+  // Domain edges (FK relationships)
+  const erdEdges = schema.getRelationships();
+
+  const dbTableShapes = useMemo(
+    () => shapes.filter((s) => s.type === "db_table"),
+    [shapes]
+  );
+
+  // Map tableId -> shape
+  const dbTableShapeByTableId = useMemo(() => {
+    const map = new Map<string, IShape>();
+    for (const s of dbTableShapes) {
+      const tableId = (s as any).data.dbTableId as string | undefined;
+      if (tableId) {
+        map.set(tableId, s);
+      }
+    }
+    return map;
+  }, [dbTableShapes]);
+
+  // Helper: get anchor point on a table’s side
+  function getTableAnchor(
+    shape: IShape,
+    side: "left" | "right" | "top" | "bottom"
+  ) {
+    const x = shape.x;
+    const y = shape.y;
+    const w = shape.width;
+    const h = shape.height;
+
+    switch (side) {
+      case "left":
+        return { x, y: y + h / 2 };
+      case "right":
+        return { x: x + w, y: y + h / 2 };
+      case "top":
+        return { x: x + w / 2, y };
+      case "bottom":
+      default:
+        return { x: x + w / 2, y: y + h };
+    }
+  }
+
+  const erdArrows = useMemo(() => {
+    const arrows: JSX.Element[] = [];
+
+    for (const edge of erdEdges) {
+      const fromShape = dbTableShapeByTableId.get(edge.fromTableId);
+      const toShape = dbTableShapeByTableId.get(edge.toTableId);
+      if (!fromShape || !toShape) continue;
+
+      // 1) Decide which sides to use for a Manhattan-style connection
+      const { fromSide, toSide } = pickOrthogonalSides(fromShape, toShape);
+
+      // 2) Compute anchors on those sides
+      const from = getAnchorForSide(fromShape, fromSide);
+      const to = getAnchorForSide(toShape, toSide);
+
+      arrows.push(
+        <SelectableConnectionArrow
+          key={edge.id}
+          id={edge.id}
+          from={from}
+          to={to}
+          fromSide="right"
+          toSide="left"
+          // purely visual; ERD arrows not selectable (for now)
+          selected={false}
+          onSelect={() => {}}
+          color="#EF4444" // red-ish to distinguish from manual connectors
+          strokeWidth={1.5}
+          bend={0.2} // slight curve, optional
+          zIndex={0} // behind normal connectors if you want
+        />
+      );
+    }
+
+    return arrows;
+  }, [erdEdges, dbTableShapeByTableId]);
+
+  function makeSpawnLinkedNodeHandler(shape: IShape) {
+    return ({
+      fromNodeId,
+      fromPortId,
+    }: {
+      fromNodeId: NodeInstanceId;
+      fromPortId: PortId;
+    }) => {
+      // 1) decide where to place the new block
+      const offsetX = shape.width + 120;
+      const newX = shape.x + offsetX;
+      const newY = shape.y; // same row for now
+
+      // 2) create new canvas shape
+      const newShapeId = uuidv4();
+      addShape("logic_node" as any, newX, newY, newShapeId);
+
+      // 3) ensure a domain node for the new shape
+      const newNode = logicService.ensureNode({
+        id: newShapeId as NodeInstanceId,
+        typeId: "logic/if", // later this could be based on port, context, etc.
+        shapeId: newShapeId,
+        config: {},
+      });
+
+      // 4) connect from the clicked port to the new node's "in" port
+      logicService.connectPorts({
+        fromNodeId,
+        fromPortId,
+        toNodeId: newNode.id,
+        toPortId: "in" as PortId,
+      });
+
+      // 5) force a re-render so LogicConnectionsLayer sees the new connection
+      logicRefresh();
+    };
   }
 
   return (
@@ -1345,7 +1494,7 @@ export default function InfiniteCanvas({
             </button>
           )}
 
-          <button
+          {/* <button
             draggable
             onDragStart={(e) => {
               e.dataTransfer.setData("shape-type", "table_card");
@@ -1353,7 +1502,6 @@ export default function InfiniteCanvas({
             className="w-10 h-10 gap-1 flex flex-col items-center "
             title="Table Card"
           >
-            {/* <SquarePlus className="text-[#111827] pointer-events-none" /> */}
             <NextImage
               src={"/ellipse.svg"}
               alt="Table Card"
@@ -1363,6 +1511,68 @@ export default function InfiniteCanvas({
             />
             <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
               Table Card
+            </span>
+          </button> */}
+
+          <button
+            draggable
+            onDragStart={(e) => {
+              // 👇 this string is what the canvas will read
+              e.dataTransfer.setData("shape-type", "db_table");
+            }}
+            className="w-10 h-10 gap-1 flex flex-col items-center "
+            title="DB Table"
+          >
+            <NextImage
+              src={"/ellipse.svg"} // reuse for now, you can swap icon later
+              alt="DB Table"
+              width={20}
+              height={20}
+              className="pointer-events-none"
+            />
+            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
+              DB Table
+            </span>
+          </button>
+
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("shape-type", "db_collection");
+            }}
+            className="w-10 h-10 gap-1 flex flex-col items-center "
+            title="Collection"
+          >
+            {/* You can change icon later */}
+            <NextImage
+              src={"/ellipse.svg"}
+              alt="Collection"
+              width={20}
+              height={20}
+              className="pointer-events-none"
+            />
+            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
+              Collection
+            </span>
+          </button>
+
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("shape-type", "logic_node");
+            }}
+            className="w-10 h-10 gap-1 flex flex-col items-center"
+            title="Logic node"
+          >
+            <NextImage
+              src={"/ellipse.svg"} // o reusá un ícono que ya tengas
+              alt="Logic node"
+              width={20}
+              height={20}
+              className="pointer-events-none"
+            />
+            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
+              Logic
             </span>
           </button>
         </div>
@@ -1430,6 +1640,9 @@ export default function InfiniteCanvas({
             visible={valueArea}
             zIndex={1} // under shapes
           /> */}
+
+          {/* ERD auto connectors (FK-based) */}
+          {erdArrows}
 
           {connectionEndpoints
             .filter((endpoint) => {
@@ -1569,6 +1782,7 @@ export default function InfiniteCanvas({
                   onCommitStyle={(id, patch) => {
                     updateShape(id, (s) => ({ ...s, ...patch })); // your existing immutable updater
                   }}
+                  onSpawnLinkedNode={makeSpawnLinkedNodeHandler(shape)}
                 />
               );
             })}
@@ -1603,6 +1817,8 @@ export default function InfiniteCanvas({
               />
             )
           )}
+
+          <LogicConnectionsLayer shapes={shapes} />
         </div>
       </div>
     </div>

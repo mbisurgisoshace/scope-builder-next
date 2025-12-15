@@ -6,9 +6,12 @@ export type ShapeType =
   | "table"
   | "ellipse"
   | "question"
+  | "db_table"
   | "interview"
+  | "logic_node"
   | "table_card"
   | "feature_idea"
+  | "db_collection"
   | "question_answer";
 
 export type CardType =
@@ -113,6 +116,13 @@ export interface Shape {
     subtitle?: string;
     description?: string;
   };
+
+  data?: {
+    dbTableId?: string;
+    dbCollectionId?: string;
+  };
+
+  logicTypeId?: string;
 }
 
 export type Attachment = {

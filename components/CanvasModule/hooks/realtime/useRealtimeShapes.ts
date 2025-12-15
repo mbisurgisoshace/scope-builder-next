@@ -19,6 +19,7 @@ function toLiveShape(shape: Shape) {
     text: shape.text ?? null,
     subtype: shape.subtype ?? null,
     cardTitle: shape.cardTitle ?? null,
+    data: shape.data ?? null,
   });
 }
 
@@ -44,6 +45,7 @@ function fromLiveShape(obj: LiveObject<any>): Shape {
     color: obj.get("color")!,
     cardTitle: obj.get("cardTitle") ?? undefined,
     text: obj.get("text") ?? undefined,
+    data: obj.get("data") ?? undefined,
   };
 }
 
@@ -155,6 +157,42 @@ export function useRealtimeShapes() {
             subtitle: "",
             description: "",
           },
+        };
+      }
+
+      if (type === "db_table") {
+        const tableId = `${nextId}-tbl`; // or just nextId; up to you
+
+        shape = {
+          ...shape,
+          width: 400,
+          height: 220,
+          color: "#ffffff",
+          data: { dbTableId: tableId }, // 👈 link to the DB schema
+        };
+      }
+
+      if (type === "db_collection") {
+        const collectionId = `${nextId}-col`; // or just nextId; up to you
+
+        shape = {
+          ...shape,
+          width: 400,
+          height: 220,
+          color: "#ffffff",
+          data: { dbCollectionId: collectionId }, // 👈 link to the DB schema
+        };
+      }
+
+      if (type === "logic_node") {
+        shape = {
+          ...shape,
+          width: 260,
+          height: 220,
+          color: "#0f172a",
+          // por ahora un único tipo de nodo
+          logicTypeId: "logic/if",
+          cardTitle: "If",
         };
       }
 

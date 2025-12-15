@@ -13,6 +13,9 @@ import { ProblemStatement } from "./custom/ProblemStatement";
 import { QuestionAnswer } from "./custom/QuestionAnswer";
 import { ExampleBrainstormCard } from "./custom/ExampleBrainstormCard";
 import { TableCard } from "./custom/TableCard";
+import { DbTableBlock } from "../db/blocks/TableBlock";
+import { DbCollectionBlock } from "../db/blocks/CollectionBlock";
+import { LogicNodeBlock } from "../logic-builder/LogicNodeBlock";
 
 // Registry maps type to corresponding component
 export const shapeRegistry: Record<string, ShapeComponent> = {
@@ -28,4 +31,7 @@ export const shapeRegistry: Record<string, ShapeComponent> = {
   question_answer: QuestionAnswer,
   example_brainstorm_card: ExampleBrainstormCard,
   table_card: TableCard,
+  db_table: DbTableBlock,
+  db_collection: DbCollectionBlock,
+  logic_node: LogicNodeBlock,
 };
