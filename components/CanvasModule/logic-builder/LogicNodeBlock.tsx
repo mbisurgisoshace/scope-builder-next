@@ -30,9 +30,14 @@ export const LogicNodeBlock: React.FC<Props> = (props) => {
   // 2) Ensure the node exists in the domain graph
   const node = useMemo(() => {
     try {
+      const typeId =
+        ((shape as any).logicTypeId as string) ??
+        (shape as any).data?.logicTypeId ??
+        "logic/if";
+
       const n = service.ensureNode({
         id: nodeId,
-        typeId: "logic/if",
+        typeId: typeId,
         shapeId: shape.id,
         config: {},
       });

@@ -48,43 +48,32 @@ export const LogicGraphProvider: React.FC<{
     const registry = new InMemoryNodeDefinitionRegistry();
     registry.register(
       new NodeDefinition({
-        typeId: "logic/if",
-        label: "If",
+        typeId: "logic/function",
+        label: "Function",
         ports: [
+          // Inputs
           {
-            id: "in",
-            name: "in",
-            kind: "input", // 👈 LogicPortKind
-            channel: "control", // 👈 LogicPortChannel
-            side: "top", // 👈 comes from above
-            order: 0,
-          },
-          // condition (data in)
-          {
-            id: "cond",
-            name: "cond",
+            id: "arg:a",
+            name: "a",
             kind: "input",
             channel: "data",
-            valueType: "boolean", // 👈 LogicValueType
-            side: "left",
-            order: 0,
-          },
-          // control branches
-          {
-            id: "then",
-            name: "then",
-            kind: "branch",
-            channel: "control",
-            side: "right",
-            order: 0,
+            valueType: "number",
           },
           {
-            id: "else",
-            name: "else",
-            kind: "branch",
-            channel: "control",
-            side: "bottom",
-            order: 0,
+            id: "arg:b",
+            name: "b",
+            kind: "input",
+            channel: "data",
+            valueType: "number",
+          },
+
+          // Output
+          {
+            id: "return",
+            name: "return",
+            kind: "output",
+            channel: "data",
+            valueType: "number",
           },
         ],
       })

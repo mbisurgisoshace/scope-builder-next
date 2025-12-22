@@ -105,4 +105,11 @@ export class LogicGraphService {
   listConnections(): LogicConnection[] {
     return this.graph.listConnections();
   }
+
+  updateNodeConfig(nodeId: NodeInstanceId, patch: Record<string, any>) {
+    const n = this.graph.getNode(nodeId);
+    if (!n) throw new Error(`Node ${nodeId} not found`);
+    n.updateConfig(patch);
+    return n;
+  }
 }

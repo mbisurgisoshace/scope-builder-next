@@ -3,6 +3,7 @@ import { NodeTypeId } from "./types";
 import { NodeDefinition } from "./NodeDefinition";
 
 export interface NodeDefinitionRegistry {
+  register(def: NodeDefinition): void;
   getDefinition(typeId: NodeTypeId): NodeDefinition | undefined;
   listDefinitions(): NodeDefinition[];
 }
