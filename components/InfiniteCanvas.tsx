@@ -56,6 +56,7 @@ import NextImage from "next/image";
 import { HelperQuestions } from "./CanvasModule/HelperQuestions";
 import { HelperValueProp } from "./CanvasModule/HelperValueProp";
 import { HelperAnalysis } from "./CanvasModule/HelperAnalysis";
+import { OrthogonalArrow } from "./CanvasModule/OrthogonalArrow";
 
 type RelativeAnchor = {
   x: number; // valor entre 0 y 1, representa el porcentaje del ancho
@@ -1479,17 +1480,28 @@ export default function InfiniteCanvas({
               // const toSide = sideFromAnchor(connection.toAnchor);
 
               return (
-                <SelectableConnectionArrow
+                // <SelectableConnectionArrow
+                //   key={id}
+                //   id={id}
+                //   from={from}
+                //   to={to}
+                //   zIndex={400}
+                //   fromSide={fromSide} // <- pass through
+                //   toSide={toSide} // <- pass through
+                //   selected={editable && selectedConnectionId === id}
+                //   onSelect={editable ? selectConnection : undefined}
+                //   layout="orthogonal"
+                // />
+                <OrthogonalArrow
                   key={id}
                   id={id}
                   from={from}
                   to={to}
-                  zIndex={400}
-                  fromSide={fromSide} // <- pass through
-                  toSide={toSide} // <- pass through
+                  zIndex={1}
+                  fromSide={fromSide}
+                  toSide={toSide}
                   selected={editable && selectedConnectionId === id}
                   onSelect={editable ? selectConnection : undefined}
-                  layout="orthogonal"
                 />
               );
             })}

@@ -17,6 +17,10 @@ export type Connection = {
   fromAnchor: Anchor;
   toShapeId: Shape["id"];
   toAnchor: Anchor;
+
+  fromSide?: Side;
+  toSide?: Side;
+  style?: "curved" | "orthogonal";
 };
 
 /** Helper: absolute pos from a shape + relative anchor */
@@ -175,7 +179,9 @@ export function useConnectionManager() {
     };
     snapResult: {
       shapeId: Shape["id"];
-      snappedPosition: Position; // world coords where the line snapped
+      snappedPosition: Position;
+      side?: Side;
+      // world coords where the line snapped
     };
     shapes: Shape[];
   }) {
@@ -193,12 +199,52 @@ export function useConnectionManager() {
       fromAnchor,
       toShapeId: snapResult.shapeId,
       toAnchor,
+
+      fromSide: connecting.fromDirection,
+      toSide: snapResult.side,
+
+      style: "orthogonal",
     });
 
     return id;
   }
 
   /** Compute absolute endpoints for rendering against current shapes */
+  // function useConnectionEndpoints(shapes: Shape[]) {
+  //   return useMemo(
+  //     () =>
+  //       connections
+  //         .map((c) => {
+  //           const from = byId(shapes, c.fromShapeId);
+  //           const to = byId(shapes, c.toShapeId);
+  //           if (!from || !to) return null;
+
+  //           const fromPt = getAbsoluteAnchorPosition(from, c.fromAnchor);
+  //           const toPt = getAbsoluteAnchorPosition(to, c.toAnchor);
+
+  //           const fromSide = sideFromAnchor(c.fromAnchor);
+  //           const toSide = sideFromAnchor(c.toAnchor);
+
+  //           return {
+  //             id: c.id,
+  //             from: fromPt,
+  //             to: toPt,
+  //             fromSide,
+  //             toSide,
+  //             connection: c,
+  //           };
+  //         })
+  //         .filter(Boolean) as Array<{
+  //         id: string;
+  //         from: Position;
+  //         to: Position;
+  //         fromSide: Side;
+  //         toSide: Side;
+  //         connection: Connection;
+  //       }>,
+  //     [connections, shapes]
+  //   );
+  // }
   function useConnectionEndpoints(shapes: Shape[]) {
     return useMemo(
       () =>
@@ -208,11 +254,20 @@ export function useConnectionManager() {
             const to = byId(shapes, c.toShapeId);
             if (!from || !to) return null;
 
-            const fromPt = getAbsoluteAnchorPosition(from, c.fromAnchor);
-            const toPt = getAbsoluteAnchorPosition(to, c.toAnchor);
+            const fromPt0 = getAbsoluteAnchorPosition(from, c.fromAnchor);
+            const toPt0 = getAbsoluteAnchorPosition(to, c.toAnchor);
 
-            const fromSide = sideFromAnchor(c.fromAnchor);
-            const toSide = sideFromAnchor(c.toAnchor);
+            // ✅ Prefer persisted sides (if you added them), fallback to derived
+            const fromSide: Side =
+              (c as any).fromSide ?? sideFromAnchor(c.fromAnchor);
+            const toSide: Side =
+              (c as any).toSide ?? sideFromAnchor(c.toAnchor);
+
+            // ✅ push endpoints OUT of the shape border so arrow is not inside it
+            // Pick an OUT distance in world units. If you want pixel-constant, pass scale here.
+            const OUT = 6;
+            const fromPt = pushOut(fromPt0, fromSide, OUT);
+            const toPt = pushOut(toPt0, toSide, OUT);
 
             return {
               id: c.id,
@@ -298,4 +353,22 @@ export function useConnectionManager() {
     //getConnectionsForShape,
     replaceEndpointWithAbsolute,
   };
+}
+
+function clamp01(v: number) {
+  return Math.max(0, Math.min(1, v));
+}
+
+// Given a side, push a point OUT from the border by `out` (world units)
+function pushOut(pt: Position, side: Side, out: number): Position {
+  switch (side) {
+    case "top":
+      return { x: pt.x, y: pt.y - out };
+    case "bottom":
+      return { x: pt.x, y: pt.y + out };
+    case "left":
+      return { x: pt.x - out, y: pt.y };
+    case "right":
+      return { x: pt.x + out, y: pt.y };
+  }
 }
