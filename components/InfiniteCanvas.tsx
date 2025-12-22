@@ -7,6 +7,7 @@ import {
   useHistory,
   useCanRedo,
 } from "@liveblocks/react";
+import { Hand } from "lucide-react";
 import { useRef, useState, useEffect, useMemo } from "react";
 
 import {
@@ -121,6 +122,7 @@ export default function InfiniteCanvas({
   const [examples, setExamples] = useState(true);
   const [solutions, setSolutions] = useState(true);
   const [valueArea, setValueArea] = useState(false);
+  const [panToolEnabled, setPanToolEnabled] = useState(false);
 
   const undo = useUndo();
   const redo = useRedo();
@@ -392,7 +394,9 @@ export default function InfiniteCanvas({
     setSelectedShapeIds,
   });
 
-  const startMarqueeSafe = editable ? startMarquee : () => {};
+  // const startMarqueeSafe = editable ? startMarquee : () => {};
+  const startMarqueeSafe =
+    editable && !panToolEnabled ? startMarquee : () => {};
 
   useShapeDragging({
     selectedShapeIds,
@@ -429,6 +433,7 @@ export default function InfiniteCanvas({
     // startMarquee,
     startMarquee: startMarqueeSafe,
     setMarqueeMousePos,
+    panToolEnabled,
   });
 
   const { handleShapeMouseDown, startResizing } = useShapeInteraction({
@@ -1107,6 +1112,23 @@ export default function InfiniteCanvas({
       {/* Toolbar */}
       {editable && (
         <div className="absolute top-1/2 -translate-y-1/2 left-4 z-20 py-4 px-3 bg-white  rounded-2xl shadow flex flex-col gap-6 items-center">
+          <button
+            onClick={() => setPanToolEnabled((v) => !v)}
+            className={`w-10 h-10 flex flex-col items-center justify-center rounded-xl
+    ${
+      panToolEnabled
+        ? "bg-blue-600 text-white"
+        : "bg-transparent text-[#111827]"
+    }
+  `}
+            title="Pan tool"
+          >
+            <Hand className="pointer-events-none" size={18} />
+            <span className="text-[10px] font-bold opacity-60 pointer-events-none">
+              Pan
+            </span>
+          </button>
+
           {toolbarOptions.rectangle && (
             <button
               draggable
@@ -1350,7 +1372,13 @@ export default function InfiniteCanvas({
       {/* Canvas */}
       <div
         ref={canvasRef}
-        className="flex-1 relative"
+        // className="flex-1 relative"
+        // className={`flex-1 relative ${panToolEnabled ? "cursor-grab" : ""}`}
+        className={[
+          "flex-1 relative",
+          panToolEnabled ? "cursor-grab" : "",
+          isPanning ? "cursor-grabbing" : "",
+        ].join(" ")}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragStart={handleDragStart}
