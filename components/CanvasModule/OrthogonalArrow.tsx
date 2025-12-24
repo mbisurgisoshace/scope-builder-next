@@ -54,7 +54,6 @@ function routeOrthogonal(args: {
   let corner = cornerA;
   if (tn) {
     // last segment will be corner -> E1. Prefer it aligned with tn axis.
-    // If target normal is horizontal, we'd like last segment horizontal.
     const lastA = { x: E1.x - cornerA.x, y: E1.y - cornerA.y };
     const lastB = { x: E1.x - cornerB.x, y: E1.y - cornerB.y };
     const score = (v: { x: number; y: number }) =>
@@ -75,7 +74,6 @@ function routeOrthogonal(args: {
     corner = manA <= manB ? cornerA : cornerB;
   }
 
-  // If corner is “degenerate” (same line), it's still fine.
   const points: Pt[] = [S, S1, corner, E1, E];
 
   // cleanup: remove consecutive duplicates / collinear redundant points
@@ -116,6 +114,28 @@ function pathFromPoints(pts: Pt[]) {
   );
 }
 
+/** angle in degrees so the tip points INTO the shape based on side */
+function angleForSide(side?: Side, fallbackVec?: { x: number; y: number }) {
+  switch (side) {
+    case "left":
+      // hit LEFT edge -> arrow tip should point RIGHT (into the shape)
+      return 180;
+    case "right":
+      // hit RIGHT edge -> arrow tip should point LEFT
+      return 0;
+    case "top":
+      // hit TOP edge -> arrow tip should point DOWN
+      return -90;
+    case "bottom":
+      // hit BOTTOM edge -> arrow tip should point UP
+      return 90;
+    default: {
+      if (!fallbackVec) return 0;
+      return (Math.atan2(fallbackVec.y, fallbackVec.x) * 180) / Math.PI;
+    }
+  }
+}
+
 export function OrthogonalArrow({
   id,
   from,
@@ -148,6 +168,8 @@ export function OrthogonalArrow({
     [from, to, fromSide, toSide, out, stub]
   );
 
+  if (pts.length < 2) return null;
+
   // bbox pad so nothing clips
   const pad = 60;
   const minX = Math.min(...pts.map((p) => p.x)) - pad;
@@ -162,10 +184,13 @@ export function OrthogonalArrow({
   const localPts = pts.map((p) => ({ x: p.x - minX, y: p.y - minY }));
   const d = pathFromPoints(localPts);
 
-  const markerId = `arrowhead-ortho-${id}`;
+  const end = localPts[localPts.length - 1];
+  const prev = localPts[localPts.length - 2] ?? end;
+  const fallbackVec = { x: end.x - prev.x, y: end.y - prev.y };
+  const angle = angleForSide(toSide, fallbackVec);
 
-  const HEAD_W = 12;
-  const HEAD_H = 8;
+  const HEAD_LEN = 12;
+  const HEAD_HALF = 4; // half width
 
   return (
     <svg
@@ -179,23 +204,6 @@ export function OrthogonalArrow({
         overflow: "visible",
       }}
     >
-      <defs>
-        <marker
-          id={markerId}
-          markerWidth={HEAD_W}
-          markerHeight={HEAD_H}
-          refX={0} // endpoint is base center
-          refY={HEAD_H / 2}
-          orient="auto-start-reverse"
-          markerUnits="userSpaceOnUse"
-        >
-          <polygon
-            points={`0 0, ${HEAD_W} ${HEAD_H / 2}, 0 ${HEAD_H}`}
-            fill={selected ? "#2563EB" : color}
-          />
-        </marker>
-      </defs>
-
       {/* hit area */}
       <path
         d={d}
@@ -209,7 +217,7 @@ export function OrthogonalArrow({
         }}
       />
 
-      {/* visible */}
+      {/* visible shaft */}
       <path
         d={d}
         stroke={selected ? "#2563EB" : color}
@@ -217,7 +225,14 @@ export function OrthogonalArrow({
         fill="none"
         strokeLinejoin="round"
         strokeLinecap="round"
-        markerEnd={`url(#${markerId})`}
+        pointerEvents="none"
+      />
+
+      {/* arrow head drawn manually at the end point */}
+      <polygon
+        points={`0,0 ${HEAD_LEN},-${HEAD_HALF} ${HEAD_LEN},${HEAD_HALF}`}
+        transform={`translate(${end.x},${end.y}) rotate(${angle})`}
+        fill={selected ? "#2563EB" : color}
         pointerEvents="none"
       />
     </svg>
