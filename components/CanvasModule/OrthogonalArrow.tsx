@@ -1,5 +1,6 @@
 "use client";
 import React, { useMemo } from "react";
+import { Shape } from "./types";
 
 export type Side = "top" | "right" | "bottom" | "left";
 type Pt = { x: number; y: number };
@@ -20,6 +21,9 @@ function normal(side?: Side) {
 }
 
 // Builds a simple Miro-like ortho polyline with 1-bend when possible.
+// Builds a simple Miro-like ortho polyline with 1-bend when possible,
+// and adds a small "dogleg" near the target if the arrow would otherwise
+// approach the side from the "wrong" direction.
 function routeOrthogonal(args: {
   from: Pt;
   to: Pt;
@@ -27,15 +31,17 @@ function routeOrthogonal(args: {
   toSide?: Side;
   out?: number; // how far outside shape border we start/end
   stub?: number; // how far we “exit/approach” before turning
+  hook?: number; // size of the little Miro hook
 }) {
   const { from, to, fromSide, toSide } = args;
   const out = args.out ?? 6;
   const stub = args.stub ?? 28;
+  const hook = args.hook ?? 14;
 
   const fn = normal(fromSide);
   const tn = normal(toSide);
 
-  // push endpoints slightly OUTSIDE the shape border so we don't sit inside it
+  // push endpoints slightly OUTSIDE the shape border
   const S = fn
     ? { x: from.x + fn.x * out, y: from.y + fn.y * out }
     : { ...from };
@@ -49,18 +55,14 @@ function routeOrthogonal(args: {
   const cornerA = { x: S1.x, y: E1.y };
   const cornerB = { x: E1.x, y: S1.y };
 
-  // pick corner based on which yields “cleaner” direction relative to end
-  // heuristic: prefer corner that doesn't reverse into the target normal if we know it
   let corner = cornerA;
   if (tn) {
-    // last segment will be corner -> E1. Prefer it aligned with tn axis.
     const lastA = { x: E1.x - cornerA.x, y: E1.y - cornerA.y };
     const lastB = { x: E1.x - cornerB.x, y: E1.y - cornerB.y };
     const score = (v: { x: number; y: number }) =>
-      tn.x !== 0 ? Math.abs(v.y) : Math.abs(v.x); // want perpendicular component small
+      tn.x !== 0 ? Math.abs(v.y) : Math.abs(v.x);
     corner = score(lastA) <= score(lastB) ? cornerA : cornerB;
   } else {
-    // if no toSide, prefer corner with shorter manhattan
     const manA =
       Math.abs(S1.x - cornerA.x) +
       Math.abs(S1.y - cornerA.y) +
@@ -74,7 +76,50 @@ function routeOrthogonal(args: {
     corner = manA <= manB ? cornerA : cornerB;
   }
 
-  const points: Pt[] = [S, S1, corner, E1, E];
+  // Base polyline (your working one)
+  let points: Pt[] = [S, S1, corner, E1, E];
+
+  // --- Add Miro-like end hook when the last two segments would be collinear ---
+  // We want a tiny perpendicular jog right before E1, but only if:
+  // segment (corner -> E1) is on same axis as (E1 -> E)
+  if (tn) {
+    const prev = points[points.length - 3]; // "corner"
+    const finalIsHorizontal = tn.x !== 0; // target side left/right => final segment horizontal
+    const finalIsVertical = tn.y !== 0; // target side top/bottom => final segment vertical
+
+    const prevToE1IsHorizontal = prev.y === E1.y;
+    const prevToE1IsVertical = prev.x === E1.x;
+
+    const needsHook =
+      (finalIsHorizontal && prevToE1IsHorizontal) ||
+      (finalIsVertical && prevToE1IsVertical);
+
+    if (needsHook) {
+      // Choose hook direction (up/down or left/right) so it tends to bend away from the source.
+      // This avoids always hooking the same way and looking “random”.
+      const sign = finalIsHorizontal
+        ? prev.y <= E1.y
+          ? -1
+          : 1 // go up if coming from above-ish
+        : prev.x <= E1.x
+        ? -1
+        : 1;
+
+      if (finalIsHorizontal) {
+        // Create: prev -> (prev.x, E1.y + hook*sign) -> (E1.x, E1.y + hook*sign) -> E1 -> E
+        const yHook = E1.y + hook * sign;
+        const pA = { x: prev.x, y: yHook };
+        const pB = { x: E1.x, y: yHook };
+        points = [S, S1, prev, pA, pB, E1, E];
+      } else {
+        // Vertical final: prev -> (E1.x + hook*sign, prev.y) -> (E1.x + hook*sign, E1.y) -> E1 -> E
+        const xHook = E1.x + hook * sign;
+        const pA = { x: xHook, y: prev.y };
+        const pB = { x: xHook, y: E1.y };
+        points = [S, S1, prev, pA, pB, E1, E];
+      }
+    }
+  }
 
   // cleanup: remove consecutive duplicates / collinear redundant points
   const simplified: Pt[] = [];
@@ -82,7 +127,7 @@ function routeOrthogonal(args: {
     const prev = simplified[simplified.length - 1];
     if (!prev || prev.x !== p.x || prev.y !== p.y) simplified.push(p);
   }
-  // remove collinear middle points
+
   const outPts: Pt[] = [];
   for (let i = 0; i < simplified.length; i++) {
     const a = outPts[outPts.length - 1];
@@ -142,6 +187,8 @@ export function OrthogonalArrow({
   to,
   fromSide,
   toSide,
+  fromRect, // 👈 new
+  toRect,
   color = "#3B82F6",
   strokeWidth = 2,
   zIndex = 400,
@@ -162,9 +209,11 @@ export function OrthogonalArrow({
   onSelect?: (id: string) => void;
   out?: number;
   stub?: number;
+  fromRect?: Shape;
+  toRect?: Shape;
 }) {
   const pts = useMemo(
-    () => routeOrthogonal({ from, to, fromSide, toSide, out, stub }),
+    () => routeOrthogonal({ from, to, fromSide, toSide, out, stub, hook: 14 }),
     [from, to, fromSide, toSide, out, stub]
   );
 

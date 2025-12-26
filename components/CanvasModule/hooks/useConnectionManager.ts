@@ -269,6 +269,19 @@ export function useConnectionManager() {
             const fromPt = pushOut(fromPt0, fromSide, OUT);
             const toPt = pushOut(toPt0, toSide, OUT);
 
+            const fromRect = {
+              x: from.x,
+              y: from.y,
+              width: from.width,
+              height: from.height,
+            };
+            const toRect = {
+              x: to.x,
+              y: to.y,
+              width: to.width,
+              height: to.height,
+            };
+
             return {
               id: c.id,
               from: fromPt,
@@ -276,6 +289,8 @@ export function useConnectionManager() {
               fromSide,
               toSide,
               connection: c,
+              fromRect,
+              toRect,
             };
           })
           .filter(Boolean) as Array<{
@@ -285,6 +300,8 @@ export function useConnectionManager() {
           fromSide: Side;
           toSide: Side;
           connection: Connection;
+          fromRect: Shape;
+          toRect: Shape;
         }>,
       [connections, shapes]
     );

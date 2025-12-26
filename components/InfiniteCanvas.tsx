@@ -1475,36 +1475,49 @@ export default function InfiniteCanvas({
 
               return true;
             })
-            .map(({ id, from, to, fromSide, toSide, connection }) => {
-              // const fromSide = sideFromAnchor(connection.fromAnchor);
-              // const toSide = sideFromAnchor(connection.toAnchor);
+            .map(
+              ({
+                id,
+                from,
+                to,
+                fromSide,
+                toSide,
+                connection,
+                fromRect,
+                toRect,
+              }) => {
+                // const fromSide = sideFromAnchor(connection.fromAnchor);
+                // const toSide = sideFromAnchor(connection.toAnchor);
 
-              return (
-                // <SelectableConnectionArrow
-                //   key={id}
-                //   id={id}
-                //   from={from}
-                //   to={to}
-                //   zIndex={400}
-                //   fromSide={fromSide} // <- pass through
-                //   toSide={toSide} // <- pass through
-                //   selected={editable && selectedConnectionId === id}
-                //   onSelect={editable ? selectConnection : undefined}
-                //   layout="orthogonal"
-                // />
-                <OrthogonalArrow
-                  key={id}
-                  id={id}
-                  from={from}
-                  to={to}
-                  zIndex={1}
-                  fromSide={fromSide}
-                  toSide={toSide}
-                  selected={editable && selectedConnectionId === id}
-                  onSelect={editable ? selectConnection : undefined}
-                />
-              );
-            })}
+                return (
+                  // <SelectableConnectionArrow
+                  //   key={id}
+                  //   id={id}
+                  //   from={from}
+                  //   to={to}
+                  //   zIndex={400}
+                  //   fromSide={fromSide} // <- pass through
+                  //   toSide={toSide} // <- pass through
+                  //   selected={editable && selectedConnectionId === id}
+                  //   onSelect={editable ? selectConnection : undefined}
+                  //   layout="orthogonal"
+                  // />
+                  <OrthogonalArrow
+                    key={id}
+                    id={id}
+                    from={from}
+                    to={to}
+                    zIndex={1}
+                    fromSide={fromSide}
+                    toSide={toSide}
+                    fromRect={fromRect} // 👈 new
+                    toRect={toRect}
+                    selected={editable && selectedConnectionId === id}
+                    onSelect={editable ? selectConnection : undefined}
+                  />
+                );
+              }
+            )}
 
           {shapes
             .filter((shape) => {
