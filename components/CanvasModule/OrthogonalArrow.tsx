@@ -84,35 +84,43 @@ function routeOrthogonal(args: {
   // segment (corner -> E1) is on same axis as (E1 -> E)
   if (tn) {
     const prev = points[points.length - 3]; // "corner"
-    const finalIsHorizontal = tn.x !== 0; // target side left/right => final segment horizontal
-    const finalIsVertical = tn.y !== 0; // target side top/bottom => final segment vertical
+
+    const finalIsHorizontal = tn.x !== 0;
+    const finalIsVertical = tn.y !== 0;
 
     const prevToE1IsHorizontal = prev.y === E1.y;
     const prevToE1IsVertical = prev.x === E1.x;
 
-    const needsHook =
+    const collinear =
       (finalIsHorizontal && prevToE1IsHorizontal) ||
       (finalIsVertical && prevToE1IsVertical);
 
+    // direction of the two last segments
+    const v1 = { x: E1.x - prev.x, y: E1.y - prev.y }; // prev -> E1
+    const v2 = { x: E.x - E1.x, y: E.y - E1.y }; // E1 -> E
+
+    const sameDir = finalIsHorizontal
+      ? Math.sign(v1.x) === Math.sign(v2.x) && Math.sign(v2.x) !== 0
+      : Math.sign(v1.y) === Math.sign(v2.y) && Math.sign(v2.y) !== 0;
+
+    // ✅ Only hook if collinear AND reversing direction (not when already straight and correct)
+    const needsHook = collinear && !sameDir;
+
     if (needsHook) {
-      // Choose hook direction (up/down or left/right) so it tends to bend away from the source.
-      // This avoids always hooking the same way and looking “random”.
       const sign = finalIsHorizontal
         ? prev.y <= E1.y
           ? -1
-          : 1 // go up if coming from above-ish
+          : 1
         : prev.x <= E1.x
         ? -1
         : 1;
 
       if (finalIsHorizontal) {
-        // Create: prev -> (prev.x, E1.y + hook*sign) -> (E1.x, E1.y + hook*sign) -> E1 -> E
         const yHook = E1.y + hook * sign;
         const pA = { x: prev.x, y: yHook };
         const pB = { x: E1.x, y: yHook };
         points = [S, S1, prev, pA, pB, E1, E];
       } else {
-        // Vertical final: prev -> (E1.x + hook*sign, prev.y) -> (E1.x + hook*sign, E1.y) -> E1 -> E
         const xHook = E1.x + hook * sign;
         const pA = { x: xHook, y: prev.y };
         const pB = { x: xHook, y: E1.y };
