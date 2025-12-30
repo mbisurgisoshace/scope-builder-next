@@ -12,7 +12,8 @@ export type ShapeType =
   | "table_card"
   | "feature_idea"
   | "db_collection"
-  | "question_answer";
+  | "question_answer"
+  | "logic_node";
 
 export type CardType =
   | "assumption_card"
@@ -123,6 +124,10 @@ export interface Shape {
   };
 
   logicTypeId?: string;
+
+  nodeTypeId?: string; // NodeTypeId (string alias)
+  nodeConfig?: Record<string, any>;
+  logicConfig?: Record<string, any>;
 }
 
 export type Attachment = {

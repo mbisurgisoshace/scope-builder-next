@@ -21,6 +21,9 @@ function toLiveShape(shape: Shape) {
     cardTitle: shape.cardTitle ?? null,
     data: shape.data ?? null,
     logicTypeId: shape.logicTypeId ?? null,
+    nodeTypeId: shape.nodeTypeId ?? null,
+    // whatever your registry type id is
+    nodeConfig: shape.nodeConfig ?? null,
   });
 }
 
@@ -48,6 +51,8 @@ function fromLiveShape(obj: LiveObject<any>): Shape {
     cardTitle: obj.get("cardTitle") ?? undefined,
     text: obj.get("text") ?? undefined,
     data: obj.get("data") ?? undefined,
+    nodeTypeId: obj.get("nodeTypeId") ?? undefined,
+    nodeConfig: obj.get("nodeConfig") ?? undefined,
   };
 }
 
@@ -189,12 +194,10 @@ export function useRealtimeShapes() {
       if (type === "logic_node") {
         shape = {
           ...shape,
-          width: 360,
-          height: 220,
-          color: "#0f172a",
-          // por ahora un único tipo de nodo
-          logicTypeId: "logic/function",
-          cardTitle: "Function",
+          width: 280,
+          height: 140,
+          nodeTypeId: "logic/function", // whatever your registry type id is
+          nodeConfig: {},
         };
       }
 

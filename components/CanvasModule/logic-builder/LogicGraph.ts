@@ -37,6 +37,8 @@ export class LogicGraph {
   // ──────────────────────────
 
   addNode(node: NodeInstance) {
+    console.log("node", node);
+
     if (this.nodes.has(node.id)) {
       throw new LogicDomainError(
         "NODE_ID_DUPLICATE",
@@ -45,7 +47,11 @@ export class LogicGraph {
       );
     }
 
+    console.log("node", node.typeId);
+
     const def = this.definitionRegistry.getDefinition(node.typeId);
+    console.log("def", def);
+
     if (!def) {
       throw new LogicDomainError(
         "NODE_TYPE_UNKNOWN",

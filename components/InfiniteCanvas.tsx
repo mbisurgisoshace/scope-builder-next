@@ -611,6 +611,7 @@ export default function InfiniteCanvas({
     e.stopPropagation();
     if (!editable) return;
     const type = e.dataTransfer.getData("shape-type") as ShapeType;
+    const logicTypeId = e.dataTransfer.getData("logicTypeId");
     if (!canvasRef.current) return;
 
     const dt = e.dataTransfer;
@@ -736,8 +737,19 @@ export default function InfiniteCanvas({
     }
 
     if (!type) return;
+    const id = uuidv4();
+    addShape(type, x, y, id);
 
-    addShape(type, x, y, uuidv4());
+    if (type === "logic_node" && logicTypeId) {
+      updateShape(id, (s) => ({
+        ...s,
+        logicTypeId,
+        logicConfig: s.logicConfig ?? {},
+        text: s.text ?? logicTypeId, // optional
+        width: 280,
+        height: 140,
+      }));
+    }
   };
 
   // tiny base64 preview (fast to sync via Liveblocks)
@@ -1556,7 +1568,7 @@ export default function InfiniteCanvas({
             </span>
           </button>
 
-          <button
+          {/* <button
             draggable
             onDragStart={(e) => {
               e.dataTransfer.setData("shape-type", "logic_node");
@@ -1573,6 +1585,66 @@ export default function InfiniteCanvas({
             />
             <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
               Logic
+            </span>
+          </button> */}
+
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("shape-type", "logic_node");
+              e.dataTransfer.setData("logicTypeId", "fn/param");
+            }}
+            className="w-10 h-10 gap-1 flex flex-col items-center"
+            title="Param"
+          >
+            <SquarePlus className="text-[#111827] pointer-events-none" />
+            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
+              Param
+            </span>
+          </button>
+
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("shape-type", "logic_node");
+              e.dataTransfer.setData("logicTypeId", "fn/var");
+            }}
+            className="w-10 h-10 gap-1 flex flex-col items-center"
+            title="Var"
+          >
+            <SquarePlus className="text-[#111827] pointer-events-none" />
+            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
+              Var
+            </span>
+          </button>
+
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("shape-type", "logic_node");
+              e.dataTransfer.setData("logicTypeId", "fn/add");
+            }}
+            className="w-10 h-10 gap-1 flex flex-col items-center"
+            title="Add"
+          >
+            <SquarePlus className="text-[#111827] pointer-events-none" />
+            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
+              Add
+            </span>
+          </button>
+
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("shape-type", "logic_node");
+              e.dataTransfer.setData("logicTypeId", "fn/return");
+            }}
+            className="w-10 h-10 gap-1 flex flex-col items-center"
+            title="Return"
+          >
+            <SquarePlus className="text-[#111827] pointer-events-none" />
+            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
+              Return
             </span>
           </button>
         </div>

@@ -5,33 +5,37 @@ import {
   createBrainstormExampleCards,
   initializeExampleCards,
 } from "@/services/rooms";
+import { LogicGraphProvider } from "@/components/CanvasModule/logic-builder/LogicGraphContext";
+import { DbSchemaProvider } from "@/components/CanvasModule/db/DbSchemaContext";
+import { LogicConnectionProvider } from "@/components/CanvasModule/logic-builder/LogicConnectionContext";
 
 export default async function IdeaBrainstormPage() {
   const { orgId } = await auth();
 
-  await initializeExampleCards(
-    `brainstorm-${orgId}`,
-    createBrainstormExampleCards
-  );
-
   return (
     <div className="flex flex-col h-full">
       <div className="h-full">
-        <Room roomId={`brainstorm-${orgId}`}>
-          <InfiniteCanvas
-            toolbarOptions={{
-              text: true,
-              card: false,
-              table: false,
-              answer: false,
-              ellipse: true,
-              feature: true,
-              question: false,
-              rectangle: true,
-              interview: false,
-            }}
-          />
-        </Room>
+        <DbSchemaProvider>
+          <LogicConnectionProvider>
+            <LogicGraphProvider>
+              <Room roomId={`brainstorm-${orgId}`}>
+                <InfiniteCanvas
+                  toolbarOptions={{
+                    text: true,
+                    card: false,
+                    table: false,
+                    answer: false,
+                    ellipse: true,
+                    feature: true,
+                    question: false,
+                    rectangle: true,
+                    interview: false,
+                  }}
+                />
+              </Room>
+            </LogicGraphProvider>
+          </LogicConnectionProvider>
+        </DbSchemaProvider>
       </div>
     </div>
   );

@@ -4,11 +4,13 @@
 export type LogicPortKind = "input" | "output" | "branch" | "body";
 
 // Is this port for control flow or data flow?
-export type LogicPortChannel = "control" | "data";
+export type LogicPortChannel = "control" | "data" | "flow";
 
 // Simple value types for data ports (can extend later)
 export type LogicValueType =
   | "any"
+  | "flow"
+  | "json"
   | "array"
   | "string"
   | "number"
