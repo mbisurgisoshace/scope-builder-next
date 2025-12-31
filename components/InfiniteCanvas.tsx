@@ -7,6 +7,7 @@ import {
   useHistory,
   useCanRedo,
 } from "@liveblocks/react";
+import { Hand } from "lucide-react";
 import { useRef, useState, useEffect, useMemo, JSX } from "react";
 
 import {
@@ -59,6 +60,7 @@ import { useDbSchema } from "./CanvasModule/db/DbSchemaContext";
 import { useLogicGraph } from "./CanvasModule/logic-builder/LogicGraphContext";
 import { NodeInstanceId, PortId } from "./CanvasModule/logic-builder/types";
 import { LogicConnectionsLayer } from "./CanvasModule/logic-builder/LogicConnectionsLayer";
+import { OrthogonalArrow } from "./CanvasModule/OrthogonalArrow";
 
 type RelativeAnchor = {
   x: number; // valor entre 0 y 1, representa el porcentaje del ancho
@@ -189,6 +191,7 @@ export default function InfiniteCanvas({
   const [examples, setExamples] = useState(true);
   const [solutions, setSolutions] = useState(true);
   const [valueArea, setValueArea] = useState(false);
+  const [panToolEnabled, setPanToolEnabled] = useState(false);
 
   const undo = useUndo();
   const redo = useRedo();
@@ -460,7 +463,9 @@ export default function InfiniteCanvas({
     setSelectedShapeIds,
   });
 
-  const startMarqueeSafe = editable ? startMarquee : () => {};
+  // const startMarqueeSafe = editable ? startMarquee : () => {};
+  const startMarqueeSafe =
+    editable && !panToolEnabled ? startMarquee : () => {};
 
   useShapeDragging({
     selectedShapeIds,
@@ -497,6 +502,7 @@ export default function InfiniteCanvas({
     // startMarquee,
     startMarquee: startMarqueeSafe,
     setMarqueeMousePos,
+    panToolEnabled,
   });
 
   const { handleShapeMouseDown, startResizing } = useShapeInteraction({
@@ -1269,6 +1275,23 @@ export default function InfiniteCanvas({
       {/* Toolbar */}
       {editable && (
         <div className="absolute top-1/2 -translate-y-1/2 left-4 z-20 py-4 px-3 bg-white  rounded-2xl shadow flex flex-col gap-6 items-center">
+          <button
+            onClick={() => setPanToolEnabled((v) => !v)}
+            className={`w-10 h-10 flex flex-col items-center justify-center rounded-xl
+    ${
+      panToolEnabled
+        ? "bg-blue-600 text-white"
+        : "bg-transparent text-[#111827]"
+    }
+  `}
+            title="Pan tool"
+          >
+            <Hand className="pointer-events-none" size={18} />
+            <span className="text-[10px] font-bold opacity-60 pointer-events-none">
+              Pan
+            </span>
+          </button>
+
           {toolbarOptions.rectangle && (
             <button
               draggable
@@ -1654,7 +1677,13 @@ export default function InfiniteCanvas({
       {/* Canvas */}
       <div
         ref={canvasRef}
-        className="flex-1 relative"
+        // className="flex-1 relative"
+        // className={`flex-1 relative ${panToolEnabled ? "cursor-grab" : ""}`}
+        className={[
+          "flex-1 relative",
+          panToolEnabled ? "cursor-grab" : "",
+          isPanning ? "cursor-grabbing" : "",
+        ].join(" ")}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragStart={handleDragStart}
@@ -1753,25 +1782,49 @@ export default function InfiniteCanvas({
 
               return true;
             })
-            .map(({ id, from, to, fromSide, toSide, connection }) => {
-              // const fromSide = sideFromAnchor(connection.fromAnchor);
-              // const toSide = sideFromAnchor(connection.toAnchor);
+            .map(
+              ({
+                id,
+                from,
+                to,
+                fromSide,
+                toSide,
+                connection,
+                fromRect,
+                toRect,
+              }) => {
+                // const fromSide = sideFromAnchor(connection.fromAnchor);
+                // const toSide = sideFromAnchor(connection.toAnchor);
 
-              return (
-                <SelectableConnectionArrow
-                  key={id}
-                  id={id}
-                  from={from}
-                  to={to}
-                  zIndex={400}
-                  fromSide={fromSide} // <- pass through
-                  toSide={toSide} // <- pass through
-                  selected={editable && selectedConnectionId === id}
-                  onSelect={editable ? selectConnection : undefined}
-                  layout="orthogonal"
-                />
-              );
-            })}
+                return (
+                  // <SelectableConnectionArrow
+                  //   key={id}
+                  //   id={id}
+                  //   from={from}
+                  //   to={to}
+                  //   zIndex={400}
+                  //   fromSide={fromSide} // <- pass through
+                  //   toSide={toSide} // <- pass through
+                  //   selected={editable && selectedConnectionId === id}
+                  //   onSelect={editable ? selectConnection : undefined}
+                  //   layout="orthogonal"
+                  // />
+                  <OrthogonalArrow
+                    key={id}
+                    id={id}
+                    from={from}
+                    to={to}
+                    zIndex={1}
+                    fromSide={fromSide}
+                    toSide={toSide}
+                    fromRect={fromRect} // 👈 new
+                    toRect={toRect}
+                    selected={editable && selectedConnectionId === id}
+                    onSelect={editable ? selectConnection : undefined}
+                  />
+                );
+              }
+            )}
 
           {shapes
             .filter((shape) => {
