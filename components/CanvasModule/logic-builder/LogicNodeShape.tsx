@@ -1,6 +1,7 @@
+// logic/LogicNodeShape.tsx
 "use client";
 
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect } from "react";
 import type { Shape as IShape } from "../../CanvasModule/types";
 import { useLogicGraph } from "./LogicGraphContext";
 import { ShapeFrameProps } from "../blocks/BlockFrame";
@@ -12,7 +13,7 @@ type Props = Omit<ShapeFrameProps, "children" | "shape"> & {
 
 const PORT_SIZE = 10;
 
-function PortDot({
+function Port({
   nodeId,
   portId,
   style,
@@ -23,53 +24,19 @@ function PortDot({
   style: React.CSSProperties;
   title: string;
 }) {
-  const { connectingFrom, beginConnection, completeConnection } =
-    useLogicGraph();
-
-  const isArming =
-    connectingFrom?.nodeId === nodeId && connectingFrom?.portId === portId;
-
   return (
-    <button
-      type="button"
+    <div
       title={title}
       data-node-id={nodeId}
       data-port-id={portId}
-      className={[
-        "absolute rounded-full bg-white border border-black/20 shadow",
-        "pointer-events-auto",
-        isArming ? "ring-2 ring-blue-500" : "",
-      ].join(" ")}
+      className="absolute rounded-full bg-white border border-black/20 shadow"
       style={{
         width: PORT_SIZE,
         height: PORT_SIZE,
         ...style,
       }}
-      onMouseDown={(e) => {
-        e.preventDefault();
-        e.stopPropagation(); // 👈 IMPORTANT: don’t start dragging/selecting the shape
-        // Click-to-connect UX:
-        if (!connectingFrom) beginConnection(String(nodeId), String(portId));
-        else completeConnection(String(nodeId), String(portId));
-      }}
     />
   );
-}
-
-function portLayout(portCount: number, idx: number) {
-  // evenly space ports vertically (avoid top title area)
-  // 24px top padding for title bar
-  const topPad = 28;
-  const bottomPad = 10;
-  const usable = `calc(100% - ${topPad + bottomPad}px)`;
-
-  // We use CSS calc so it adapts with node size
-  const step =
-    portCount <= 1 ? "50%" : `calc(${idx} * (${usable} / ${portCount - 1}))`;
-  return {
-    top: `calc(${topPad}px + ${step})`,
-    transform: "translateY(-50%)",
-  } as React.CSSProperties;
 }
 
 export function LogicNodeShape({
@@ -78,64 +45,65 @@ export function LogicNodeShape({
   isSelected,
   onMouseDown,
 }: Props) {
-  const {
-    service,
-    registry,
-    refresh,
-    connectingFrom,
-    beginConnection,
-    completeConnection,
-    cancelConnection,
-  } = useLogicGraph();
+  const { service, graph, registry, refresh } = useLogicGraph();
 
-  // ✅ Ensure node exists in logic graph (one per canvas shape)
+  // Ensure node exists in logic graph (one per canvas shape)
   useEffect(() => {
-    if (!shape.logicTypeId) return;
-
     service.ensureNode({
       id: shape.id as NodeInstanceId,
-      typeId: shape.logicTypeId as NodeTypeId,
+      typeId: (shape.logicTypeId ?? "fn/param") as NodeTypeId,
       shapeId: shape.id,
-      config: shape.logicConfig ?? {},
+      config: (shape.logicConfig ?? {}) as Record<string, any>,
     });
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shape.id, shape.logicTypeId, shape.nodeTypeId]);
+  }, [shape.id]);
 
-  const nodeId = shape.id as string;
-  const typeId = (shape.logicTypeId ?? shape.nodeTypeId) as string;
+  const node = graph.getNode(shape.id as NodeInstanceId);
+  if (!node) return null;
 
-  const def = useMemo(
-    () => registry.getDefinition(typeId as any),
-    [registry, typeId]
-  );
+  const def = registry.getDefinition(node.typeId);
+  if (!def) {
+    return (
+      <div
+        data-shapeid={shape.id}
+        className="absolute rounded-xl bg-red-50 border border-red-300 shadow-sm p-2 text-xs text-red-700"
+        style={{
+          left: shape.x,
+          top: shape.y,
+          width: shape.width,
+          height: shape.height,
+        }}
+        onMouseDown={interactive ? onMouseDown : undefined}
+      >
+        <div className="font-semibold">Unknown node type</div>
+        <div className="mt-1">{String(node.typeId)}</div>
+      </div>
+    );
+  }
 
-  const ports = def?.ports ?? [];
-  const inputs = ports.filter((p: any) => p.kind === "input");
-  const outputs = ports.filter((p: any) => p.kind === "output");
+  // Separate ports by kind for left/right placement
+  const inputs = def.ports.filter((p) => p.kind === "input");
+  const outputs = def.ports.filter((p) => p.kind === "output");
 
-  const title = def?.label ?? shape.text ?? "Logic Node";
+  // Simple vertical spacing (n8n-ish)
+  const TOP_PAD = 36; // space for header
+  const BOT_PAD = 12;
+  const usableH = Math.max(1, shape.height - TOP_PAD - BOT_PAD);
 
-  const handlePortMouseDown =
-    (portId: string, kind: "input" | "output") => (e: React.MouseEvent) => {
-      e.stopPropagation();
+  const placePorts = (ports: typeof def.ports) => {
+    const n = Math.max(1, ports.length);
+    return ports.map((p, idx) => {
+      const t = n === 1 ? 0.5 : (idx + 1) / (n + 1);
+      return {
+        port: p,
+        top: TOP_PAD + t * usableH,
+      };
+    });
+  };
 
-      // n8n-ish behavior:
-      // - click output => begin connection
-      // - click input while connecting => complete connection
-      if (kind === "output") {
-        beginConnection(nodeId, portId);
-        return;
-      }
-
-      // input
-      if (connectingFrom) {
-        completeConnection(nodeId, portId);
-      } else {
-        // optional: clicking an input without active connection cancels any pending
-        cancelConnection();
-      }
-    };
+  const inputPlacements = placePorts(inputs);
+  const outputPlacements = placePorts(outputs);
 
   return (
     <div
@@ -151,51 +119,65 @@ export function LogicNodeShape({
       }}
       onMouseDown={interactive ? onMouseDown : undefined}
     >
-      {/* Title */}
-      <div className="px-3 py-2 text-sm font-semibold truncate">{title}</div>
+      {/* Header */}
+      <div className="px-3 py-2 text-sm font-semibold truncate flex items-center justify-between">
+        <span>{def.label}</span>
+        {/* Optional: show typeId small for debugging */}
+        {/* <span className="text-[10px] text-black/40">{def.typeId}</span> */}
+      </div>
 
-      {/* LEFT: inputs */}
-      {inputs.map((p: any, i: number) => {
-        const active =
-          connectingFrom?.nodeId === nodeId && connectingFrom?.portId === p.id;
-        return (
-          <PortDot
-            key={p.id}
-            nodeId={nodeId}
-            portId={p.id}
-            title={`${p.name ?? p.id}`}
+      {/* Inputs (left) */}
+      {inputPlacements.map(({ port, top }) => (
+        <React.Fragment key={`in-${port.id}`}>
+          <Port
+            nodeId={node.id}
+            portId={port.id}
+            title={port.name}
             style={{
               left: -PORT_SIZE / 2,
-              ...portLayout(inputs.length, i),
+              top,
+              transform: "translateY(-50%)",
             }}
-            //active={active}
-            //onMouseDown={handlePortMouseDown(p.id, "input")}
           />
-        );
-      })}
+          <div
+            className="absolute text-[11px] text-black/60 select-none"
+            style={{
+              left: 10,
+              top,
+              transform: "translateY(-50%)",
+            }}
+          >
+            {port.name}
+          </div>
+        </React.Fragment>
+      ))}
 
-      {/* RIGHT: outputs */}
-      {outputs.map((p: any, i: number) => {
-        const active =
-          connectingFrom?.nodeId === nodeId && connectingFrom?.portId === p.id;
-        return (
-          <PortDot
-            key={p.id}
-            nodeId={nodeId}
-            portId={p.id}
-            title={`${p.name ?? p.id}`}
+      {/* Outputs (right) */}
+      {outputPlacements.map(({ port, top }) => (
+        <React.Fragment key={`out-${port.id}`}>
+          <Port
+            nodeId={node.id}
+            portId={port.id}
+            title={port.name}
             style={{
               right: -PORT_SIZE / 2,
-              ...portLayout(outputs.length, i),
+              top,
+              transform: "translateY(-50%)",
             }}
-            //active={active}
-            //onMouseDown={handlePortMouseDown(p.id, "output")}
           />
-        );
-      })}
-
-      {/* Optional: tiny debug line */}
-      {/* <div className="absolute bottom-2 left-3 text-[10px] text-black/40">{typeId}</div> */}
+          <div
+            className="absolute text-[11px] text-black/60 select-none"
+            style={{
+              right: 10,
+              top,
+              transform: "translateY(-50%)",
+              textAlign: "right",
+            }}
+          >
+            {port.name}
+          </div>
+        </React.Fragment>
+      ))}
     </div>
   );
 }

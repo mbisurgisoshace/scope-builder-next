@@ -745,6 +745,7 @@ export default function InfiniteCanvas({
         ...s,
         logicTypeId,
         logicConfig: s.logicConfig ?? {},
+        nodeTypeId: logicTypeId,
         text: s.text ?? logicTypeId, // optional
         width: 280,
         height: 140,

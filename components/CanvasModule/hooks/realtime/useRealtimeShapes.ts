@@ -196,7 +196,7 @@ export function useRealtimeShapes() {
           ...shape,
           width: 280,
           height: 140,
-          nodeTypeId: "logic/function", // whatever your registry type id is
+          nodeTypeId: "fn/param", // whatever your registry type id is
           nodeConfig: {},
         };
       }
