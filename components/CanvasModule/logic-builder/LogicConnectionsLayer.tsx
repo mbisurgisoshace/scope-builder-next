@@ -2,102 +2,216 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Shape as IShape } from "../types";
+import type { Shape as IShape } from "../types";
 import { useLogicGraph } from "./LogicGraphContext";
-import { LogicPortSide, PortId } from "./types";
-import { SelectableConnectionArrow } from "../SelectableConnectionArrow";
+import { OrthogonalArrow } from "../OrthogonalArrow";
+import type {
+  LogicPortDefinition,
+  LogicPortSide,
+  NodeInstanceId,
+  PortId,
+} from "./types";
+
+type Point = { x: number; y: number };
 
 type Props = {
   shapes: IShape[];
+  mousePos?: Point | null; // world coords (same coords as shapes)
 };
 
-function getAnchor(
-  shape: IShape,
-  side: LogicPortSide | undefined,
-  portId?: PortId
-): { x: number; y: number } {
-  const s = side ?? "right";
-  const { x, y, width: w, height: h } = shape;
+const PORT_SIZE = 10;
 
-  if (s === "top") {
-    return { x: x + w / 2, y };
-  }
+// Keep this aligned with LogicNodeShape visual layout
+const TOP_PAD = 36;
+const BOT_PAD = 12;
 
-  if (s === "bottom") {
-    // Align with your UI: "then" bottom-left, "else" bottom-right, others center
-    if (portId === ("then" as PortId)) {
-      return { x: x + w * 0.25, y: y + h };
-    }
-    if (portId === ("else" as PortId)) {
-      return { x: x + w * 0.75, y: y + h };
-    }
-    return { x: x + w / 2, y: y + h };
-  }
-
-  if (s === "left") {
-    return { x, y: y + h / 2 };
-  }
-
-  // right
-  return { x: x + w, y: y + h / 2 };
+function defaultSideForPort(p: LogicPortDefinition): LogicPortSide {
+  if (p.side) return p.side;
+  // sensible defaults
+  if (p.kind === "input") return "left";
+  if (p.kind === "output") return "right";
+  // branch/body/control-ish: bottom feels “n8n-ish”
+  if (p.kind === "branch" || p.kind === "body") return "bottom";
+  return "right";
 }
 
-export const LogicConnectionsLayer: React.FC<Props> = ({ shapes }) => {
-  const { graph, registry } = useLogicGraph();
+function rectForShape(s: IShape) {
+  return { x: s.x, y: s.y, width: s.width, height: s.height };
+}
 
+function placePortsOnSide(
+  shape: IShape,
+  ports: LogicPortDefinition[],
+  side: LogicPortSide
+) {
+  const usableH = Math.max(1, shape.height - TOP_PAD - BOT_PAD);
+  const usableW = Math.max(1, shape.width - 24); // small padding effect for top/bottom distribution
+
+  // Sort by explicit order first, then stable by id
+  const sorted = [...ports].sort((a, b) => {
+    const ao = a.order ?? 0;
+    const bo = b.order ?? 0;
+    if (ao !== bo) return ao - bo;
+    return String(a.id).localeCompare(String(b.id));
+  });
+
+  const n = Math.max(1, sorted.length);
+
+  return sorted.map((p, idx) => {
+    const t = n === 1 ? 0.5 : (idx + 1) / (n + 1);
+
+    // Compute anchor point at the edge (matching how the dot sits visually)
+    if (side === "left") {
+      return { port: p, x: shape.x, y: shape.y + TOP_PAD + t * usableH };
+    }
+    if (side === "right") {
+      return {
+        port: p,
+        x: shape.x + shape.width,
+        y: shape.y + TOP_PAD + t * usableH,
+      };
+    }
+    if (side === "top") {
+      return {
+        port: p,
+        x: shape.x + shape.width / 2 + (t - 0.5) * usableW,
+        y: shape.y,
+      };
+    }
+    // bottom
+    return {
+      port: p,
+      x: shape.x + shape.width / 2 + (t - 0.5) * usableW,
+      y: shape.y + shape.height,
+    };
+  });
+}
+
+function getPortWorldPos(
+  shape: IShape,
+  defPorts: LogicPortDefinition[],
+  portId: PortId
+) {
+  const p = defPorts.find((x) => x.id === portId);
+  if (!p) return null;
+
+  const side = defaultSideForPort(p);
+
+  // group ports by side to distribute nicely
+  const bySide = defPorts.filter((pp) => defaultSideForPort(pp) === side);
+  const placed = placePortsOnSide(shape, bySide, side);
+  const hit = placed.find((it) => it.port.id === portId);
+  if (!hit) return null;
+
+  return {
+    pos: { x: hit.x, y: hit.y },
+    side,
+  };
+}
+
+function pickSideFromVector(from: Point, to: Point): LogicPortSide {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    return dx >= 0 ? "right" : "left";
+  }
+  return dy >= 0 ? "bottom" : "top";
+}
+
+export function LogicConnectionsLayer({ shapes, mousePos }: Props) {
+  const { graph, registry, connectingFrom } = useLogicGraph();
+
+  // fast shape lookup
   const shapeById = useMemo(() => {
     const m = new Map<string, IShape>();
     for (const s of shapes) m.set(s.id, s);
     return m;
   }, [shapes]);
 
-  const connections = graph.listConnections();
+  const conns = graph.listConnections();
+
+  const arrows = conns
+    .map((c) => {
+      const fromNode = graph.getNode(c.fromNodeId as NodeInstanceId);
+      const toNode = graph.getNode(c.toNodeId as NodeInstanceId);
+      if (!fromNode || !toNode) return null;
+
+      const fromShapeId = fromNode.shapeId ?? fromNode.id;
+      const toShapeId = toNode.shapeId ?? toNode.id;
+
+      const fromShape = shapeById.get(fromShapeId);
+      const toShape = shapeById.get(toShapeId);
+      if (!fromShape || !toShape) return null;
+
+      const fromDef = registry.getDefinition(fromNode.typeId);
+      const toDef = registry.getDefinition(toNode.typeId);
+      if (!fromDef || !toDef) return null;
+
+      const fromPort = getPortWorldPos(fromShape, fromDef.ports, c.fromPortId);
+      const toPort = getPortWorldPos(toShape, toDef.ports, c.toPortId);
+      if (!fromPort || !toPort) return null;
+
+      return (
+        <OrthogonalArrow
+          key={c.id}
+          id={c.id}
+          from={fromPort.pos}
+          to={toPort.pos}
+          fromSide={fromPort.side}
+          toSide={toPort.side}
+          fromRect={rectForShape(fromShape)}
+          toRect={rectForShape(toShape)}
+          selected={false}
+          onSelect={() => {}}
+          zIndex={6}
+        />
+      );
+    })
+    .filter(Boolean);
+
+  // Preview while connecting
+  const preview = (() => {
+    if (!connectingFrom || !mousePos) return null;
+
+    const fromNode = graph.getNode(connectingFrom.nodeId as NodeInstanceId);
+    if (!fromNode) return null;
+
+    const fromShapeId = fromNode.shapeId ?? fromNode.id;
+    const fromShape = shapeById.get(fromShapeId);
+    if (!fromShape) return null;
+
+    const fromDef = registry.getDefinition(fromNode.typeId);
+    if (!fromDef) return null;
+
+    const fromPort = getPortWorldPos(
+      fromShape,
+      fromDef.ports,
+      connectingFrom.portId as PortId
+    );
+    if (!fromPort) return null;
+
+    const toSide = pickSideFromVector(fromPort.pos, mousePos);
+
+    return (
+      <OrthogonalArrow
+        id="logic-preview"
+        from={fromPort.pos}
+        to={mousePos}
+        fromSide={fromPort.side}
+        toSide={toSide}
+        fromRect={rectForShape(fromShape)}
+        // no toRect for mouse
+        selected={false}
+        onSelect={() => {}}
+        zIndex={7}
+      />
+    );
+  })();
 
   return (
     <>
-      {connections.map((conn) => {
-        const fromNode = graph.getNode(conn.fromNodeId);
-        const toNode = graph.getNode(conn.toNodeId);
-        if (!fromNode || !toNode) return null;
-
-        if (!fromNode.shapeId || !toNode.shapeId) return null;
-
-        const fromShape = shapeById.get(fromNode.shapeId);
-        const toShape = shapeById.get(toNode.shapeId);
-        if (!fromShape || !toShape) return null;
-
-        const fromDef = registry.getDefinition(fromNode.typeId);
-        const toDef = registry.getDefinition(toNode.typeId);
-        if (!fromDef || !toDef) return null;
-
-        const fromPort = fromDef.getPort(conn.fromPortId as PortId);
-        const toPort = toDef.getPort(conn.toPortId as PortId);
-        if (!fromPort || !toPort) return null;
-
-        const fromSide = (fromPort.side ?? "right") as LogicPortSide;
-        const toSide = (toPort.side ?? "left") as LogicPortSide;
-
-        const fromPos = getAnchor(
-          fromShape,
-          fromSide,
-          conn.fromPortId as PortId
-        );
-        const toPos = getAnchor(toShape, toSide, conn.toPortId as PortId);
-
-        return (
-          <SelectableConnectionArrow
-            key={conn.id}
-            id={conn.id}
-            from={fromPos}
-            to={toPos}
-            fromSide={fromSide}
-            toSide={toSide}
-            bend={0.5}
-            strokeWidth={2}
-            color="#22C55E"
-          />
-        );
-      })}
+      {arrows}
+      {preview}
     </>
   );
-};
+}

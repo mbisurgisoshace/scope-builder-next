@@ -1,38 +1,36 @@
 // logic/NodeInstance.ts
 import { NodeInstanceId, NodeTypeId } from "./types";
-import { NodeDefinition } from "./NodeDefinition";
 
-export interface NodeInstanceProps {
+export interface NodeInstanceInit {
   id: NodeInstanceId;
   typeId: NodeTypeId;
   config?: Record<string, any>;
-  // optional: link back to UI shape
-  shapeId?: string; // InfiniteCanvas shape id
+  shapeId?: string;
 }
 
-/**
- * A concrete node placed in a graph.
- * Knows its typeId, config values, and optional shape mapping.
- *
- * It does NOT know the actual NodeDefinition – the graph or a registry does.
- */
 export class NodeInstance {
   id: NodeInstanceId;
   typeId: NodeTypeId;
   config: Record<string, any>;
   shapeId?: string;
 
-  constructor(props: NodeInstanceProps) {
-    this.id = props.id;
-    this.typeId = props.typeId;
-    this.config = { ...(props.config ?? {}) };
-    this.shapeId = props.shapeId;
+  constructor(init: NodeInstanceInit) {
+    this.id = init.id;
+    this.typeId = init.typeId;
+    this.config = init.config ?? {};
+    this.shapeId = init.shapeId;
   }
 
-  updateConfig(patch: Partial<Record<string, any>>) {
-    this.config = {
-      ...this.config,
-      ...patch,
+  updateConfig(patch: Record<string, any>) {
+    this.config = { ...this.config, ...patch };
+  }
+
+  toJSON() {
+    return {
+      id: this.id,
+      typeId: this.typeId,
+      shapeId: this.shapeId ?? null,
+      config: this.config ?? {},
     };
   }
 }

@@ -1944,7 +1944,7 @@ export default function InfiniteCanvas({
             )
           )}
 
-          <LogicConnectionsLayer shapes={shapes} />
+          <LogicConnectionsLayer shapes={shapes} mousePos={canvasMousePos} />
         </div>
       </div>
     </div>

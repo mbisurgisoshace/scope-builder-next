@@ -1,10 +1,12 @@
+// CanvasModule/logic-builder/LogicNodeShape.tsx
 "use client";
 
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect } from "react";
 import type { Shape as IShape } from "../../CanvasModule/types";
 import { useLogicGraph } from "./LogicGraphContext";
+import { useLogicConnection } from "./LogicConnectionContext";
+import type { NodeInstanceId, NodeTypeId, PortId } from "./types";
 import { ShapeFrameProps } from "../blocks/BlockFrame";
-import type { NodeInstanceId, NodeTypeId } from "./types";
 
 type Props = Omit<ShapeFrameProps, "children" | "shape"> & {
   shape: IShape;
@@ -46,21 +48,12 @@ export function LogicNodeShape({
   isSelected,
   onMouseDown,
 }: Props) {
-  const {
-    service,
-    graph,
-    registry,
-    refresh,
-    connectingFrom,
-    beginConnection,
-    completeConnection,
-    cancelConnection,
-  } = useLogicGraph();
+  const { service, graph, registry, refresh } = useLogicGraph();
+  const { drag, beginDrag, endDrag, cancelDrag } = useLogicConnection();
 
-  // Always derive a stable nodeTypeId for this shape
   const nodeTypeId = (shape.logicTypeId ?? "fn/param") as NodeTypeId;
 
-  // Ensure node exists in logic graph (one per canvas shape)
+  // Ensure node exists
   useEffect(() => {
     service.ensureNode({
       id: shape.id as NodeInstanceId,
@@ -72,54 +65,64 @@ export function LogicNodeShape({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shape.id, nodeTypeId, shape.logicConfig]);
 
-  // Compute node/def WITHOUT early returns (prevents hook-order changes)
-  const node = useMemo(
-    () => graph.getNode(shape.id as NodeInstanceId),
-    [graph, shape.id]
+  // ✅ IMPORTANT: do NOT memo these (graph mutates internally)
+  const node = graph.getNode(shape.id as NodeInstanceId);
+  const def = node ? registry.getDefinition(node.typeId) : undefined;
+
+  const handleNodeMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (!interactive) return;
+      if (drag) cancelDrag();
+      onMouseDown?.(e as any);
+    },
+    [interactive, drag, cancelDrag, onMouseDown]
   );
 
-  const def = useMemo(
-    () => (node ? registry.getDefinition(node.typeId) : undefined),
-    [registry, node]
-  );
-
-  // Port click behavior (n8n-ish)
   const handlePortMouseDown = useCallback(
     (nodeId: string, portId: string) => (e: React.MouseEvent) => {
       e.stopPropagation();
       if (!interactive) return;
-      // Start connection from this port
-      beginConnection(nodeId, portId);
+
+      const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+
+      beginDrag({
+        fromNodeId: nodeId as NodeInstanceId,
+        fromPortId: portId as PortId,
+        fromPos: { x: cx, y: cy },
+      });
     },
-    [beginConnection, interactive]
+    [beginDrag, interactive]
   );
 
   const handlePortMouseUp = useCallback(
-    (nodeId: string, portId: string) => (e: React.MouseEvent) => {
+    (toNodeId: string, toPortId: string) => (e: React.MouseEvent) => {
       e.stopPropagation();
       if (!interactive) return;
-      // If a connection is in progress, complete it here
-      if (connectingFrom) {
-        completeConnection(nodeId, portId);
+      if (!drag) return;
+
+      try {
+        service.connectPorts({
+          fromNodeId: drag.fromNodeId,
+          fromPortId: drag.fromPortId,
+          toNodeId: toNodeId as NodeInstanceId,
+          toPortId: toPortId as PortId,
+        });
+      } catch (err) {
+        console.error("Failed to connect logic ports:", err);
+      } finally {
+        endDrag({
+          toNodeId: toNodeId as NodeInstanceId,
+          toPortId: toPortId as PortId,
+        });
+        refresh();
       }
     },
-    [completeConnection, connectingFrom, interactive]
+    [interactive, drag, service, endDrag, refresh]
   );
 
-  // Clicking on empty node surface should cancel any in-progress connection
-  const handleNodeMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (!interactive) return;
-      // if the user is mid-connection and clicks elsewhere, cancel it
-      if (connectingFrom) cancelConnection();
-      onMouseDown?.(e as any);
-    },
-    [interactive, connectingFrom, cancelConnection, onMouseDown]
-  );
-
-  // -------- Render (safe even if node/def missing) --------
-
-  // Unknown / not-yet-ready node state
+  // Fallbacks
   if (!node) {
     return (
       <div
@@ -202,11 +205,7 @@ export function LogicNodeShape({
             nodeId={node.id}
             portId={port.id}
             title={port.name}
-            style={{
-              left: -PORT_SIZE / 2,
-              top,
-              transform: "translateY(-50%)",
-            }}
+            style={{ left: -PORT_SIZE / 2, top, transform: "translateY(-50%)" }}
             onMouseDown={handlePortMouseDown(node.id, port.id)}
             onMouseUp={handlePortMouseUp(node.id, port.id)}
           />

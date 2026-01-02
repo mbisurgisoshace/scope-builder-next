@@ -1,165 +1,115 @@
 // logic/LogicGraph.ts
-import {
-  LogicConnection,
-  ConnectionId,
-  NodeInstanceId,
-  NodeTypeId,
-  PortId,
-} from "./types";
-import { NodeInstance } from "./NodeInstance";
-import { NodeDefinition } from "./NodeDefinition";
-import { LogicDomainError } from "./LogicError";
 import { NodeDefinitionRegistry } from "./NodeRegistry";
+import { NodeInstance } from "./NodeInstance";
+import { LogicConnection, ConnectionId, NodeInstanceId } from "./types";
 
-export interface LogicGraphProps {
+export interface LogicGraphMeta {
   id: string;
   name: string;
 }
 
 export class LogicGraph {
-  readonly id: string;
-  name: string;
+  private nodes = new Map<NodeInstanceId, NodeInstance>();
+  private connections = new Map<ConnectionId, LogicConnection>();
 
-  private nodes: Map<NodeInstanceId, NodeInstance>;
-  private connections: Map<ConnectionId, LogicConnection>;
-  private definitionRegistry: NodeDefinitionRegistry;
-
-  constructor(props: LogicGraphProps, registry: NodeDefinitionRegistry) {
-    this.id = props.id;
-    this.name = props.name;
-    this.nodes = new Map();
-    this.connections = new Map();
-    this.definitionRegistry = registry;
-  }
+  constructor(
+    public meta: LogicGraphMeta,
+    private registry: NodeDefinitionRegistry
+  ) {}
 
   // ──────────────────────────
-  // Node operations
+  // Nodes
   // ──────────────────────────
 
   addNode(node: NodeInstance) {
-    console.log("node", node);
-
-    if (this.nodes.has(node.id)) {
-      throw new LogicDomainError(
-        "NODE_ID_DUPLICATE",
-        `Node with id ${node.id} already exists.`,
-        { nodeId: node.id }
-      );
-    }
-
-    console.log("node", node.typeId);
-
-    const def = this.definitionRegistry.getDefinition(node.typeId);
-    console.log("def", def);
-
+    // Validate node type exists
+    const def = this.registry.getDefinition(node.typeId);
     if (!def) {
-      throw new LogicDomainError(
-        "NODE_TYPE_UNKNOWN",
-        `Unknown node type: ${node.typeId}`,
-        { typeId: node.typeId }
-      );
+      throw new Error(`Unknown node type: ${node.typeId}`);
     }
-
     this.nodes.set(node.id, node);
   }
 
-  removeNode(nodeId: NodeInstanceId) {
-    if (!this.nodes.has(nodeId)) return;
-
-    // Remove all connections touching this node
-    for (const [id, conn] of [...this.connections.entries()]) {
-      if (conn.fromNodeId === nodeId || conn.toNodeId === nodeId) {
-        this.connections.delete(id);
-      }
-    }
-
-    this.nodes.delete(nodeId);
+  getNode(id: NodeInstanceId): NodeInstance | undefined {
+    return this.nodes.get(id);
   }
 
-  getNode(nodeId: NodeInstanceId): NodeInstance | undefined {
-    return this.nodes.get(nodeId);
+  removeNode(id: NodeInstanceId) {
+    this.nodes.delete(id);
+    // remove connections involving this node
+    for (const [cid, c] of this.connections) {
+      if (c.fromNodeId === id || c.toNodeId === id) {
+        this.connections.delete(cid);
+      }
+    }
   }
 
   listNodes(): NodeInstance[] {
-    return [...this.nodes.values()];
+    return Array.from(this.nodes.values());
   }
 
   // ──────────────────────────
-  // Connection operations
+  // Connections
   // ──────────────────────────
 
   addConnection(conn: LogicConnection) {
-    if (this.connections.has(conn.id)) {
-      throw new LogicDomainError(
-        "CONNECTION_ID_DUPLICATE",
-        `Connection ${conn.id} already exists.`,
-        { connectionId: conn.id }
-      );
-    }
-
+    // Validate both nodes exist
     const fromNode = this.nodes.get(conn.fromNodeId);
     const toNode = this.nodes.get(conn.toNodeId);
-    if (!fromNode || !toNode) {
-      throw new LogicDomainError(
-        "CONNECTION_NODE_NOT_FOUND",
-        `Connection references unknown node(s).`,
-        { connection: conn }
-      );
-    }
+    if (!fromNode) throw new Error(`fromNode not found: ${conn.fromNodeId}`);
+    if (!toNode) throw new Error(`toNode not found: ${conn.toNodeId}`);
 
-    const fromDef = this.definitionRegistry.getDefinition(fromNode.typeId);
-    const toDef = this.definitionRegistry.getDefinition(toNode.typeId);
-    if (!fromDef || !toDef) {
-      throw new LogicDomainError(
-        "CONNECTION_NODE_TYPE_UNKNOWN",
-        `One or both node types are unknown for connection.`,
-        { connection: conn }
-      );
-    }
+    // Validate ports exist on definitions
+    const fromDef = this.registry.getDefinition(fromNode.typeId);
+    const toDef = this.registry.getDefinition(toNode.typeId);
+    if (!fromDef) throw new Error(`Unknown node type: ${fromNode.typeId}`);
+    if (!toDef) throw new Error(`Unknown node type: ${toNode.typeId}`);
 
-    const fromPort = fromDef.getPort(conn.fromPortId);
-    const toPort = toDef.getPort(conn.toPortId);
+    const fromPort = fromDef.ports.find((p) => p.id === conn.fromPortId);
+    const toPort = toDef.ports.find((p) => p.id === conn.toPortId);
+    if (!fromPort) throw new Error(`Unknown fromPort: ${conn.fromPortId}`);
+    if (!toPort) throw new Error(`Unknown toPort: ${conn.toPortId}`);
 
-    if (!fromPort || !toPort) {
-      throw new LogicDomainError(
-        "CONNECTION_PORT_NOT_FOUND",
-        `One or both ports not found for connection.`,
-        { connection: conn }
-      );
-    }
-
-    // Basic invariant: control→control, data→data
-    if (fromPort.channel !== toPort.channel) {
-      throw new LogicDomainError(
-        "CONNECTION_CHANNEL_MISMATCH",
-        `Cannot connect ${fromPort.channel} to ${toPort.channel}.`,
-        { fromPort, toPort }
-      );
-    }
-
-    // If data ports: basic type compatibility check
-    if (fromPort.channel === "data") {
-      const a = fromPort.valueType ?? "any";
-      const b = toPort.valueType ?? "any";
-      if (a !== "any" && b !== "any" && a !== b) {
-        // we could allow some promotions later
-        throw new LogicDomainError(
-          "CONNECTION_TYPE_MISMATCH",
-          `Cannot connect ${a} to ${b}.`,
-          { fromPort, toPort }
-        );
-      }
-    }
-
-    // Later: we can check for multiple inputs, cycles, etc.
     this.connections.set(conn.id, conn);
   }
 
-  removeConnection(connectionId: ConnectionId) {
-    this.connections.delete(connectionId);
+  removeConnection(id: ConnectionId) {
+    this.connections.delete(id);
   }
 
   listConnections(): LogicConnection[] {
-    return [...this.connections.values()];
+    return Array.from(this.connections.values());
+  }
+
+  // ──────────────────────────
+  // Debug / Inspect
+  // ──────────────────────────
+
+  toJSON() {
+    return {
+      meta: this.meta,
+      nodes: this.listNodes().map((n) => n.toJSON()),
+      connections: this.listConnections().map((c) => ({ ...c })),
+    };
+  }
+
+  toDebugString() {
+    const j = this.toJSON();
+    const lines: string[] = [];
+
+    lines.push(`Graph: ${j.meta.name} (${j.meta.id})`);
+    lines.push(`Nodes: ${j.nodes.length}`);
+    for (const n of j.nodes) {
+      lines.push(`  - ${n.id}  type=${n.typeId}  shape=${n.shapeId ?? "∅"}`);
+    }
+
+    lines.push(`Connections: ${j.connections.length}`);
+    for (const c of j.connections) {
+      lines.push(
+        `  - ${c.id}: ${c.fromNodeId}.${c.fromPortId} -> ${c.toNodeId}.${c.toPortId}`
+      );
+    }
+
+    return lines.join("\n");
   }
 }
