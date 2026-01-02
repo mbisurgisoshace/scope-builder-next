@@ -9,8 +9,11 @@ import { LogicGraphProvider } from "@/components/CanvasModule/logic-builder/Logi
 import { DbSchemaProvider } from "@/components/CanvasModule/db/DbSchemaContext";
 import { LogicConnectionProvider } from "@/components/CanvasModule/logic-builder/LogicConnectionContext";
 
+import { playground } from "@/components/LogicModule/playground";
+
 export default async function IdeaBrainstormPage() {
   const { orgId } = await auth();
+  playground();
 
   return (
     <div className="flex flex-col h-full">
