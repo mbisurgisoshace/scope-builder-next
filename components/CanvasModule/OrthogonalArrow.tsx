@@ -4,6 +4,7 @@ import { Shape } from "./types";
 
 export type Side = "top" | "right" | "bottom" | "left";
 type Pt = { x: number; y: number };
+type Rect = { x: number; y: number; width: number; height: number };
 
 function normal(side?: Side) {
   switch (side) {
@@ -217,8 +218,8 @@ export function OrthogonalArrow({
   onSelect?: (id: string) => void;
   out?: number;
   stub?: number;
-  fromRect?: Shape;
-  toRect?: Shape;
+  fromRect?: Rect;
+  toRect?: Rect;
 }) {
   const pts = useMemo(
     () => routeOrthogonal({ from, to, fromSide, toSide, out, stub, hook: 14 }),

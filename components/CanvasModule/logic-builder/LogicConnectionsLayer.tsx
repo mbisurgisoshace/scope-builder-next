@@ -191,8 +191,21 @@ export function LogicConnectionsLayer({ shapes, mousePos }: Props) {
     if (!fromPort) return null;
 
     const toSide = pickSideFromVector(fromPort.pos, mousePos);
+    const mouseRect = { x: mousePos.x, y: mousePos.y, width: 0, height: 0 };
 
     return (
+      // <OrthogonalArrow
+      //   id="logic-preview"
+      //   from={fromPort.pos}
+      //   to={mousePos}
+      //   fromSide={fromPort.side}
+      //   toSide={toSide}
+      //   fromRect={rectForShape(fromShape)}
+      //   // no toRect for mouse
+      //   selected={false}
+      //   onSelect={() => {}}
+      //   zIndex={7}
+      // />
       <OrthogonalArrow
         id="logic-preview"
         from={fromPort.pos}
@@ -200,10 +213,10 @@ export function LogicConnectionsLayer({ shapes, mousePos }: Props) {
         fromSide={fromPort.side}
         toSide={toSide}
         fromRect={rectForShape(fromShape)}
-        // no toRect for mouse
+        toRect={mouseRect as any}
         selected={false}
         onSelect={() => {}}
-        zIndex={7}
+        zIndex={999} // keep it above nodes while dragging
       />
     );
   })();
