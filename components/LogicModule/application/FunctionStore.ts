@@ -9,6 +9,20 @@ import { ExecutionPlanner } from "../domain/services/ExecutionPlanner";
 import { FunctionDefinition } from "../domain/model/FunctionDefinition";
 import { FunctionValidator } from "../domain/services/FunctionValidator";
 
+export type FunctionSnapshot = {
+  version: 1;
+  params: Array<{ id: string; name: string }>;
+  statements: Array<
+    | {
+        type: "variable";
+        id: string;
+        declarations: Array<{ name: string; source: any }>;
+      }
+    | { type: "logic"; id: string; assignments: any[] }
+    | { type: "return"; id: string; source?: any }
+  >;
+  flow: Array<{ from: string; to: string }>;
+};
 export class FunctionStore {
   private fn: FunctionDefinition;
 
@@ -130,6 +144,146 @@ export class FunctionStore {
 
   getStatement(statementIdRaw: string) {
     return this.fn.getStatement(asStatementId(statementIdRaw));
+  }
+
+  setVariableDeclarationSource(
+    statementIdRaw: string,
+    declName: string,
+    source:
+      | { kind: "literal"; value: unknown }
+      | { kind: "symbolRef"; name: string }
+  ) {
+    const id = asStatementId(statementIdRaw);
+    const stmt = this.fn.getStatement(id);
+    if (!stmt || stmt.type !== "variable") return;
+
+    const v = stmt as VariableStatement;
+    const d = v.declarations.find((x) => x.name === declName);
+    if (!d) return;
+
+    if (source.kind === "literal") d.source = Value.literal(source.value);
+    if (source.kind === "symbolRef") d.source = Value.ref(source.name);
+  }
+
+  getVariableDeclarations(
+    statementIdRaw: string
+  ): Array<{ name: string; source: any }> {
+    const id = asStatementId(statementIdRaw);
+    const stmt = this.fn.getStatement(id);
+    if (!stmt || stmt.type !== "variable") return [];
+    const v = stmt as VariableStatement;
+    return v.declarations.map((d) => ({ name: d.name, source: d.source }));
+  }
+
+  // ----------------
+  // Persistence (Snapshot)
+  // ----------------
+
+  serialize(): FunctionSnapshot {
+    // Params: your FunctionDefinition currently stores params internally.
+    // If you don't have a list method yet, see notes below.
+    const params =
+      // @ts-ignore - adapt if you have a real method
+      (this.fn.listParameters?.() ?? this.fn.parameters ?? []).map(
+        (p: any) => ({
+          id: String(p.id ?? p.name),
+          name: String(p.name),
+        })
+      );
+
+    const statements: FunctionSnapshot["statements"] = this.fn
+      .listStatements()
+      .map((s: any) => {
+        if (s.type === "variable") {
+          return {
+            type: "variable",
+            id: String(s.id),
+            declarations: (s.declarations ?? []).map((d: any) => ({
+              name: String(d.name),
+              source: d.source ?? Value.literal(null),
+            })),
+          };
+        }
+
+        if (s.type === "logic") {
+          return {
+            type: "logic",
+            id: String(s.id),
+            assignments: s.assignments ?? [],
+          };
+        }
+
+        return {
+          type: "return",
+          id: String(s.id),
+          source: s.source ?? Value.literal(null),
+        };
+      });
+
+    const flow = this.fn.listEdges().map((e: any) => ({
+      from: String(e.from),
+      to: String(e.to),
+    }));
+
+    return {
+      version: 1,
+      params,
+      statements,
+      flow,
+    };
+  }
+
+  hydrate(snapshot: FunctionSnapshot) {
+    // reset to a clean function
+    this.fn = new FunctionDefinition({
+      id: asFunctionId("fn_local"),
+      name: "UntitledFunction",
+    });
+
+    // Restore params
+    for (const p of snapshot.params ?? []) {
+      this.fn.addParameter({ name: p.name });
+    }
+
+    // Restore statements
+    for (const s of snapshot.statements ?? []) {
+      const id = asStatementId(s.id);
+
+      if (s.type === "variable") {
+        const stmt: VariableStatement = {
+          id,
+          type: "variable",
+          declarations: (s.declarations ?? []).map((d) => ({
+            name: d.name,
+            source: d.source ?? Value.literal(null),
+          })),
+        };
+        this.fn.addStatement(stmt);
+        continue;
+      }
+
+      if (s.type === "logic") {
+        const stmt: LogicStatement = {
+          id,
+          type: "logic",
+          assignments: (s as any).assignments ?? [],
+        };
+        this.fn.addStatement(stmt);
+        continue;
+      }
+
+      const stmt: ReturnStatement = {
+        id,
+        type: "return",
+        source: (s as any).source ?? Value.literal(null),
+      };
+      this.fn.addStatement(stmt);
+    }
+
+    // Restore flow edges
+    for (const edge of snapshot.flow ?? []) {
+      this.fn.connectFlow(asStatementId(edge.from), asStatementId(edge.to));
+    }
   }
 }
 
