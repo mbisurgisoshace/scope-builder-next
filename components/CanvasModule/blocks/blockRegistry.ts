@@ -18,6 +18,7 @@ import { DbCollectionBlock } from "../db/blocks/CollectionBlock";
 import { LogicNodeBlock } from "../logic-builder/LogicNodeBlock";
 import { LogicBlock } from "../logic-builder/LogicBlock";
 import { LogicNodeShape } from "../logic-builder/LogicNodeShape";
+import LogicBuilderNode from "@/components/LogicModule/ui/LogicBuilderNode";
 
 // Registry maps type to corresponding component
 export const shapeRegistry: Record<string, ShapeComponent> = {
@@ -35,5 +36,5 @@ export const shapeRegistry: Record<string, ShapeComponent> = {
   table_card: TableCard,
   db_table: DbTableBlock,
   db_collection: DbCollectionBlock,
-  logic_node: LogicNodeShape,
+  logic_node: LogicBuilderNode,
 };

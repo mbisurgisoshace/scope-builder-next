@@ -61,6 +61,8 @@ import { useLogicGraph } from "./CanvasModule/logic-builder/LogicGraphContext";
 import { NodeInstanceId, PortId } from "./CanvasModule/logic-builder/types";
 import { LogicConnectionsLayer } from "./CanvasModule/logic-builder/LogicConnectionsLayer";
 import { OrthogonalArrow } from "./CanvasModule/OrthogonalArrow";
+import { useFunctionDomain } from "./LogicModule/ui/FunctionProvider";
+import { LogicBuilderInspector } from "./LogicModule/ui/LogicBuilderInspector";
 
 type RelativeAnchor = {
   x: number; // valor entre 0 y 1, representa el porcentaje del ancho
@@ -107,6 +109,12 @@ type RectShape = {
 };
 
 //type Side = "left" | "right" | "top" | "bottom";
+
+function isLogicBuilderStatementShape(shape: any): boolean {
+  // We only treat these as domain statements
+  const t = shape?.logicTypeId;
+  return t === "fn/var" || t === "fn/add" || t === "fn/return";
+}
 
 function getCenter(shape: RectShape) {
   return {
@@ -176,6 +184,12 @@ export default function InfiniteCanvas({
   },
 }: InfiniteCanvasProps) {
   const pathname = usePathname();
+  const {
+    store: fnStore,
+    bump: bumpDomain,
+    version: domainVersion,
+  } = useFunctionDomain();
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string[]>([]);
   const { scale, canvasRef, position, setPosition, setScale, zoomIn, zoomOut } =
     useCanvasTransform();
@@ -185,7 +199,7 @@ export default function InfiniteCanvas({
   const isMarketSegmentsCanvas = pathname.includes("/segments");
   const isValuePropCanvas = pathname.includes("/value-proposition");
 
-  const { service: logicService, refresh: logicRefresh } = useLogicGraph();
+  // const { service: logicService, refresh: logicRefresh } = useLogicGraph();
 
   const [problems, setProblems] = useState(true);
   const [examples, setExamples] = useState(true);
@@ -307,6 +321,20 @@ export default function InfiniteCanvas({
           snapResult, // { shapeId, snappedPosition }
           shapes,
         });
+
+        try {
+          if (
+            isLogicBuilderStatementShape(fromShape) &&
+            isLogicBuilderStatementShape(toShape)
+          ) {
+            fnStore.connectFlow(connecting.fromShapeId, snapResult.shapeId);
+            bumpDomain(); // triggers any debug/inspector UI to refresh
+          }
+        } catch (e) {
+          // If this fails, we keep the visual edge, but the domain refuses the connection.
+          // Later we can show a toast + auto-remove the visual edge if you want.
+          console.warn("LogicBuilder domain connectFlow failed:", e);
+        }
 
         setConnecting(null);
         setConnectingMousePos(null);
@@ -747,15 +775,75 @@ export default function InfiniteCanvas({
     addShape(type, x, y, id);
 
     if (type === "logic_node" && logicTypeId) {
-      updateShape(id, (s) => ({
-        ...s,
-        logicTypeId,
-        logicConfig: s.logicConfig ?? {},
-        nodeTypeId: logicTypeId,
-        text: s.text ?? logicTypeId, // optional
-        width: 280,
-        height: 140,
-      }));
+      // updateShape(id, (s) => ({
+      //   ...s,
+      //   logicTypeId,
+      //   logicConfig: s.logicConfig ?? {},
+      //   nodeTypeId: logicTypeId,
+      //   text: s.text ?? logicTypeId, // optional
+      //   width: 280,
+      //   height: 140,
+      // }));
+
+      try {
+        if (logicTypeId === "fn/param") {
+          const paramName = `param_${id.slice(0, 4)}`;
+          fnStore.addParameterNamed(paramName);
+
+          // store paramName on the shape so we can delete/edit later
+          updateShape(id, (s) => ({
+            ...s,
+            data: { ...(s as any).data, fnParamName: paramName },
+          }));
+
+          updateShape(id, (s) => ({
+            ...s,
+            logicTypeId,
+            text: `Param: ${paramName}`,
+            width: 260,
+            height: 110,
+          }));
+        }
+
+        if (logicTypeId === "fn/var") {
+          fnStore.addStatementWithId("variable", id);
+          updateShape(id, (s) => ({
+            ...s,
+            logicTypeId,
+            text: "Variable",
+            width: 260,
+            height: 110,
+          }));
+        }
+
+        if (logicTypeId === "fn/add") {
+          fnStore.addStatementWithId("logic", id);
+          updateShape(id, (s) => ({
+            ...s,
+            logicTypeId,
+            text: "Logic",
+            width: 260,
+            height: 110,
+          }));
+        }
+
+        if (logicTypeId === "fn/return") {
+          fnStore.addStatementWithId("return", id);
+          updateShape(id, (s) => ({
+            ...s,
+            logicTypeId,
+            text: "Return",
+            width: 260,
+            height: 110,
+          }));
+        }
+
+        bumpDomain();
+      } catch (e) {
+        console.warn("Domain create failed:", e);
+      }
+
+      return;
     }
   };
 
@@ -849,8 +937,8 @@ export default function InfiniteCanvas({
       const shape = shapes.find((s) => s.id === id);
       if (shape && shape.type === "db_table") {
         const tableId = (shape as any).data.dbTableId as string;
-        schema.removeTable(tableId);
-        refresh();
+        //schema.removeTable(tableId);
+        //refresh();
       }
     });
 
@@ -1027,10 +1115,10 @@ export default function InfiniteCanvas({
   }
 
   // Subscribe to schema to re-render when it changes
-  const { schema, refresh } = useDbSchema();
+  // const { schema, refresh } = useDbSchema();
 
   // Domain edges (FK relationships)
-  const erdEdges = schema.getRelationships();
+  // const erdEdges = schema.getRelationships();
 
   const dbTableShapes = useMemo(
     () => shapes.filter((s) => s.type === "db_table"),
@@ -1072,42 +1160,42 @@ export default function InfiniteCanvas({
     }
   }
 
-  const erdArrows = useMemo(() => {
-    const arrows: JSX.Element[] = [];
+  // const erdArrows = useMemo(() => {
+  //   const arrows: JSX.Element[] = [];
 
-    for (const edge of erdEdges) {
-      const fromShape = dbTableShapeByTableId.get(edge.fromTableId);
-      const toShape = dbTableShapeByTableId.get(edge.toTableId);
-      if (!fromShape || !toShape) continue;
+  //   for (const edge of erdEdges) {
+  //     const fromShape = dbTableShapeByTableId.get(edge.fromTableId);
+  //     const toShape = dbTableShapeByTableId.get(edge.toTableId);
+  //     if (!fromShape || !toShape) continue;
 
-      // 1) Decide which sides to use for a Manhattan-style connection
-      const { fromSide, toSide } = pickOrthogonalSides(fromShape, toShape);
+  //     // 1) Decide which sides to use for a Manhattan-style connection
+  //     const { fromSide, toSide } = pickOrthogonalSides(fromShape, toShape);
 
-      // 2) Compute anchors on those sides
-      const from = getAnchorForSide(fromShape, fromSide);
-      const to = getAnchorForSide(toShape, toSide);
+  //     // 2) Compute anchors on those sides
+  //     const from = getAnchorForSide(fromShape, fromSide);
+  //     const to = getAnchorForSide(toShape, toSide);
 
-      arrows.push(
-        <SelectableConnectionArrow
-          key={edge.id}
-          id={edge.id}
-          from={from}
-          to={to}
-          fromSide="right"
-          toSide="left"
-          // purely visual; ERD arrows not selectable (for now)
-          selected={false}
-          onSelect={() => {}}
-          color="#EF4444" // red-ish to distinguish from manual connectors
-          strokeWidth={1.5}
-          bend={0.2} // slight curve, optional
-          zIndex={0} // behind normal connectors if you want
-        />
-      );
-    }
+  //     arrows.push(
+  //       <SelectableConnectionArrow
+  //         key={edge.id}
+  //         id={edge.id}
+  //         from={from}
+  //         to={to}
+  //         fromSide="right"
+  //         toSide="left"
+  //         // purely visual; ERD arrows not selectable (for now)
+  //         selected={false}
+  //         onSelect={() => {}}
+  //         color="#EF4444" // red-ish to distinguish from manual connectors
+  //         strokeWidth={1.5}
+  //         bend={0.2} // slight curve, optional
+  //         zIndex={0} // behind normal connectors if you want
+  //       />
+  //     );
+  //   }
 
-    return arrows;
-  }, [erdEdges, dbTableShapeByTableId]);
+  //   return arrows;
+  // }, [erdEdges, dbTableShapeByTableId]);
 
   function makeSpawnLinkedNodeHandler(shape: IShape) {
     return ({
@@ -1127,25 +1215,43 @@ export default function InfiniteCanvas({
       addShape("logic_node" as any, newX, newY, newShapeId);
 
       // 3) ensure a domain node for the new shape
-      const newNode = logicService.ensureNode({
-        id: newShapeId as NodeInstanceId,
-        typeId: "logic/if", // later this could be based on port, context, etc.
-        shapeId: newShapeId,
-        config: {},
-      });
+      // const newNode = logicService.ensureNode({
+      //   id: newShapeId as NodeInstanceId,
+      //   typeId: "logic/if", // later this could be based on port, context, etc.
+      //   shapeId: newShapeId,
+      //   config: {},
+      // });
 
       // 4) connect from the clicked port to the new node's "in" port
-      logicService.connectPorts({
-        fromNodeId,
-        fromPortId,
-        toNodeId: newNode.id,
-        toPortId: "in" as PortId,
-      });
+      // logicService.connectPorts({
+      //   fromNodeId,
+      //   fromPortId,
+      //   toNodeId: newNode.id,
+      //   toPortId: "in" as PortId,
+      // });
 
       // 5) force a re-render so LogicConnectionsLayer sees the new connection
-      logicRefresh();
+      //logicRefresh();
     };
   }
+
+  const selectedId = selectedShapeIds[0];
+
+  // force re-render when domain changes (if you used a bump/version pattern)
+  void domainVersion; // if you have it; otherwise ignore
+
+  const validation = fnStore.validate();
+
+  let plan: string[] = [];
+  try {
+    plan = fnStore.getExecutionPlan();
+  } catch {
+    plan = [];
+  }
+
+  const symbols = selectedId
+    ? fnStore.getVisibleSymbols(selectedId).map((s) => s.name)
+    : [];
 
   return (
     <div className="w-full h-full overflow-hidden bg-[#EFF0F4] relative flex">
@@ -1195,7 +1301,8 @@ export default function InfiniteCanvas({
               checked={valueArea}
               onCheckedChange={() => setValueArea(!valueArea)}
               className={
-                "data-[state=checked]:bg-white data-[state=checked]:text-black"
+                "data-[state=checked]:bg-
+                white data-[state=checked]:text-black"
               }
             />
             <Label htmlFor="value-areas">Values Area</Label>
@@ -1674,6 +1781,61 @@ export default function InfiniteCanvas({
         </div>
       )}
 
+      <div className="absolute top-4 left-4 z-40 bg-white/90 backdrop-blur rounded-xl shadow p-3 w-[360px] text-xs">
+        <div className="font-semibold mb-2">LogicBuilder Debug</div>
+
+        <div className="mb-2">
+          <div className="font-medium">Validation</div>
+          <div className={validation.ok ? "text-green-700" : "text-red-700"}>
+            {validation.ok ? "OK" : "INVALID"}
+          </div>
+          {!validation.ok && (
+            <div className="mt-1 text-red-700 break-all">
+              {String(
+                (validation as any).error?.message ?? (validation as any).error
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="mb-2">
+          <div className="font-medium">Execution plan</div>
+          <div className="break-all">{plan.join(" → ") || "(empty)"}</div>
+        </div>
+
+        <div>
+          <div className="font-medium">Selected node</div>
+          <div className="break-all">{selectedId ?? "(none)"}</div>
+
+          <div className="mt-2">
+            <div className="font-medium">Visible symbols</div>
+            <div className="break-all">{symbols.join(", ") || "(none)"}</div>
+          </div>
+        </div>
+      </div>
+
+      {(() => {
+        const selectedId = selectedShapeIds[0] ?? null;
+        const selectedShape = selectedId
+          ? shapes.find((s) => s.id === selectedId)
+          : null;
+        const selectedLogicTypeId = (selectedShape as any)?.logicTypeId ?? null;
+
+        // Only show inspector for our new blocks
+        const isLogicBuilder =
+          selectedLogicTypeId === "fn/param" ||
+          selectedLogicTypeId === "fn/var" ||
+          selectedLogicTypeId === "fn/add" ||
+          selectedLogicTypeId === "fn/return";
+
+        return isLogicBuilder ? (
+          <LogicBuilderInspector
+            selectedShapeId={selectedId}
+            selectedLogicTypeId={selectedLogicTypeId}
+          />
+        ) : null;
+      })()}
+
       {/* Canvas */}
       <div
         ref={canvasRef}
@@ -1744,7 +1906,7 @@ export default function InfiniteCanvas({
           /> */}
 
           {/* ERD auto connectors (FK-based) */}
-          {erdArrows}
+          {/* {erdArrows} */}
 
           {connectionEndpoints
             .filter((endpoint) => {
@@ -1944,7 +2106,7 @@ export default function InfiniteCanvas({
             )
           )}
 
-          <LogicConnectionsLayer shapes={shapes} mousePos={canvasMousePos} />
+          {/* <LogicConnectionsLayer shapes={shapes} mousePos={canvasMousePos} /> */}
         </div>
       </div>
     </div>
