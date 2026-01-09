@@ -2,11 +2,13 @@
 
 import liveblocks from "@/lib/liveblocks";
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 export async function createKanbanBoard(
   roomId: string,
   name: string,
-  order: number
+  order: number,
+  path?: string
 ) {
   const newBoard = await prisma.kanbanBoardCategory.create({
     data: {
@@ -16,23 +18,36 @@ export async function createKanbanBoard(
       shape_ids: [],
     },
   });
+  if (path) {
+    revalidatePath(path);
+  }
   return newBoard;
 }
 
-export async function updateKanbanBoard(boardId: number, values: any) {
+export async function updateKanbanBoard(
+  boardId: number,
+  values: any,
+  path?: string
+) {
   const updatedBoard = await prisma.kanbanBoardCategory.update({
     where: { id: boardId },
     data: {
       ...values,
     },
   });
+  if (path) {
+    revalidatePath(path);
+  }
   return updatedBoard;
 }
 
-export async function deleteKanbanBoard(boardId: number) {
+export async function deleteKanbanBoard(boardId: number, path?: string) {
   await prisma.kanbanBoardCategory.delete({
     where: { id: boardId },
   });
+  if (path) {
+    revalidatePath(path);
+  }
 }
 
 export async function getRoomKanbanBoards(roomId: string) {
@@ -88,12 +103,17 @@ export async function getKanbanBoardShapes(roomId: string) {
 }
 
 export async function updateKanbanBoards(
-  kanbanBoards: { boardId: number; shapeIds: string[] }[]
+  kanbanBoards: { boardId: number; shapeIds: string[] }[],
+  path?: string
 ) {
   for (const board of kanbanBoards) {
     await prisma.kanbanBoardCategory.update({
       where: { id: board.boardId },
       data: { shape_ids: board.shapeIds },
     });
+  }
+
+  if (path) {
+    revalidatePath(path);
   }
 }

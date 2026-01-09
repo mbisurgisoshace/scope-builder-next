@@ -61,6 +61,7 @@ export default async function SegmentsPage() {
               className="w-full h-full flex overflow-x-scroll"
             >
               <KanbanView
+                path="/segments"
                 roomId={`segments-${orgId}`}
                 kanbanBoards={kanbanBoards}
               />

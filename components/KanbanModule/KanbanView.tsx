@@ -49,11 +49,16 @@ import {
 } from "../ui/alert-dialog";
 
 interface KanbanViewProps {
+  path: string;
   roomId: string;
   kanbanBoards: KanbanBoardCategory[];
 }
 
-export default function KanbanView({ roomId, kanbanBoards }: KanbanViewProps) {
+export default function KanbanView({
+  path,
+  roomId,
+  kanbanBoards,
+}: KanbanViewProps) {
   const [openAlert, setOpenAlert] = useState(false);
   const { shapes, addShape, updateShape } = useRealtimeShapes();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -125,7 +130,12 @@ export default function KanbanView({ roomId, kanbanBoards }: KanbanViewProps) {
 
     try {
       // Persist to DB → returns real id (number) and maybe order
-      const newBoard = await createKanbanBoard(roomId, name, nextBoardOrder());
+      const newBoard = await createKanbanBoard(
+        roomId,
+        name,
+        nextBoardOrder(),
+        path
+      );
 
       // Replace temp id with real id
       // setContainers((prev) =>
@@ -302,7 +312,7 @@ export default function KanbanView({ roomId, kanbanBoards }: KanbanViewProps) {
     }));
 
     try {
-      await updateKanbanBoards(payload);
+      await updateKanbanBoards(payload, path);
       //await saveBoardsComposition(payload); // 👉 implement below (API or Server Action)
       // success: nothing else to do (UI is already correct)
     } catch (e) {
@@ -326,7 +336,7 @@ export default function KanbanView({ roomId, kanbanBoards }: KanbanViewProps) {
     if (hasShapes) {
       setOpenAlert(true);
     } else {
-      await deleteKanbanBoard(boardId);
+      await deleteKanbanBoard(boardId, path);
       setContainers((prev) => prev.filter((b) => b.id !== boardId));
     }
   };
