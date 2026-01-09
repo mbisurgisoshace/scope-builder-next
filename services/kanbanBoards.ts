@@ -8,7 +8,7 @@ export async function createKanbanBoard(
   roomId: string,
   name: string,
   order: number,
-  path?: string
+  path: string
 ) {
   const newBoard = await prisma.kanbanBoardCategory.create({
     data: {
@@ -18,16 +18,16 @@ export async function createKanbanBoard(
       shape_ids: [],
     },
   });
-  if (path) {
-    revalidatePath(path);
-  }
+
+  revalidatePath(path);
+
   return newBoard;
 }
 
 export async function updateKanbanBoard(
   boardId: number,
   values: any,
-  path?: string
+  path: string
 ) {
   const updatedBoard = await prisma.kanbanBoardCategory.update({
     where: { id: boardId },
@@ -35,19 +35,18 @@ export async function updateKanbanBoard(
       ...values,
     },
   });
-  if (path) {
-    revalidatePath(path);
-  }
+
+  revalidatePath(path);
+
   return updatedBoard;
 }
 
-export async function deleteKanbanBoard(boardId: number, path?: string) {
+export async function deleteKanbanBoard(boardId: number, path: string) {
   await prisma.kanbanBoardCategory.delete({
     where: { id: boardId },
   });
-  if (path) {
-    revalidatePath(path);
-  }
+
+  revalidatePath(path);
 }
 
 export async function getRoomKanbanBoards(roomId: string) {
