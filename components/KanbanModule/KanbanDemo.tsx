@@ -160,7 +160,7 @@ export default function KanbanDemo({ kanbanBoards }: KanbanDemoProps) {
       );
       // In the same container
       if (activeContainerIndex === overContainerIndex) {
-        let newItems = [...containers];
+        const newItems = [...containers];
         newItems[activeContainerIndex].items = arrayMove(
           newItems[activeContainerIndex].items,
           activeitemIndex,
@@ -170,7 +170,7 @@ export default function KanbanDemo({ kanbanBoards }: KanbanDemoProps) {
         setContainers(newItems);
       } else {
         // In different containers
-        let newItems = [...containers];
+        const newItems = [...containers];
         const [removeditem] = newItems[activeContainerIndex].items.splice(
           activeitemIndex,
           1
@@ -213,7 +213,7 @@ export default function KanbanDemo({ kanbanBoards }: KanbanDemoProps) {
       );
 
       // Remove the active item from the active container and add it to the over container
-      let newItems = [...containers];
+      const newItems = [...containers];
       const [removeditem] = newItems[activeContainerIndex].items.splice(
         activeitemIndex,
         1
@@ -279,7 +279,7 @@ export default function KanbanDemo({ kanbanBoards }: KanbanDemoProps) {
 
       // In the same container
       if (activeContainerIndex === overContainerIndex) {
-        let newItems = [...containers];
+        const newItems = [...containers];
         newItems[activeContainerIndex].items = arrayMove(
           newItems[activeContainerIndex].items,
           activeitemIndex,
@@ -288,7 +288,7 @@ export default function KanbanDemo({ kanbanBoards }: KanbanDemoProps) {
         setContainers(newItems);
       } else {
         // In different containers
-        let newItems = [...containers];
+        const newItems = [...containers];
         const [removeditem] = newItems[activeContainerIndex].items.splice(
           activeitemIndex,
           1
@@ -327,7 +327,7 @@ export default function KanbanDemo({ kanbanBoards }: KanbanDemoProps) {
         (item) => item.id === active.id
       );
 
-      let newItems = [...containers];
+      const newItems = [...containers];
       const [removeditem] = newItems[activeContainerIndex].items.splice(
         activeitemIndex,
         1
