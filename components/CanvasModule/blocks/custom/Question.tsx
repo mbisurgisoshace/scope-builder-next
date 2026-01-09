@@ -553,8 +553,8 @@ export const Question: React.FC<QuestionProps> = (props) => {
                       //   .getCurrentContent()
                       //   .getPlainText();
 
-                      const text = `${item.cardTitle} ${largeText}`;
-                      //const text = `${item.cardTitle}`;
+                      // const text = `${item.cardTitle} ${largeText}`;
+                      const text = `${item.cardTitle}`;
 
                       if (text.trim().length === 0) return null;
 
@@ -577,7 +577,7 @@ export const Question: React.FC<QuestionProps> = (props) => {
                                 {item.cardTitle}
                               </span>
                             )}
-                            {trimTo50(largeText)}
+                            {/* {trimTo50(largeText)} */}
                           </Label>
                         </div>
                       );
