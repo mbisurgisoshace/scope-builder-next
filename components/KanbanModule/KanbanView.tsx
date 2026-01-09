@@ -384,6 +384,7 @@ export default function KanbanView({
                   onDeleteBoard={() =>
                     onDeleteBoard(board.id, boardItems.length > 0)
                   }
+                  path={path}
                 >
                   {/* @ts-ignore */}
                   <SortableContext

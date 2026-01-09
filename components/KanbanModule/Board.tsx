@@ -11,6 +11,7 @@ import { Input } from "../ui/input";
 import { updateKanbanBoard } from "@/services/kanbanBoards";
 
 interface BoardProps {
+  path: string;
   title?: string;
   id: UniqueIdentifier;
   description?: string;
@@ -21,6 +22,7 @@ interface BoardProps {
 
 const Board = ({
   id,
+  path,
   children,
   title,
   description,
@@ -47,7 +49,7 @@ BoardProps) => {
 
   const updateBoardTitle = async () => {
     setIsEditing(false);
-    await updateKanbanBoard(Number(id), { name: value });
+    await updateKanbanBoard(Number(id), { name: value }, path);
   };
 
   return (
