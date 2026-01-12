@@ -39,6 +39,29 @@ export const DbCollectionBlock: React.FC<Props> = (props) => {
     refresh(); // same as table block
   }
 
+  // ─────────────────────────────
+  // Header state
+  // ─────────────────────────────
+  const [nameDraft, setNameDraft] = useState(collection?.name || "");
+  const [isEditingName, setIsEditingName] = useState(false);
+
+  // ─────────────────────────────
+  // Top-level field add state
+  // ─────────────────────────────
+  const [newFieldName, setNewFieldName] = useState("");
+  const [newFieldType, setNewFieldType] =
+    useState<CollectionFieldType>("string");
+
+  // ─────────────────────────────
+  // Nested child add state
+  // ─────────────────────────────
+  const [activeParentPath, setActiveParentPath] = useState<FieldPath | null>(
+    null
+  );
+  const [newChildName, setNewChildName] = useState("");
+  const [newChildType, setNewChildType] =
+    useState<CollectionFieldType>("string");
+
   if (!dbCollectionId || !collection) {
     return (
       <ShapeFrame
@@ -54,12 +77,6 @@ export const DbCollectionBlock: React.FC<Props> = (props) => {
       </ShapeFrame>
     );
   }
-
-  // ─────────────────────────────
-  // Header state
-  // ─────────────────────────────
-  const [nameDraft, setNameDraft] = useState(collection.name);
-  const [isEditingName, setIsEditingName] = useState(false);
 
   const handleNameCommit = () => {
     const trimmed = nameDraft.trim();
@@ -79,13 +96,6 @@ export const DbCollectionBlock: React.FC<Props> = (props) => {
     setIsEditingName(false);
   };
 
-  // ─────────────────────────────
-  // Top-level field add state
-  // ─────────────────────────────
-  const [newFieldName, setNewFieldName] = useState("");
-  const [newFieldType, setNewFieldType] =
-    useState<CollectionFieldType>("string");
-
   const handleAddTopField = () => {
     const trimmed = newFieldName.trim();
     if (!trimmed) return;
@@ -101,16 +111,6 @@ export const DbCollectionBlock: React.FC<Props> = (props) => {
     setNewFieldType("string");
     refresh();
   };
-
-  // ─────────────────────────────
-  // Nested child add state
-  // ─────────────────────────────
-  const [activeParentPath, setActiveParentPath] = useState<FieldPath | null>(
-    null
-  );
-  const [newChildName, setNewChildName] = useState("");
-  const [newChildType, setNewChildType] =
-    useState<CollectionFieldType>("string");
 
   const isPathEqual = (a: FieldPath | null, b: FieldPath): boolean => {
     if (!a) return false;
