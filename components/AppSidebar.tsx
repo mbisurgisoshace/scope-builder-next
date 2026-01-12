@@ -36,7 +36,7 @@ import CollapsibleSidebar from "./MainSidebar";
 const data = {
   subMain: [
     {
-      name: "Todo's",
+      name: "Db Builder",
       url: "/",
       //icon: Frame,
     },
@@ -45,86 +45,86 @@ const data = {
     //   url: "/progress",
     //   //icon: Frame,
     // },
-    {
-      name: "Idea Brainstorm",
-      url: "/idea-brainstorm",
-      //icon: PieChart,
-    },
+    // {
+    //   name: "Idea Brainstorm",
+    //   url: "/idea-brainstorm",
+    //   //icon: PieChart,
+    // },
   ],
   navMain: [
-    {
-      title: "Hypothesize",
-      items: [
-        {
-          title: "Segments",
-          url: "/segments",
-        },
-        {
-          title: "Value Proposition",
-          url: "/value-proposition",
-        },
-        {
-          title: "Ecosystem Map",
-          url: "/ecosystem-map",
-        },
-      ],
-    },
-    {
-      title: "Validate",
-      items: [
-        {
-          title: "Questions",
-          url: "/questions",
-          isActive: true,
-        },
-        {
-          title: "Participants",
-          url: "/participants",
-        },
-        // {
-        //   title: "Interviews",
-        //   url: "/interviews",
-        // },
-        {
-          title: "Analysis",
-          url: "/analysis",
-        },
-      ],
-    },
-    {
-      title: "Resources",
-      items: [
-        {
-          title: "Customer Discovery",
-          url: "/customer-discovery",
-        },
-        {
-          title: "Interview Prep",
-          url: "/interview-preparation",
-        },
-        {
-          title: "Common Vocabulary",
-          url: "/common-vocabulary",
-        },
-      ],
-    },
-    {
-      title: "Examples",
-      items: [
-        {
-          title: "Pickup Truck",
-          url: "/examples/pickup-truck",
-        },
-        {
-          title: "Laptop",
-          url: "/examples/laptop",
-        },
-        {
-          title: "Ecosystem Maps",
-          url: "/examples/ecosystem-maps",
-        },
-      ],
-    },
+    // {
+    //   title: "Hypothesize",
+    //   items: [
+    //     {
+    //       title: "Segments",
+    //       url: "/segments",
+    //     },
+    //     {
+    //       title: "Value Proposition",
+    //       url: "/value-proposition",
+    //     },
+    //     {
+    //       title: "Ecosystem Map",
+    //       url: "/ecosystem-map",
+    //     },
+    //   ],
+    // },
+    // {
+    //   title: "Validate",
+    //   items: [
+    //     {
+    //       title: "Questions",
+    //       url: "/questions",
+    //       isActive: true,
+    //     },
+    //     {
+    //       title: "Participants",
+    //       url: "/participants",
+    //     },
+    //     // {
+    //     //   title: "Interviews",
+    //     //   url: "/interviews",
+    //     // },
+    //     {
+    //       title: "Analysis",
+    //       url: "/analysis",
+    //     },
+    //   ],
+    // },
+    // {
+    //   title: "Resources",
+    //   items: [
+    //     {
+    //       title: "Customer Discovery",
+    //       url: "/customer-discovery",
+    //     },
+    //     {
+    //       title: "Interview Prep",
+    //       url: "/interview-preparation",
+    //     },
+    //     {
+    //       title: "Common Vocabulary",
+    //       url: "/common-vocabulary",
+    //     },
+    //   ],
+    // },
+    // {
+    //   title: "Examples",
+    //   items: [
+    //     {
+    //       title: "Pickup Truck",
+    //       url: "/examples/pickup-truck",
+    //     },
+    //     {
+    //       title: "Laptop",
+    //       url: "/examples/laptop",
+    //     },
+    //     {
+    //       title: "Ecosystem Maps",
+    //       url: "/examples/ecosystem-maps",
+    //     },
+    //   ],
+    // },
     // {
     //   title: "Needs",
     //   url: "/needs",
@@ -156,7 +156,7 @@ export function AppSidebar({
 
   return (
     <Sidebar className="bg-white" {...props}>
-      <SidebarHeader className="bg-white p-3 flex gap-4">
+      {/* <SidebarHeader className="bg-white p-3 flex gap-4">
         <Link href={"/"} className="flex flex-col gap-2 items-center">
           <Image
             width={200}
@@ -220,7 +220,7 @@ export function AppSidebar({
             </>
           )}
         </div>
-      </SidebarHeader>
+      </SidebarHeader> */}
       <SidebarContent className="p-3 bg-white border-t flex justify-between">
         <div>
           <SecondarySidebar

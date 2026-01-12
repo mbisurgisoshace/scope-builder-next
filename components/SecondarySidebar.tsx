@@ -22,7 +22,7 @@ export default function SecondarySidebar({
   return (
     <SidebarGroup>
       <SidebarMenu>
-        {isAdminOrMentor && (
+        {/* {isAdminOrMentor && (
           <SidebarMenuItem key={"startups"}>
               <SidebarMenuButton
                 asChild
@@ -37,12 +37,12 @@ export default function SecondarySidebar({
                   letterSpacing: "0%",
                 }}
               >
-                <Link href={"/startups"} data-sidebar-link>
+                <Link href={"/"} data-sidebar-link>
                   <span>{`Startups`}</span>
                 </Link>
               </SidebarMenuButton>
           </SidebarMenuItem>
-        )}
+        )} */}
         {items.map((item) => {
           const isActive = pathname === item.url;
           return (
