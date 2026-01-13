@@ -73,7 +73,7 @@ export default function ProjectsTable({ data }: { data: any[] }) {
       <TableBody className="**:data-[slot=table-cell]:first:w-8">
         {table.getRowModel().rows?.length ? (
           table.getRowModel().rows.map((row) => (
-            <TableRow>
+            <TableRow key={row.id}>
               {row.getVisibleCells().map((cell) => (
                 <TableCell key={cell.id}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
