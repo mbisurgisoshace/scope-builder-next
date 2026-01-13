@@ -201,3 +201,23 @@ model OrgTask {
   @@unique([org_id, task_id])
   @@map("org_tasks")
 }
+
+model Project {
+  id           Int      @id @default(autoincrement())
+  org_id       String
+  project_name String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  @@map("projects")
+}
+
+model KanbanBoardCategory {
+  id        Int      @id @default(autoincrement())
+  room_id   String
+  name      String
+  order     Int      @default(0)
+  shape_ids String[]
+
+  @@map("kanban_board_categories")
+}

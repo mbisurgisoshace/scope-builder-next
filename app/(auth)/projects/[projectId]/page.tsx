@@ -8,17 +8,24 @@ import { LogicGraphProvider } from "@/components/CanvasModule/logic-builder/Logi
 import { LogicConnectionProvider } from "@/components/CanvasModule/logic-builder/LogicConnectionContext";
 import ProjectsTable from "@/components/ProjectsTable";
 import { NewProject } from "@/components/NewProject";
-import { getProjects } from "@/services/projects";
+import { getProject } from "@/services/projects";
 
-export default async function Home() {
+export default async function Home({
+  params,
+}: {
+  params: Promise<{ projectId: string }>;
+}) {
   const { orgId } = await auth();
+  const { projectId } = await params;
 
-  const projects = await getProjects();
+  const project = await getProject(Number(projectId));
+
+  console.log("project", project);
 
   return (
     <div className="flex flex-col h-full">
-      <div className="h-full p-10 flex flex-col gap-2">
-        {/* <Room roomId={`db-builder-${orgId}`}>
+      <div className="h-full flex flex-col gap-2">
+        <Room roomId={`db-builder-${orgId}-${projectId}`}>
           <LogicGraphProvider>
             <LogicConnectionProvider>
               <DbSchemaProvider>
@@ -40,13 +47,7 @@ export default async function Home() {
               </DbSchemaProvider>
             </LogicConnectionProvider>
           </LogicGraphProvider>
-        </Room> */}
-        <div className="w-full">
-          <div className="ml-auto w-max">
-            <NewProject />
-          </div>
-        </div>
-        <ProjectsTable data={projects} />
+        </Room>
       </div>
     </div>
   );
