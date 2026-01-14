@@ -1505,6 +1505,44 @@ export default function InfiniteCanvas({
     return null;
   }
 
+  function resolveOwningFunctionId(
+    nodeId: string,
+    shapes: any[],
+    connections: { fromShapeId: string; toShapeId: string }[]
+  ): string | null {
+    const byId = new Map(shapes.map((s) => [s.id, s] as const));
+    const visited = new Set<string>();
+    const queue: string[] = [nodeId];
+
+    while (queue.length) {
+      const cur = queue.shift()!;
+      if (visited.has(cur)) continue;
+      visited.add(cur);
+
+      const incoming = connections.filter((c) => c.toShapeId === cur);
+      for (const edge of incoming) {
+        const from = edge.fromShapeId;
+        const fromShape = byId.get(from);
+        if (fromShape?.logicTypeId === "fn/function") return fromShape.id;
+        queue.push(from);
+      }
+    }
+    return null;
+  }
+
+  function uniq(list: string[]) {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const x of list) {
+      const t = String(x ?? "").trim();
+      if (!t) continue;
+      if (seen.has(t)) continue;
+      seen.add(t);
+      out.push(t);
+    }
+    return out;
+  }
+
   const selectedId = selectedShapeIds[0] ?? null;
 
   // pick store for selected node
@@ -1526,19 +1564,55 @@ export default function InfiniteCanvas({
   }
 
   // Visible symbols from selected store, with param filtering if not connected
-  const symbols = selectedId
-    ? (() => {
-        const sym = debugStore
-          .getVisibleSymbols(selectedId)
-          .map((s: any) => s.name);
+  // const symbols = selectedId
+  //   ? (() => {
+  //       const sym = debugStore
+  //         .getVisibleSymbols(selectedId)
+  //         .map((s: any) => s.name);
 
-        if (!hasOwningFunction) {
-          const paramNames = new Set(fnStore.getParameters());
-          return sym.filter((n: string) => !paramNames.has(n));
-        }
-        return sym;
-      })()
-    : [];
+  //       if (!hasOwningFunction) {
+  //         const paramNames = new Set(fnStore.getParameters());
+  //         return sym.filter((n: string) => !paramNames.has(n));
+  //       }
+  //       return sym;
+  //     })()
+  //   : [];
+  const selectedShape = selectedId
+    ? shapes.find((s) => s.id === selectedId)
+    : null;
+  const selectedLogicTypeId = (selectedShape as any)?.logicTypeId ?? null;
+
+  const fnId = selectedId
+    ? selectedLogicTypeId === "fn/function"
+      ? selectedId // function owns itself
+      : resolveOwningFunctionId(selectedId, shapes, connections) ?? "fn_local"
+    : "fn_local";
+
+  const scopedStore = fnId === "fn_local" ? fnStore : getStore(fnId);
+
+  const symbols = useMemo(() => {
+    if (!selectedId) return [];
+
+    // Selecting a Function node: show its full scope (params + all declared vars in that function)
+    if (selectedLogicTypeId === "fn/function") {
+      const params = scopedStore.getParameters();
+
+      // FunctionStore must expose getStatements() for this to work.
+      // If your API differs, tell me the method name and I’ll adapt it.
+      const declaredVars =
+        (scopedStore as any)
+          .getStatements?.()
+          ?.filter((s: any) => s.type === "variable")
+          ?.flatMap((v: any) =>
+            (v.declarations ?? []).map((d: any) => d.name)
+          ) ?? [];
+
+      return uniq([...params, ...declaredVars]);
+    }
+
+    // Normal node: use visibility rules
+    return scopedStore.getVisibleSymbols(selectedId).map((s: any) => s.name);
+  }, [selectedId, selectedLogicTypeId, scopedStore, domainVersion]);
 
   return (
     <div className="w-full h-full overflow-hidden bg-[#EFF0F4] relative flex">

@@ -3,122 +3,185 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useFunctionDomain } from "./FunctionProvider";
 
+/**
+ * Resolve the owning function node for any node by walking "incoming" edges.
+ * If we ever reach a fn/function node, that's the function scope owner.
+ */
+function resolveOwningFunctionId(
+  nodeId: string,
+  shapes: any[],
+  connections: { fromShapeId: string; toShapeId: string }[]
+): string | null {
+  const byId = new Map(shapes.map((s) => [s.id, s] as const));
+  const visited = new Set<string>();
+  const queue: string[] = [nodeId];
+
+  while (queue.length) {
+    const cur = queue.shift()!;
+    if (visited.has(cur)) continue;
+    visited.add(cur);
+
+    const incoming = connections.filter((c) => c.toShapeId === cur);
+    for (const edge of incoming) {
+      const from = edge.fromShapeId;
+      const fromShape = byId.get(from);
+      if (fromShape?.logicTypeId === "fn/function") return fromShape.id;
+      queue.push(from);
+    }
+  }
+
+  return null;
+}
+
+function uniq(list: string[]) {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const x of list) {
+    const t = String(x ?? "").trim();
+    if (!t) continue;
+    if (seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out;
+}
+
 export function LogicBuilderInspector({
   shapes,
   connections,
   selectedShapeId,
   selectedLogicTypeId,
 }: {
-  shapes: any;
-  connections: any;
+  shapes: any[];
+  connections: { fromShapeId: string; toShapeId: string }[];
   selectedShapeId: string | null;
   selectedLogicTypeId?: string | null;
 }) {
   const { store: defaultStore, bump, version, getStore } = useFunctionDomain();
   const [text, setText] = useState("");
 
-  const isVariable = selectedLogicTypeId === "fn/var";
-  const isReturn = selectedLogicTypeId === "fn/return";
-  const isLogic = selectedLogicTypeId === "fn/add";
-  const isParam = selectedLogicTypeId === "fn/param";
   const isFunction = selectedLogicTypeId === "fn/function";
+  const isParam = selectedLogicTypeId === "fn/param";
+  const isVariable = selectedLogicTypeId === "fn/var";
+  const isLogic = selectedLogicTypeId === "fn/add";
+  const isReturn = selectedLogicTypeId === "fn/return";
 
-  function resolveOwningFunctionId(
-    nodeId: string,
-    shapes: any[],
-    connections: { fromShapeId: string; toShapeId: string }[]
-  ): string | null {
-    const byId = new Map(shapes.map((s) => [s.id, s] as const));
+  /**
+   * Pick the correct function store for the currently selected node.
+   * - If the selected node IS the function node: it owns itself -> fnId = selectedShapeId
+   * - Otherwise: walk incoming edges until we find fn/function
+   * - Fallback: fn_local
+   */
+  const fnId = useMemo(() => {
+    if (!selectedShapeId) return "fn_local";
+    if (isFunction) return selectedShapeId;
 
-    // If the selected node IS a function block, it owns itself.
-    const self = byId.get(nodeId);
-    if (self?.logicTypeId === "fn/function") return nodeId;
+    return (
+      resolveOwningFunctionId(selectedShapeId, shapes, connections) ??
+      "fn_local"
+    );
+  }, [selectedShapeId, isFunction, shapes, connections]);
 
-    const visited = new Set<string>();
-    const queue: string[] = [nodeId];
+  const fnStore = useMemo(() => {
+    return fnId === "fn_local" ? defaultStore : getStore(fnId);
+  }, [fnId, defaultStore, getStore]);
 
-    while (queue.length) {
-      const cur = queue.shift()!;
-      if (visited.has(cur)) continue;
-      visited.add(cur);
+  /**
+   * CRITICAL: Ensure the domain statement exists *inside the correct fnStore*
+   * once a node becomes owned by a function.
+   *
+   * This fixes the "Apply does nothing" problem when:
+   * - you drop a var node (statement created in default store / or not created),
+   * - later connect it to a function,
+   * - inspector switches to fnStore(functionId) and cannot find the statement.
+   */
+  useEffect(() => {
+    if (!selectedShapeId) return;
 
-      const incoming = connections.filter((c) => c.toShapeId === cur);
-      for (const edge of incoming) {
-        const from = edge.fromShapeId;
-        const fromShape = byId.get(from);
-        if (fromShape?.logicTypeId === "fn/function") return fromShape.id;
-        queue.push(from);
-      }
+    // Only statements need backing domain statements
+    const needsStatement = isVariable || isLogic || isReturn;
+    if (!needsStatement) return;
+
+    // If it already exists in the current fnStore, do nothing
+    const existing = fnStore.getStatement(selectedShapeId);
+    if (existing) return;
+
+    // Create it in the correct store (based on node type)
+    try {
+      if (isVariable) fnStore.addStatementWithId("variable", selectedShapeId);
+      else if (isLogic) fnStore.addStatementWithId("logic", selectedShapeId);
+      else if (isReturn) fnStore.addStatementWithId("return", selectedShapeId);
+
+      bump();
+    } catch (e) {
+      console.warn("Failed to ensure statement in function store:", e);
     }
-    return null;
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedShapeId, fnStore, isVariable, isLogic, isReturn]);
 
-  const owningFnId = selectedShapeId
-    ? resolveOwningFunctionId(selectedShapeId, shapes, connections)
-    : null;
-
-  const hasOwningFunction = !!owningFnId;
-  const fnId = owningFnId ?? "fn_local";
-  const fnStore = fnId === "fn_local" ? defaultStore : getStore(fnId);
-
-  // Visible symbols for the selected node (params + upstream declarations)
+  // Visible symbols for the selected node (scoped)
   const visibleSymbols = useMemo(() => {
     if (!selectedShapeId) return [];
-
-    const symbols = fnStore
-      .getVisibleSymbols(selectedShapeId)
-      .map((s: any) => s.name);
-
-    // If this node is not connected to any function,
-    // params must not be visible (even if fn_local has some).
-    if (!hasOwningFunction) {
-      const paramNames = new Set(defaultStore.getParameters());
-      return symbols.filter((name) => !paramNames.has(name));
+    try {
+      return fnStore.getVisibleSymbols(selectedShapeId).map((s: any) => s.name);
+    } catch {
+      return [];
     }
+  }, [selectedShapeId, fnStore, version]);
 
-    return symbols;
-  }, [selectedShapeId, fnStore, version, hasOwningFunction, defaultStore]);
-
-  // Current declarations (with sources)
+  // Current declarations (with sources) for variable node
   const declarations = useMemo(() => {
     if (!selectedShapeId || !isVariable) return [];
     return fnStore.getVariableDeclarations(selectedShapeId);
   }, [selectedShapeId, isVariable, fnStore, version]);
 
+  // Parameters text (for param editor UI)
   const paramsText = useMemo(() => {
     return fnStore.getParameters().join("\n");
   }, [fnStore, version]);
 
+  /**
+   * Function symbols:
+   * - params in this function store
+   * - ALL variable declaration names that exist in this function store
+   *
+   * Note: we intentionally do NOT include upstream-only filtering here;
+   * this is "what exists in the function" (good for debugging).
+   */
+  const functionSymbols = useMemo(() => {
+    if (!isFunction) return [];
+
+    const params = fnStore.getParameters();
+
+    const varDecls =
+      fnStore
+        .getStatements()
+        .filter((s: any) => s.type === "variable")
+        .flatMap((v: any) => (v.declarations ?? []).map((d: any) => d.name)) ??
+      [];
+
+    return uniq([...params, ...varDecls]);
+  }, [isFunction, fnStore, version]);
+
+  // Load text area content based on selected node type
   useEffect(() => {
     if (!selectedShapeId) return;
 
     if (isParam) {
-      // If not connected to a function, don't load from fn_local.
-      if (!hasOwningFunction) {
-        setText("");
-        return;
-      }
       setText(paramsText);
       return;
     }
 
-    if (!isVariable) {
-      setText("");
+    if (isVariable) {
+      const stmt: any = fnStore.getStatement(selectedShapeId);
+      const names = (stmt?.declarations ?? []).map((d: any) => d.name);
+      setText(names.join("\n"));
       return;
     }
 
-    const stmt: any = fnStore.getStatement(selectedShapeId);
-    const names = (stmt?.declarations ?? []).map((d: any) => d.name);
-    setText(names.join("\n"));
-  }, [
-    selectedShapeId,
-    isVariable,
-    isParam,
-    fnStore,
-    version,
-    paramsText,
-    hasOwningFunction,
-  ]);
+    // Function / Logic / Return currently don't use the textarea
+    setText("");
+  }, [selectedShapeId, isParam, isVariable, fnStore, version, paramsText]);
 
   if (!selectedShapeId) return null;
 
@@ -130,19 +193,45 @@ export function LogicBuilderInspector({
         {selectedLogicTypeId ?? "unknown"} · {selectedShapeId}
       </div>
 
-      {isParam && !hasOwningFunction && (
-        <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2 mb-3">
-          This Param node is not connected to a Function yet.
-          <br />
-          Connect it to a Function to edit that function’s parameters.
+      {/* FUNCTION */}
+      {isFunction && (
+        <div className="flex flex-col gap-3">
+          <div className="font-medium">Function scope</div>
+
+          <div className="text-[11px] text-gray-500">
+            Symbols available inside this function (params + variables).
+          </div>
+
+          <div className="rounded-md border bg-white p-2">
+            {functionSymbols.length === 0 ? (
+              <div className="text-[11px] text-gray-500">(none)</div>
+            ) : (
+              <div className="flex flex-wrap gap-1">
+                {functionSymbols.map((s) => (
+                  <span
+                    key={s}
+                    className="px-2 py-1 rounded-full border text-[11px] bg-gray-50"
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="text-[11px] text-gray-500">
+            Tip: params become available only when Param nodes belong to this
+            function (connected by flow).
+          </div>
         </div>
       )}
 
+      {/* PARAM */}
       {isParam && (
         <div className="flex flex-col gap-3">
           <div className="font-medium">Parameters</div>
           <div className="text-[11px] text-gray-500">
-            One per line. These are visible only inside the owning Function.
+            One per line. These are symbols available to nodes in this function.
           </div>
 
           <textarea
@@ -150,14 +239,11 @@ export function LogicBuilderInspector({
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder={"amount\nrate\ndays"}
-            disabled={!hasOwningFunction}
           />
 
           <button
-            className="rounded-md bg-blue-600 text-white text-xs py-2 disabled:opacity-50"
-            disabled={!hasOwningFunction}
+            className="rounded-md bg-blue-600 text-white text-xs py-2"
             onClick={() => {
-              if (!hasOwningFunction) return;
               const names = text.split("\n");
               fnStore.setParameters(names);
               bump();
@@ -168,6 +254,7 @@ export function LogicBuilderInspector({
         </div>
       )}
 
+      {/* VARIABLE */}
       {isVariable && (
         <div className="flex flex-col gap-3">
           <div className="font-medium">Declarations</div>
@@ -186,13 +273,6 @@ export function LogicBuilderInspector({
             className="rounded-md bg-blue-600 text-white text-xs py-2"
             onClick={() => {
               const names = text.split("\n");
-
-              // ✅ ensure statement exists in the selected function store
-              const existing = fnStore.getStatement(selectedShapeId);
-              if (!existing) {
-                fnStore.addStatementWithId("variable", selectedShapeId);
-              }
-
               fnStore.setVariableDeclarations(selectedShapeId, names);
               bump();
             }}
@@ -200,6 +280,7 @@ export function LogicBuilderInspector({
             Apply
           </button>
 
+          {/* Per-declaration sources */}
           <div className="mt-2 border-t pt-2">
             <div className="font-medium mb-2">Sources</div>
 
@@ -231,21 +312,17 @@ export function LogicBuilderInspector({
         </div>
       )}
 
+      {/* LOGIC */}
       {isLogic && (
         <div className="text-sm">
-          Logic node editing comes next (assignments).
+          Logic node editing comes next (simple assignment).
         </div>
       )}
 
+      {/* RETURN */}
       {isReturn && (
         <div className="text-sm">
           Return node editing comes next (choose symbol to return).
-        </div>
-      )}
-
-      {isFunction && (
-        <div className="text-sm">
-          Function editing comes next (name, signature, etc.).
         </div>
       )}
     </div>
