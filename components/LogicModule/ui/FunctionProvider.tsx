@@ -6,40 +6,76 @@ import React, {
   useMemo,
   useState,
   useEffect,
+  useRef,
+  useCallback,
 } from "react";
-import { FunctionStore } from "../application/FunctionStore";
+import { FunctionStore, FunctionSnapshot } from "../application/FunctionStore";
+import { FunctionDefinition } from "../domain/model/FunctionDefinition";
+import { asFunctionId } from "../domain/model/ids";
+
+type MultiFnSnapshot = {
+  version: 1;
+  functions: Record<string, FunctionSnapshot>;
+};
 
 type Ctx = {
-  store: FunctionStore;
+  store: FunctionStore; // default / legacy store (fn_local)
+  getStore: (fnId: string) => FunctionStore;
   version: number;
   bump: () => void;
 };
 
 const C = createContext<Ctx | null>(null);
 
-const STORAGE_KEY = "logicbuilder:function:v1";
+const STORAGE_KEY = "logicbuilder:functions:v1";
 
 export function FunctionDomainProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const store = useMemo(() => new FunctionStore(), []);
   const [version, setVersion] = useState(0);
   const bump = () => setVersion((v) => v + 1);
 
-  // Prevent saving an empty initial store before we try to hydrate
+  const storesRef = useRef(new Map<string, FunctionStore>());
+
+  // Prevent saving an empty initial state before hydrate
   const [hydrated, setHydrated] = useState(false);
+
+  const getStore = useCallback((fnId: string) => {
+    const map = storesRef.current;
+    const existing = map.get(fnId);
+    if (existing) return existing;
+
+    const created = new FunctionStore(
+      new FunctionDefinition({
+        id: asFunctionId(fnId),
+        name: "UntitledFunction",
+      })
+    );
+
+    map.set(fnId, created);
+    return created;
+  }, []);
+
+  // Default store for backward compatibility
+  const store = useMemo(() => getStore("fn_local"), [getStore]);
 
   // 1) Hydrate once on mount
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const snapshot = JSON.parse(raw);
-        store.hydrate(snapshot);
-        // force a re-render so inspector/debug picks up hydrated state
-        setVersion((v) => v + 1);
+        const parsed = JSON.parse(raw) as MultiFnSnapshot;
+
+        if (parsed?.version === 1 && parsed.functions) {
+          for (const [fnId, fnSnap] of Object.entries(parsed.functions)) {
+            const s = getStore(fnId);
+            s.hydrate(fnSnap);
+          }
+          // force UI refresh
+          setVersion((v) => v + 1);
+        }
       }
     } catch (e) {
       console.warn("Failed to hydrate LogicBuilder snapshot:", e);
@@ -52,15 +88,28 @@ export function FunctionDomainProvider({
   // 2) Persist on every version change (after hydration)
   useEffect(() => {
     if (!hydrated) return;
+
     try {
-      const snap = store.serialize();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(snap));
+      const out: MultiFnSnapshot = {
+        version: 1,
+        functions: {},
+      };
+
+      for (const [fnId, s] of storesRef.current.entries()) {
+        out.functions[fnId] = s.serialize();
+      }
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(out));
     } catch (e) {
       console.warn("Failed to persist LogicBuilder snapshot:", e);
     }
-  }, [version, hydrated, store]);
+  }, [version, hydrated]);
 
-  return <C.Provider value={{ store, version, bump }}>{children}</C.Provider>;
+  return (
+    <C.Provider value={{ store, getStore, version, bump }}>
+      {children}
+    </C.Provider>
+  );
 }
 
 export function useFunctionDomain() {

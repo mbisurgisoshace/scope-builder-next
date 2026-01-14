@@ -14,6 +14,7 @@ function titleFor(shape: any) {
   if (t === "fn/var") return "Variable";
   if (t === "fn/add") return "Logic";
   if (t === "fn/return") return "Return";
+  if (t === "fn/function") return "Function";
   return "LogicBuilder";
 }
 
@@ -22,6 +23,9 @@ function subtitleFor(shape: any) {
   if (t === "fn/param") {
     const name = shape?.data?.fnParamName;
     return name ? name : "(unnamed)";
+  }
+  if (t === "fn/function") {
+    return shape?.data?.fnName ?? "Untitled";
   }
   return t ?? "";
 }
@@ -35,8 +39,9 @@ export default function LogicBuilderNode({
 }: Props) {
   const t = (shape as any)?.logicTypeId as string | undefined;
 
-  const isStatement = t === "fn/var" || t === "fn/add" || t === "fn/return";
   const isParam = t === "fn/param";
+  const isFunction = t === "fn/function";
+  const isStatement = t === "fn/var" || t === "fn/add" || t === "fn/return";
 
   return (
     <div
@@ -70,34 +75,36 @@ export default function LogicBuilderNode({
       </div>
 
       {/* Connectors (reuse your existing connector API) */}
-      {interactive && onConnectorMouseDown && isStatement && (
-        <>
-          {/* top */}
-          <Connector
-            x="50%"
-            y={0}
-            onMouseDown={(e) => onConnectorMouseDown(e, shape.id, "top")}
-          />
-          {/* right */}
-          <Connector
-            x="100%"
-            y="50%"
-            onMouseDown={(e) => onConnectorMouseDown(e, shape.id, "right")}
-          />
-          {/* bottom */}
-          <Connector
-            x="50%"
-            y="100%"
-            onMouseDown={(e) => onConnectorMouseDown(e, shape.id, "bottom")}
-          />
-          {/* left */}
-          <Connector
-            x={0}
-            y="50%"
-            onMouseDown={(e) => onConnectorMouseDown(e, shape.id, "left")}
-          />
-        </>
-      )}
+      {interactive &&
+        onConnectorMouseDown &&
+        (isStatement || isParam || isFunction) && (
+          <>
+            {/* top */}
+            <Connector
+              x="50%"
+              y={0}
+              onMouseDown={(e) => onConnectorMouseDown(e, shape.id, "top")}
+            />
+            {/* right */}
+            <Connector
+              x="100%"
+              y="50%"
+              onMouseDown={(e) => onConnectorMouseDown(e, shape.id, "right")}
+            />
+            {/* bottom */}
+            <Connector
+              x="50%"
+              y="100%"
+              onMouseDown={(e) => onConnectorMouseDown(e, shape.id, "bottom")}
+            />
+            {/* left */}
+            <Connector
+              x={0}
+              y="50%"
+              onMouseDown={(e) => onConnectorMouseDown(e, shape.id, "left")}
+            />
+          </>
+        )}
     </div>
   );
 }

@@ -185,6 +185,7 @@ export default function InfiniteCanvas({
 }: InfiniteCanvasProps) {
   const pathname = usePathname();
   const {
+    getStore,
     store: fnStore,
     bump: bumpDomain,
     version: domainVersion,
@@ -288,6 +289,49 @@ export default function InfiniteCanvas({
     connecting?.fromShapeId ?? null
   );
 
+  function isLogicBuilderFunctionShape(shape: any): boolean {
+    return shape?.logicTypeId === "fn/function";
+  }
+
+  function isLogicBuilderStatementShape(shape: any): boolean {
+    const t = shape?.logicTypeId;
+    return t === "fn/var" || t === "fn/add" || t === "fn/return";
+  }
+
+  function resolveOwningFunctionId(
+    nodeId: string,
+    shapes: IShape[],
+    connections: { fromShapeId: string; toShapeId: string }[]
+  ): string | null {
+    // Walk "upstream": who points INTO me?
+    const byId = new Map(shapes.map((s) => [s.id, s] as const));
+
+    const visited = new Set<string>();
+    const queue: string[] = [nodeId];
+
+    while (queue.length) {
+      const cur = queue.shift()!;
+      if (visited.has(cur)) continue;
+      visited.add(cur);
+
+      // Find incoming edges: X -> cur
+      const incoming = connections.filter((c) => c.toShapeId === cur);
+
+      for (const edge of incoming) {
+        const from = edge.fromShapeId;
+        const fromShape = byId.get(from);
+
+        if (fromShape && isLogicBuilderFunctionShape(fromShape)) {
+          return fromShape.id; // function shape id acts as fnId
+        }
+
+        queue.push(from);
+      }
+    }
+
+    return null;
+  }
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!editable) return;
@@ -323,18 +367,157 @@ export default function InfiniteCanvas({
         });
 
         try {
+          // ✅ NEW: If this edge connects a Function block to a Param/Statement node,
+          // ensure the node exists in the Function store (not just in fn_local).
+          const fromIsFn = (fromShape as any)?.logicTypeId === "fn/function";
+          const toIsFn = (toShape as any)?.logicTypeId === "fn/function";
+
+          const fromIsParam = (fromShape as any)?.logicTypeId === "fn/param";
+          const toIsParam = (toShape as any)?.logicTypeId === "fn/param";
+
+          const fromIsStmt = isLogicBuilderStatementShape(fromShape);
+          const toIsStmt = isLogicBuilderStatementShape(toShape);
+
+          // Function <-> Param OR Function <-> Statement
           if (
-            isLogicBuilderStatementShape(fromShape) &&
-            isLogicBuilderStatementShape(toShape)
+            (fromIsFn && (toIsParam || toIsStmt)) ||
+            (toIsFn && (fromIsParam || fromIsStmt))
           ) {
-            fnStore.connectFlow(connecting.fromShapeId, snapResult.shapeId);
-            bumpDomain(); // triggers any debug/inspector UI to refresh
+            const fnShape = fromIsFn ? fromShape : toShape;
+            const otherShape =
+              fnShape.id === fromShape.id ? toShape : fromShape;
+
+            const fnId = fnShape.id; // 👈 function store key is the function shape id
+            const storeForFn = fnId === "fn_local" ? fnStore : getStore(fnId);
+
+            // If connecting a STATEMENT node to the function, ensure statement exists in this store
+            if (isLogicBuilderStatementShape(otherShape)) {
+              const stmtId = otherShape.id;
+
+              const logicTypeId = (otherShape as any)?.logicTypeId;
+              const stmtType =
+                logicTypeId === "fn/var"
+                  ? "variable"
+                  : logicTypeId === "fn/add"
+                  ? "logic"
+                  : "return";
+
+              // Only create if missing (so reconnecting doesn't explode)
+              if (!storeForFn.getStatement(stmtId)) {
+                storeForFn.addStatementWithId(stmtType as any, stmtId);
+              }
+            }
+
+            // If connecting a PARAM node to the function:
+            // right now params are edited as "global parameters" inside a store,
+            // but your Param shapes don’t map to named params yet.
+            // So we do nothing here (yet). Later we’ll use shape.data.fnParamName and add it to storeForFn.
+            bumpDomain();
+          }
+
+          // ✅ EXISTING: statement -> statement flow (scoped to same function)
+          if (fromIsStmt && toIsStmt) {
+            // Build a "fresh" edge list that includes the edge we just created.
+            // React state `connections` is stale inside this same event tick.
+            const pendingEdge = {
+              fromShapeId: connecting.fromShapeId,
+              toShapeId: snapResult.shapeId,
+            };
+
+            // If your `connections` objects have more fields, normalize them:
+            const edgesForResolution = [
+              ...connections.map((c: any) => ({
+                fromShapeId: c.fromShapeId,
+                toShapeId: c.toShapeId,
+              })),
+              pendingEdge,
+            ];
+
+            // 1) Resolve which Function block each node belongs to (using fresh edges)
+            const fromFnId =
+              resolveOwningFunctionId(
+                fromShape.id,
+                shapes,
+                edgesForResolution
+              ) ?? "fn_local";
+            const toFnId =
+              resolveOwningFunctionId(toShape.id, shapes, edgesForResolution) ??
+              "fn_local";
+
+            // 2) Only allow statement->statement flow inside the same function
+            if (fromFnId !== toFnId) {
+              console.warn(
+                "Blocked connectFlow across different functions",
+                fromFnId,
+                toFnId
+              );
+              // Optional: remove the just-created visual edge here later
+              return;
+            }
+
+            // 3) Use the correct store (scoped)
+            const store =
+              fromFnId === "fn_local" ? fnStore : getStore(fromFnId);
+
+            const ensureStmt = (shape: any) => {
+              const t = shape?.logicTypeId;
+              if (t === "fn/var" && !store.getStatement(shape.id))
+                store.addStatementWithId("variable", shape.id);
+              if (t === "fn/add" && !store.getStatement(shape.id))
+                store.addStatementWithId("logic", shape.id);
+              if (t === "fn/return" && !store.getStatement(shape.id))
+                store.addStatementWithId("return", shape.id);
+            };
+
+            ensureStmt(fromShape);
+            ensureStmt(toShape);
+
+            store.connectFlow(connecting.fromShapeId, snapResult.shapeId);
+
+            bumpDomain();
           }
         } catch (e) {
-          // If this fails, we keep the visual edge, but the domain refuses the connection.
-          // Later we can show a toast + auto-remove the visual edge if you want.
           console.warn("LogicBuilder domain connectFlow failed:", e);
         }
+
+        // try {
+        //   if (
+        //     isLogicBuilderStatementShape(fromShape) &&
+        //     isLogicBuilderStatementShape(toShape)
+        //   ) {
+        //     // fnStore.connectFlow(connecting.fromShapeId, snapResult.shapeId);
+        //     // bumpDomain(); // triggers any debug/inspector UI to refresh
+        //     // 1) Resolve which Function block each node belongs to
+        //     const fromFnId =
+        //       resolveOwningFunctionId(fromShape.id, shapes, connections) ??
+        //       "fn_local";
+        //     const toFnId =
+        //       resolveOwningFunctionId(toShape.id, shapes, connections) ??
+        //       "fn_local";
+
+        //     // 2) Only allow statement->statement flow inside the same function
+        //     if (fromFnId !== toFnId) {
+        //       console.warn(
+        //         "Blocked connectFlow across different functions",
+        //         fromFnId,
+        //         toFnId
+        //       );
+        //       // Optional: remove the just-created visual edge here later (we can add that next)
+        //       return;
+        //     }
+
+        //     // 3) Use the correct store (scoped)
+        //     const store =
+        //       fromFnId === "fn_local" ? fnStore : getStore(fromFnId);
+        //     store.connectFlow(connecting.fromShapeId, snapResult.shapeId);
+
+        //     bumpDomain();
+        //   }
+        // } catch (e) {
+        //   // If this fails, we keep the visual edge, but the domain refuses the connection.
+        //   // Later we can show a toast + auto-remove the visual edge if you want.
+        //   console.warn("LogicBuilder domain connectFlow failed:", e);
+        // }
 
         setConnecting(null);
         setConnectingMousePos(null);
@@ -786,6 +969,23 @@ export default function InfiniteCanvas({
       // }));
 
       try {
+        if (logicTypeId === "fn/function") {
+          // create function shape
+          updateShape(id, (s) => ({
+            ...s,
+            logicTypeId,
+            width: 320,
+            height: 130,
+            data: { ...(s as any).data, fnName: "Untitled", fnFunctionId: id },
+            text: "Function",
+          }));
+
+          // ensure workspace has a store for it
+          const store = getStore(id); // <-- from workspace domain hook
+          // optional: set function name in domain too
+          store.getFunction().rename("Untitled");
+        }
+
         if (logicTypeId === "fn/param") {
           // const paramName = `param_${id.slice(0, 4)}`;
           // fnStore.addParameterNamed(paramName);
@@ -1016,6 +1216,23 @@ export default function InfiniteCanvas({
     }
   }
 
+  function isFunctionShape(shape: any) {
+    return shape?.logicTypeId === "fn/function";
+  }
+
+  function isParamShape(shape: any) {
+    return shape?.logicTypeId === "fn/param";
+  }
+
+  function isStatementShape(shape: any) {
+    const t = shape?.logicTypeId;
+    return t === "fn/var" || t === "fn/add" || t === "fn/return";
+  }
+
+  function getBoundFunctionId(shape: any): string | null {
+    return shape?.data?.fnFunctionId ?? null;
+  }
+
   async function duplicateSelection() {
     if (!selectedShapeIds.length) return;
     const sel = shapes.filter((s) => selectedShapeIds.includes(s.id));
@@ -1242,22 +1459,85 @@ export default function InfiniteCanvas({
     };
   }
 
-  const selectedId = selectedShapeIds[0];
+  //const selectedId = selectedShapeIds[0];
 
   // force re-render when domain changes (if you used a bump/version pattern)
   void domainVersion; // if you have it; otherwise ignore
 
-  const validation = fnStore.validate();
+  // const validation = fnStore.validate();
+
+  // let plan: string[] = [];
+  // try {
+  //   plan = fnStore.getExecutionPlan();
+  // } catch {
+  //   plan = [];
+  // }
+
+  // const symbols = selectedId
+  //   ? fnStore.getVisibleSymbols(selectedId).map((s) => s.name)
+  //   : [];
+  function resolveOwningFunctionIdForDebug(
+    nodeId: string,
+    shapes: any[],
+    connections: { fromShapeId: string; toShapeId: string }[]
+  ): string | null {
+    const byId = new Map(shapes.map((s) => [s.id, s] as const));
+
+    const self = byId.get(nodeId);
+    if (self?.logicTypeId === "fn/function") return nodeId;
+
+    const visited = new Set<string>();
+    const queue: string[] = [nodeId];
+
+    while (queue.length) {
+      const cur = queue.shift()!;
+      if (visited.has(cur)) continue;
+      visited.add(cur);
+
+      const incoming = connections.filter((c) => c.toShapeId === cur);
+      for (const edge of incoming) {
+        const from = edge.fromShapeId;
+        const fromShape = byId.get(from);
+        if (fromShape?.logicTypeId === "fn/function") return fromShape.id;
+        queue.push(from);
+      }
+    }
+    return null;
+  }
+
+  const selectedId = selectedShapeIds[0] ?? null;
+
+  // pick store for selected node
+  const owningFnId = selectedId
+    ? resolveOwningFunctionIdForDebug(selectedId, shapes, connections)
+    : null;
+
+  const hasOwningFunction = !!owningFnId;
+  const debugStore = owningFnId ? getStore(owningFnId) : fnStore;
+
+  // Validation + plan come from the selected store
+  const validation = debugStore.validate();
 
   let plan: string[] = [];
   try {
-    plan = fnStore.getExecutionPlan();
+    plan = debugStore.getExecutionPlan();
   } catch {
     plan = [];
   }
 
+  // Visible symbols from selected store, with param filtering if not connected
   const symbols = selectedId
-    ? fnStore.getVisibleSymbols(selectedId).map((s) => s.name)
+    ? (() => {
+        const sym = debugStore
+          .getVisibleSymbols(selectedId)
+          .map((s: any) => s.name);
+
+        if (!hasOwningFunction) {
+          const paramNames = new Set(fnStore.getParameters());
+          return sym.filter((n: string) => !paramNames.has(n));
+        }
+        return sym;
+      })()
     : [];
 
   return (
@@ -1406,244 +1686,6 @@ export default function InfiniteCanvas({
             </span>
           </button>
 
-          {toolbarOptions.rectangle && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                console.log("e", e);
-
-                e.dataTransfer.setData("shape-type", "rect");
-              }}
-              className="w-10 h-10 gap-1 flex flex-col items-center "
-              title="Rectangle"
-            >
-              {/* <SquarePlus className="text-[#111827] pointer-events-none" /> */}
-              <NextImage
-                src={"/rectangle.svg"}
-                alt="Rectangle"
-                width={20}
-                height={20}
-                className="pointer-events-none"
-              />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Rectangle
-              </span>
-            </button>
-          )}
-
-          {toolbarOptions.ellipse && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "ellipse");
-              }}
-              className="w-10 h-10 gap-1 flex flex-col items-center "
-              title="Ellipse"
-            >
-              {/* <SquarePlus className="text-[#111827] pointer-events-none" /> */}
-              <NextImage
-                src={"/ellipse.svg"}
-                alt="Ellipse"
-                width={20}
-                height={20}
-                className="pointer-events-none"
-              />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Ellipse
-              </span>
-            </button>
-          )}
-
-          {/* <button
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("shape-type", "text");
-          }}
-          className="w-10 h-10 flex items-center justify-center bg-yellow-300 rounded text-black font-bold"
-          title="Text"
-        >
-          Tx
-        </button> */}
-
-          {toolbarOptions.text && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "text");
-              }}
-              className="w-10 h-10 gap-1 flex flex-col items-center "
-              title="Text"
-            >
-              {/* <SquarePlus className="text-[#111827] pointer-events-none" /> */}
-              <NextImage
-                src={"/text.svg"}
-                alt="Text"
-                width={16}
-                height={16}
-                className="pointer-events-none"
-              />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Text
-              </span>
-            </button>
-          )}
-
-          {/* <button
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("shape-type", "interview");
-          }}
-          className="w-10 h-10 flex items-center justify-center bg-purple-300 rounded text-black font-bold"
-          title="Interview"
-        >
-          In
-        </button> */}
-
-          {toolbarOptions.interview && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "interview");
-              }}
-              className="w-10 h-10  flex flex-col items-center "
-              title="Interview"
-            >
-              <SquarePlus className="text-[#111827] pointer-events-none" />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Interview
-              </span>
-            </button>
-          )}
-
-          {/* <button
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("shape-type", "question");
-          }}
-          className="w-10 h-10 flex items-center justify-center bg-red-300 rounded text-black font-bold"
-          title="Question"
-        >
-          Qs
-        </button> */}
-
-          {toolbarOptions.question && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "question");
-              }}
-              className="w-10 h-10  flex flex-col items-center "
-              title="Question"
-            >
-              <SquarePlus className="text-[#111827] pointer-events-none" />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Question
-              </span>
-            </button>
-          )}
-
-          {/* <button
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("shape-type", "question_answer");
-          }}
-          className="w-10 h-10 flex items-center justify-center bg-amber-300 rounded text-black font-bold"
-          title="Answer"
-        >
-          An
-        </button> */}
-
-          {toolbarOptions.answer && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "question_answer");
-              }}
-              className="w-10 h-10  flex flex-col items-center "
-              title="Answer"
-            >
-              <SquarePlus className="text-[#111827] pointer-events-none" />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Answer
-              </span>
-            </button>
-          )}
-
-          {/* <button
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("shape-type", "table");
-          }}
-          className="w-10 h-10 flex items-center justify-center bg-pink-300 rounded text-black font-bold"
-          title="Table"
-        >
-          Tb
-        </button> */}
-          {toolbarOptions.table && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "table");
-              }}
-              className="w-10 h-10  flex flex-col items-center "
-              title="Table"
-            >
-              <SquarePlus className="text-[#111827] pointer-events-none" />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Table
-              </span>
-            </button>
-          )}
-
-          {/* <button
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("shape-type", "feature_idea");
-          }}
-          className="w-10 h-10 flex items-center justify-center bg-indigo-300 rounded text-black font-bold"
-          title="Feature Idea"
-        >
-          Fi
-        </button> */}
-          {toolbarOptions.feature && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "feature_idea");
-              }}
-              className="w-10 h-10  flex flex-col items-center "
-              title="Feature Idea"
-            >
-              <SquarePlus className="text-[#111827] pointer-events-none" />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Feature
-              </span>
-            </button>
-          )}
-
-          {toolbarOptions.card && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "card");
-              }}
-              className="w-10 h-10 gap-1 flex flex-col items-center "
-              title="Card"
-            >
-              {/* <SquarePlus className="text-[#111827] pointer-events-none" /> */}
-              <NextImage
-                src={"/card.svg"}
-                alt="Card"
-                width={20}
-                height={20}
-                className="pointer-events-none"
-              />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Card
-              </span>
-            </button>
-          )}
-
           {/* <button
             draggable
             onDragStart={(e) => {
@@ -1664,48 +1706,6 @@ export default function InfiniteCanvas({
             </span>
           </button> */}
 
-          <button
-            draggable
-            onDragStart={(e) => {
-              // 👇 this string is what the canvas will read
-              e.dataTransfer.setData("shape-type", "db_table");
-            }}
-            className="w-10 h-10 gap-1 flex flex-col items-center "
-            title="DB Table"
-          >
-            <NextImage
-              src={"/ellipse.svg"} // reuse for now, you can swap icon later
-              alt="DB Table"
-              width={20}
-              height={20}
-              className="pointer-events-none"
-            />
-            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-              DB Table
-            </span>
-          </button>
-
-          <button
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.setData("shape-type", "db_collection");
-            }}
-            className="w-10 h-10 gap-1 flex flex-col items-center "
-            title="Collection"
-          >
-            {/* You can change icon later */}
-            <NextImage
-              src={"/ellipse.svg"}
-              alt="Collection"
-              width={20}
-              height={20}
-              className="pointer-events-none"
-            />
-            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-              Collection
-            </span>
-          </button>
-
           {/* <button
             draggable
             onDragStart={(e) => {
@@ -1725,6 +1725,21 @@ export default function InfiniteCanvas({
               Logic
             </span>
           </button> */}
+
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("shape-type", "logic_node");
+              e.dataTransfer.setData("logicTypeId", "fn/function");
+            }}
+            className="w-10 h-10 gap-1 flex flex-col items-center"
+            title="Function"
+          >
+            <SquarePlus className="text-[#111827] pointer-events-none" />
+            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
+              Fn
+            </span>
+          </button>
 
           <button
             draggable
@@ -1837,6 +1852,8 @@ export default function InfiniteCanvas({
 
         return isLogicBuilder ? (
           <LogicBuilderInspector
+            shapes={shapes}
+            connections={connections}
             selectedShapeId={selectedId}
             selectedLogicTypeId={selectedLogicTypeId}
           />
