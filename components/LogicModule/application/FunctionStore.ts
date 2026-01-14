@@ -78,10 +78,45 @@ export class FunctionStore {
   }
 
   addParameterNamed(name: string) {
-    this.fn.addParameter({ name });
+    this.fn.addParameter(name);
   }
+
   removeParameterNamed(name: string) {
-    this.fn.removeParameter(name);
+    const p = this.fn.listParameters().find((x) => x.name === name);
+    if (!p) return;
+    this.fn.removeParameter(p.id);
+  }
+
+  getParameters(): string[] {
+    return this.fn.listParameters().map((p) => p.name);
+  }
+
+  /**
+   * Replace all parameters with the given list.
+   * Implemented using existing FunctionDefinition methods (no domain changes needed).
+   */
+  setParameters(names: string[]) {
+    const normalized = names.map((n) => n.trim()).filter(Boolean);
+
+    // Deduplicate while preserving order
+    const uniq: string[] = [];
+    const seen = new Set<string>();
+    for (const n of normalized) {
+      if (!seen.has(n)) {
+        uniq.push(n);
+        seen.add(n);
+      }
+    }
+
+    // Remove all current params
+    for (const p of this.fn.listParameters()) {
+      this.fn.removeParameter(p.id);
+    }
+
+    // Add new params
+    for (const name of uniq) {
+      this.fn.addParameter(name);
+    }
   }
 
   connectFlow(from: string, to: string) {
@@ -182,14 +217,10 @@ export class FunctionStore {
   serialize(): FunctionSnapshot {
     // Params: your FunctionDefinition currently stores params internally.
     // If you don't have a list method yet, see notes below.
-    const params =
-      // @ts-ignore - adapt if you have a real method
-      (this.fn.listParameters?.() ?? this.fn.parameters ?? []).map(
-        (p: any) => ({
-          id: String(p.id ?? p.name),
-          name: String(p.name),
-        })
-      );
+    const params = this.fn.listParameters().map((p) => ({
+      id: String(p.id),
+      name: p.name,
+    }));
 
     const statements: FunctionSnapshot["statements"] = this.fn
       .listStatements()
@@ -242,7 +273,8 @@ export class FunctionStore {
 
     // Restore params
     for (const p of snapshot.params ?? []) {
-      this.fn.addParameter({ name: p.name });
+      // keep the same id if present (important for stable renames later)
+      this.fn.addParameter(p.name, p.id as any);
     }
 
     // Restore statements

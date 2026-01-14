@@ -2,11 +2,18 @@
 import { FlowEdge } from "./FlowEdge";
 import { Statement } from "./Statement";
 import { InvariantError } from "../errors/DomainError";
-import { FunctionId, StatementId, EdgeId, asEdgeId } from "./ids";
+import {
+  FunctionId,
+  StatementId,
+  EdgeId,
+  asEdgeId,
+  ParamId,
+  asParamId,
+} from "./ids";
 
 export interface FunctionParameter {
+  id: ParamId;
   name: string;
-  // type?: string; // later if you want
 }
 
 export class FunctionDefinition {
@@ -60,17 +67,40 @@ export class FunctionDefinition {
     this.name = name.trim();
   }
 
-  addParameter(param: FunctionParameter) {
-    if (!param.name.trim())
-      throw new InvariantError("Parameter name cannot be empty.");
-    const exists = this.parameters.some((p) => p.name === param.name);
+  addParameter(name: string, id?: ParamId) {
+    const trimmed = name.trim();
+    if (!trimmed) throw new InvariantError("Parameter name cannot be empty.");
+    const exists = this.parameters.some((p) => p.name === trimmed);
     if (exists)
-      throw new InvariantError(`Parameter "${param.name}" already exists.`);
-    this.parameters = [...this.parameters, { name: param.name.trim() }];
+      throw new InvariantError(`Parameter "${trimmed}" already exists.`);
+
+    const pid = id ?? asParamId(`param_${cryptoLikeId()}`);
+    this.parameters = [...this.parameters, { id: pid, name: trimmed }];
+    return pid;
   }
 
-  removeParameter(name: string) {
-    this.parameters = this.parameters.filter((p) => p.name !== name);
+  renameParameter(id: ParamId, newName: string) {
+    const trimmed = newName.trim();
+    if (!trimmed) throw new InvariantError("Parameter name cannot be empty.");
+    const exists = this.parameters.some(
+      (p) => p.name === trimmed && p.id !== id
+    );
+    if (exists)
+      throw new InvariantError(`Parameter "${trimmed}" already exists.`);
+
+    const p = this.parameters.find((x) => x.id === id);
+    if (!p) throw new InvariantError("Parameter not found.");
+    const oldName = p.name;
+    p.name = trimmed;
+
+    // propagate rename everywhere (variable refs etc.)
+    this.renameSymbolEverywhere(oldName, trimmed);
+  }
+
+  removeParameter(id: ParamId) {
+    const p = this.parameters.find((x) => x.id === id);
+    this.parameters = this.parameters.filter((x) => x.id !== id);
+    // optionally clean refs? (later)
   }
 
   addStatement(stmt: Statement) {
@@ -114,6 +144,28 @@ export class FunctionDefinition {
 
   disconnectFlow(edgeId: EdgeId) {
     this.edges.delete(edgeId);
+  }
+
+  renameSymbolEverywhere(oldName: string, newName: string) {
+    const o = oldName.trim();
+    const n = newName.trim();
+    if (!o || !n || o === n) return;
+
+    for (const s of this.statements.values()) {
+      if (s.type !== "variable") continue;
+
+      // assuming VariableStatement has declarations: {name, source}
+      const vs: any = s;
+
+      for (const d of vs.declarations ?? []) {
+        if (d.name === o) d.name = n;
+        if (d.source?.kind === "ref" && d.source.name === o) {
+          d.source = { ...d.source, name: n };
+        }
+      }
+    }
+
+    // later: return statement ref, logic assignment refs
   }
 }
 

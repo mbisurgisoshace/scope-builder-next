@@ -787,21 +787,28 @@ export default function InfiniteCanvas({
 
       try {
         if (logicTypeId === "fn/param") {
-          const paramName = `param_${id.slice(0, 4)}`;
-          fnStore.addParameterNamed(paramName);
+          // const paramName = `param_${id.slice(0, 4)}`;
+          // fnStore.addParameterNamed(paramName);
 
-          // store paramName on the shape so we can delete/edit later
-          updateShape(id, (s) => ({
-            ...s,
-            data: { ...(s as any).data, fnParamName: paramName },
-          }));
+          // // store paramName on the shape so we can delete/edit later
+          // updateShape(id, (s) => ({
+          //   ...s,
+          //   data: { ...(s as any).data, fnParamName: paramName },
+          // }));
 
+          // updateShape(id, (s) => ({
+          //   ...s,
+          //   logicTypeId,
+          //   text: `Param: ${paramName}`,
+          //   width: 260,
+          //   height: 110,
+          // }));
           updateShape(id, (s) => ({
             ...s,
             logicTypeId,
-            text: `Param: ${paramName}`,
+            text: "Params",
             width: 260,
-            height: 110,
+            height: 140, // a bit taller to display a list
           }));
         }
 

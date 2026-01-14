@@ -30,16 +30,39 @@ export function LogicBuilderInspector({
     return fnStore.getVariableDeclarations(selectedShapeId);
   }, [selectedShapeId, isVariable, fnStore, version]);
 
+  const paramsText = useMemo(() => {
+    return fnStore.getParameters().join("\n");
+  }, [fnStore, version]);
+
   // Load current variable declarations into textarea when selection changes
+  // useEffect(() => {
+  //   if (!selectedShapeId || !isVariable) {
+  //     setText("");
+  //     return;
+  //   }
+  //   const stmt: any = fnStore.getStatement(selectedShapeId);
+  //   const names = (stmt?.declarations ?? []).map((d: any) => d.name);
+  //   setText(names.join("\n"));
+  // }, [selectedShapeId, isVariable, fnStore, version]);
+
   useEffect(() => {
-    if (!selectedShapeId || !isVariable) {
+    if (!selectedShapeId) return;
+
+    if (isParam) {
+      setText(paramsText);
+      return;
+    }
+
+    // existing variable logic stays the same
+    if (!isVariable) {
       setText("");
       return;
     }
+
     const stmt: any = fnStore.getStatement(selectedShapeId);
     const names = (stmt?.declarations ?? []).map((d: any) => d.name);
     setText(names.join("\n"));
-  }, [selectedShapeId, isVariable, fnStore, version]);
+  }, [selectedShapeId, isVariable, isParam, fnStore, version, paramsText]);
 
   if (!selectedShapeId) return null;
 
@@ -52,8 +75,29 @@ export function LogicBuilderInspector({
       </div>
 
       {isParam && (
-        <div className="text-sm">
-          Parameter nodes are global inputs (we’ll edit names next).
+        <div className="flex flex-col gap-3">
+          <div className="font-medium">Parameters</div>
+          <div className="text-[11px] text-gray-500">
+            One per line. These are global symbols visible everywhere.
+          </div>
+
+          <textarea
+            className="w-full h-32 rounded-md border p-2 text-xs font-mono"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={"amount\nrate\ndays"}
+          />
+
+          <button
+            className="rounded-md bg-blue-600 text-white text-xs py-2"
+            onClick={() => {
+              const names = text.split("\n");
+              fnStore.setParameters(names);
+              bump();
+            }}
+          >
+            Apply
+          </button>
         </div>
       )}
 
