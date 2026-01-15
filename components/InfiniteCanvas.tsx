@@ -1645,21 +1645,68 @@ export default function InfiniteCanvas({
     return scopedStore.getVisibleSymbols(selectedId).map((s: any) => s.name);
   }, [selectedId, selectedLogicTypeId, scopedStore, domainVersion]);
 
+  // Runtime params, scoped per function id (so each Function can have its own test inputs)
+  const [runtimeParamsByFn, setRuntimeParamsByFn] = useState<
+    Record<string, Record<string, number>>
+  >({});
+
+  // Small UX: "Run" can be explicit (button) or auto-run (inputs immediately apply).
+  // We'll do explicit Run.
+  const [runtimeRunNonceByFn, setRuntimeRunNonceByFn] = useState<
+    Record<string, number>
+  >({});
+
+  function getRuntimeParams(fnId: string | null) {
+    if (!fnId) return {};
+    return runtimeParamsByFn[fnId] ?? {};
+  }
+
+  function setRuntimeParam(fnId: string, name: string, value: number) {
+    setRuntimeParamsByFn((prev) => ({
+      ...prev,
+      [fnId]: { ...(prev[fnId] ?? {}), [name]: value },
+    }));
+  }
+
+  function bumpRun(fnId: string) {
+    setRuntimeRunNonceByFn((prev) => ({
+      ...prev,
+      [fnId]: (prev[fnId] ?? 0) + 1,
+    }));
+  }
+
+  const runtimeFnId = debugFnId; // the function whose store we are debugging
+
+  const runtimeParams = useMemo(
+    () => getRuntimeParams(runtimeFnId),
+    [runtimeFnId, runtimeParamsByFn]
+  );
+
+  const runtimeRunNonce = runtimeFnId
+    ? runtimeRunNonceByFn[runtimeFnId] ?? 0
+    : 0;
+
   const runtime = useMemo(() => {
     try {
-      return debugStore.computeRuntimeValues();
+      return debugStore.computeRuntimeValues({ params: runtimeParams });
     } catch (e: any) {
-      return { values: {}, errors: { __runtime__: String(e?.message ?? e) } };
+      return {
+        values: {},
+        errors: { __runtime__: String(e?.message ?? e) },
+        scope: {},
+      };
     }
-  }, [debugStore, domainVersion]);
+    // important: include runtimeRunNonce so "Run" forces refresh even if params are identical
+  }, [debugStore, domainVersion, runtimeParams, runtimeRunNonce]);
 
+  // wherever you keep runtimeParams (see note below)
   const ret = useMemo(() => {
     try {
-      return debugStore.computeReturnValue();
+      return debugStore.computeReturnValue({ params: runtimeParams });
     } catch (e: any) {
       return { value: null, error: String(e?.message ?? e) };
     }
-  }, [debugStore, domainVersion]);
+  }, [debugStore, domainVersion, runtimeParams, runtimeRunNonce]);
 
   return (
     <div className="w-full h-full overflow-hidden bg-[#EFF0F4] relative flex">
@@ -1939,6 +1986,85 @@ export default function InfiniteCanvas({
               )}
             </div>
           )}
+        </div>
+
+        <div className="mb-3 border-t pt-2">
+          <div className="font-medium mb-2">Runtime params</div>
+
+          {(() => {
+            // show params from the store we're debugging
+            const params = debugStore.getParameters?.() ?? [];
+            if (!runtimeFnId)
+              return (
+                <div className="text-gray-500 text-[11px]">
+                  (Select a node inside a function)
+                </div>
+              );
+            if (params.length === 0)
+              return (
+                <div className="text-gray-500 text-[11px]">(No params)</div>
+              );
+
+            return (
+              <div className="flex flex-col gap-2">
+                {params.map((p: string) => {
+                  const current = runtimeParams[p];
+                  const display = Number.isFinite(current)
+                    ? String(current)
+                    : "";
+
+                  return (
+                    <div
+                      key={p}
+                      className="grid grid-cols-[1fr_120px] gap-2 items-center"
+                    >
+                      <div className="font-mono">{p}</div>
+                      <input
+                        className="border rounded-md px-2 py-1 text-xs font-mono"
+                        inputMode="decimal"
+                        value={display}
+                        placeholder="e.g. 100"
+                        onChange={(e) => {
+                          if (!runtimeFnId) return;
+                          const raw = e.target.value;
+
+                          // allow clearing
+                          if (raw.trim() === "") {
+                            // store NaN or delete — I prefer delete so "Missing runtime param" shows
+                            setRuntimeParamsByFn((prev) => {
+                              const next = { ...(prev[runtimeFnId] ?? {}) };
+                              delete next[p];
+                              return { ...prev, [runtimeFnId]: next };
+                            });
+                            return;
+                          }
+
+                          const n = Number(raw);
+                          if (Number.isFinite(n))
+                            setRuntimeParam(runtimeFnId, p, n);
+                          else {
+                            // if they type "-" or "1." mid-way, don't fight them — ignore until valid
+                            // (optional: keep a string map for draft editing, but this is ok for now)
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+
+                <button
+                  className="rounded-md bg-blue-600 text-white text-xs py-2 mt-1"
+                  onClick={() => runtimeFnId && bumpRun(runtimeFnId)}
+                >
+                  Run
+                </button>
+
+                <div className="text-[11px] text-gray-500">
+                  Tip: missing params will show as “Missing runtime param”.
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         <div className="mb-2">

@@ -10,6 +10,14 @@ import { FunctionDefinition } from "../domain/model/FunctionDefinition";
 import { FunctionValidator } from "../domain/services/FunctionValidator";
 import { ExpressionEvaluator } from "../domain/services/ExpressionEvaluator";
 
+export type RuntimeParams = Record<string, number>;
+
+export type RuntimeResult = {
+  values: Record<string, number>;
+  errors: Record<string, string>;
+  scope: Record<string, unknown>; // useful for debugging / return
+};
+
 type LogicExpr =
   | { kind: "literal"; value: unknown }
   | { kind: "symbolRef"; name: string };
@@ -78,34 +86,40 @@ export class FunctionStore {
    * - values: symbol -> number
    * - errors: symbol -> string (why it failed)
    */
-  computeRuntimeValues(): {
-    values: Record<string, number>;
-    errors: Record<string, string>;
-  } {
+  computeRuntimeValues(runtime?: { params?: RuntimeParams }): RuntimeResult {
     const values: Record<string, number> = {};
     const errors: Record<string, string> = {};
+    const scope: Record<string, unknown> = {};
 
     let ordered: string[] = [];
     try {
       ordered = this.getExecutionPlan();
     } catch (e: any) {
-      // If the plan fails (cycle), return empty + one global error
       return {
         values,
         errors: { __plan__: String(e?.message ?? e) },
+        scope,
       };
     }
 
-    const scope: Record<string, unknown> = {};
-
-    // 1) Seed scope with params (MVP: params have no values yet)
-    // For now we expose params as NaN until/compiler assigns them.
-    // If you later let params have default values, plug them here.
+    // 1) Seed scope with params from runtime (and mark missing)
+    const paramValues = runtime?.params ?? {};
     for (const p of this.fn.listParameters()) {
-      scope[p.name] = scope[p.name] ?? NaN;
+      const name = p.name;
+      if (name in paramValues) {
+        const v = paramValues[name];
+        scope[name] = v;
+        // you can expose params as values too (optional but helpful)
+        values[name] = v;
+        delete errors[name];
+      } else {
+        scope[name] = NaN;
+        errors[name] = "Missing runtime param";
+        values[name] = NaN;
+      }
     }
 
-    // 2) Execute statements in order
+    // 2) Execute statements in topo order
     for (const stmtId of ordered) {
       const stmt = this.fn.getStatement(asStatementId(String(stmtId)));
       if (!stmt) continue;
@@ -119,6 +133,8 @@ export class FunctionStore {
 
           if (!src) {
             errors[name] = "Missing source";
+            scope[name] = NaN;
+            values[name] = NaN;
             continue;
           }
 
@@ -129,16 +145,16 @@ export class FunctionStore {
             delete errors[name];
           } catch (e: any) {
             errors[name] = String(e?.message ?? e);
-            // keep scope entry so downstream formulas can still run and error meaningfully
             scope[name] = NaN;
+            values[name] = NaN;
           }
         }
       }
 
-      // logic + return later (Step 3+)
+      // logic nodes later (we’ll add after this runtime layer is stable)
     }
 
-    return { values, errors };
+    return { values, errors, scope };
   }
 
   // ----------------
@@ -370,19 +386,20 @@ export class FunctionStore {
    * - evaluates variables (as today)
    * - when it reaches the Return node, evaluates its source against current scope
    */
-  computeReturnValue(): {
+  /**
+   * Compute return value by executing statements in topo order.
+   * - evaluates params from runtime
+   * - evaluates variables
+   * - evaluates Return source against the computed scope
+   */
+  computeReturnValue(runtime?: { params?: RuntimeParams }): {
     value: number | null;
     error?: string;
     scopeValues: Record<string, number>;
     scopeErrors: Record<string, string>;
   } {
-    const { values, errors } = this.computeRuntimeValues();
-
-    // Build a scope that includes everything computeRuntimeValues produced
-    // (it already seeded params + ran variable declarations).
-    const scope: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(values)) scope[k] = v;
-    // NOTE: params were seeded as NaN inside computeRuntimeValues. That’s OK for now.
+    // ✅ IMPORTANT: use the scope produced by computeRuntimeValues (it includes runtime params)
+    const { values, errors, scope } = this.computeRuntimeValues(runtime);
 
     // Find the (single) return statement if present
     const returnStmt = this.fn
@@ -393,8 +410,29 @@ export class FunctionStore {
       return { value: null, scopeValues: values, scopeErrors: errors };
     }
 
+    // If no return source yet, don't explode
+    if (!returnStmt.source) {
+      return {
+        value: null,
+        error: "Missing return source",
+        scopeValues: values,
+        scopeErrors: errors,
+      };
+    }
+
     try {
       const num = this.evaluator.evaluate(returnStmt.source, scope);
+
+      // Optional safety: keep your UI consistent (you can remove this if evaluator guarantees numbers)
+      if (!Number.isFinite(num)) {
+        return {
+          value: null,
+          error: `Return is not a numeric: ${String(num)}`,
+          scopeValues: values,
+          scopeErrors: errors,
+        };
+      }
+
       return { value: num, scopeValues: values, scopeErrors: errors };
     } catch (e: any) {
       return {
