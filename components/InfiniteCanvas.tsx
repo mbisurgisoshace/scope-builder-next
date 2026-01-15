@@ -298,39 +298,39 @@ export default function InfiniteCanvas({
     return t === "fn/var" || t === "fn/add" || t === "fn/return";
   }
 
-  function resolveOwningFunctionId(
-    nodeId: string,
-    shapes: IShape[],
-    connections: { fromShapeId: string; toShapeId: string }[]
-  ): string | null {
-    // Walk "upstream": who points INTO me?
-    const byId = new Map(shapes.map((s) => [s.id, s] as const));
+  // function resolveOwningFunctionId(
+  //   nodeId: string,
+  //   shapes: IShape[],
+  //   connections: { fromShapeId: string; toShapeId: string }[]
+  // ): string | null {
+  //   // Walk "upstream": who points INTO me?
+  //   const byId = new Map(shapes.map((s) => [s.id, s] as const));
 
-    const visited = new Set<string>();
-    const queue: string[] = [nodeId];
+  //   const visited = new Set<string>();
+  //   const queue: string[] = [nodeId];
 
-    while (queue.length) {
-      const cur = queue.shift()!;
-      if (visited.has(cur)) continue;
-      visited.add(cur);
+  //   while (queue.length) {
+  //     const cur = queue.shift()!;
+  //     if (visited.has(cur)) continue;
+  //     visited.add(cur);
 
-      // Find incoming edges: X -> cur
-      const incoming = connections.filter((c) => c.toShapeId === cur);
+  //     // Find incoming edges: X -> cur
+  //     const incoming = connections.filter((c) => c.toShapeId === cur);
 
-      for (const edge of incoming) {
-        const from = edge.fromShapeId;
-        const fromShape = byId.get(from);
+  //     for (const edge of incoming) {
+  //       const from = edge.fromShapeId;
+  //       const fromShape = byId.get(from);
 
-        if (fromShape && isLogicBuilderFunctionShape(fromShape)) {
-          return fromShape.id; // function shape id acts as fnId
-        }
+  //       if (fromShape && isLogicBuilderFunctionShape(fromShape)) {
+  //         return fromShape.id; // function shape id acts as fnId
+  //       }
 
-        queue.push(from);
-      }
-    }
+  //       queue.push(from);
+  //     }
+  //   }
 
-    return null;
-  }
+  //   return null;
+  // }
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -1505,6 +1505,31 @@ export default function InfiniteCanvas({
     return null;
   }
 
+  // function resolveOwningFunctionId(
+  //   nodeId: string,
+  //   shapes: any[],
+  //   connections: { fromShapeId: string; toShapeId: string }[]
+  // ): string | null {
+  //   const byId = new Map(shapes.map((s) => [s.id, s] as const));
+  //   const visited = new Set<string>();
+  //   const queue: string[] = [nodeId];
+
+  //   while (queue.length) {
+  //     const cur = queue.shift()!;
+  //     if (visited.has(cur)) continue;
+  //     visited.add(cur);
+
+  //     const incoming = connections.filter((c) => c.toShapeId === cur);
+  //     for (const edge of incoming) {
+  //       const from = edge.fromShapeId;
+  //       const fromShape = byId.get(from);
+  //       if (fromShape?.logicTypeId === "fn/function") return fromShape.id;
+  //       queue.push(from);
+  //     }
+  //   }
+  //   return null;
+  // }
+
   function resolveOwningFunctionId(
     nodeId: string,
     shapes: any[],
@@ -1551,7 +1576,13 @@ export default function InfiniteCanvas({
     : null;
 
   const hasOwningFunction = !!owningFnId;
-  const debugStore = owningFnId ? getStore(owningFnId) : fnStore;
+  // const debugStore = owningFnId ? getStore(owningFnId) : fnStore;
+
+  const debugFnId = selectedId
+    ? resolveOwningFunctionId(selectedId, shapes, connections) ?? "fn_local"
+    : "fn_local";
+
+  const debugStore = debugFnId === "fn_local" ? fnStore : getStore(debugFnId);
 
   // Validation + plan come from the selected store
   const validation = debugStore.validate();
@@ -1613,6 +1644,22 @@ export default function InfiniteCanvas({
     // Normal node: use visibility rules
     return scopedStore.getVisibleSymbols(selectedId).map((s: any) => s.name);
   }, [selectedId, selectedLogicTypeId, scopedStore, domainVersion]);
+
+  const runtime = useMemo(() => {
+    try {
+      return debugStore.computeRuntimeValues();
+    } catch (e: any) {
+      return { values: {}, errors: { __runtime__: String(e?.message ?? e) } };
+    }
+  }, [debugStore, domainVersion]);
+
+  const ret = useMemo(() => {
+    try {
+      return debugStore.computeReturnValue();
+    } catch (e: any) {
+      return { value: null, error: String(e?.message ?? e) };
+    }
+  }, [debugStore, domainVersion]);
 
   return (
     <div className="w-full h-full overflow-hidden bg-[#EFF0F4] relative flex">
@@ -1905,7 +1952,51 @@ export default function InfiniteCanvas({
 
           <div className="mt-2">
             <div className="font-medium">Visible symbols</div>
-            <div className="break-all">{symbols.join(", ") || "(none)"}</div>
+            {/* <div className="break-all">{symbols.join(", ") || "(none)"}</div> */}
+            <div className="break-all">
+              {symbols.length === 0 ? (
+                "(none)"
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {symbols.map((s) => {
+                    const hasVal = s in runtime.values;
+                    const val = runtime.values[s];
+                    const err = runtime.errors[s];
+
+                    return (
+                      <div
+                        key={s}
+                        className="flex items-center justify-between gap-2"
+                      >
+                        <span className="font-mono">{s}</span>
+                        <span
+                          className={err ? "text-red-700" : "text-gray-900"}
+                        >
+                          {err ? `⚠ ${err}` : hasVal ? String(val) : "—"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {runtime.errors.__plan__ && (
+                    <div className="text-red-700 mt-1">
+                      ⚠ Plan: {runtime.errors.__plan__}
+                    </div>
+                  )}
+                  {runtime.errors.__runtime__ && (
+                    <div className="text-red-700 mt-1">
+                      ⚠ Runtime: {runtime.errors.__runtime__}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-2">
+            <div className="font-medium">Return</div>
+            <div className="break-all">
+              {ret.error ? `ERROR: ${ret.error}` : ret.value ?? "(none)"}
+            </div>
           </div>
         </div>
       </div>

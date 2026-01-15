@@ -1,4 +1,4 @@
-import { Value } from "../domain/model/ValueSource";
+import { Value, ValueSource } from "../domain/model/ValueSource";
 import { LogicStatement } from "../domain/model/LogicStatement";
 import { ScopeResolver } from "../domain/services/ScopeResolver";
 import { ReturnStatement } from "../domain/model/ReturnStatement";
@@ -8,6 +8,36 @@ import { VariableStatement } from "../domain/model/VariableStatement";
 import { ExecutionPlanner } from "../domain/services/ExecutionPlanner";
 import { FunctionDefinition } from "../domain/model/FunctionDefinition";
 import { FunctionValidator } from "../domain/services/FunctionValidator";
+import { ExpressionEvaluator } from "../domain/services/ExpressionEvaluator";
+
+type LogicExpr =
+  | { kind: "literal"; value: unknown }
+  | { kind: "symbolRef"; name: string };
+
+type SimpleLogicAssignment = {
+  target: string;
+  expr: LogicExpr;
+};
+
+function encodeExpr(expr: LogicExpr): string {
+  if (expr.kind === "symbolRef") return `ref:${expr.name}`;
+  // store literals as string payload, but allow numbers/booleans/etc
+  return `lit:${String(expr.value ?? "")}`;
+}
+
+function decodeExpr(expression: string): LogicExpr {
+  const raw = String(expression ?? "");
+  if (raw.startsWith("ref:")) return { kind: "symbolRef", name: raw.slice(4) };
+  if (raw.startsWith("lit:")) {
+    const s = raw.slice(4);
+    // auto-coerce numeric string -> number
+    const n = Number(s);
+    if (s.trim() !== "" && Number.isFinite(n))
+      return { kind: "literal", value: n };
+    return { kind: "literal", value: s };
+  }
+  return { kind: "literal", value: raw };
+}
 
 export type FunctionSnapshot = {
   version: 1;
@@ -26,9 +56,10 @@ export type FunctionSnapshot = {
 export class FunctionStore {
   private fn: FunctionDefinition;
 
-  private validator = new FunctionValidator();
-  private planner = new ExecutionPlanner();
   private scope = new ScopeResolver();
+  private planner = new ExecutionPlanner();
+  private validator = new FunctionValidator();
+  private evaluator = new ExpressionEvaluator();
 
   constructor(fn?: FunctionDefinition) {
     this.fn =
@@ -37,6 +68,77 @@ export class FunctionStore {
         id: asFunctionId("fn_local"),
         name: "UntitledFunction",
       });
+  }
+
+  /**
+   * Computes numeric values for currently visible symbols by executing statements
+   * in topo order. This is read-only and used for Debug UI (v1).
+   *
+   * Returns:
+   * - values: symbol -> number
+   * - errors: symbol -> string (why it failed)
+   */
+  computeRuntimeValues(): {
+    values: Record<string, number>;
+    errors: Record<string, string>;
+  } {
+    const values: Record<string, number> = {};
+    const errors: Record<string, string> = {};
+
+    let ordered: string[] = [];
+    try {
+      ordered = this.getExecutionPlan();
+    } catch (e: any) {
+      // If the plan fails (cycle), return empty + one global error
+      return {
+        values,
+        errors: { __plan__: String(e?.message ?? e) },
+      };
+    }
+
+    const scope: Record<string, unknown> = {};
+
+    // 1) Seed scope with params (MVP: params have no values yet)
+    // For now we expose params as NaN until/compiler assigns them.
+    // If you later let params have default values, plug them here.
+    for (const p of this.fn.listParameters()) {
+      scope[p.name] = scope[p.name] ?? NaN;
+    }
+
+    // 2) Execute statements in order
+    for (const stmtId of ordered) {
+      const stmt = this.fn.getStatement(asStatementId(String(stmtId)));
+      if (!stmt) continue;
+
+      if (stmt.type === "variable") {
+        const v = stmt as any;
+
+        for (const decl of v.declarations ?? []) {
+          const name = String(decl.name);
+          const src = decl.source as ValueSource | undefined;
+
+          if (!src) {
+            errors[name] = "Missing source";
+            continue;
+          }
+
+          try {
+            const num = this.evaluator.evaluate(src, scope);
+            scope[name] = num;
+            values[name] = num;
+            delete errors[name];
+          } catch (e: any) {
+            errors[name] = String(e?.message ?? e);
+            // keep scope entry so downstream formulas can still run and error meaningfully
+            scope[name] = NaN;
+          }
+        }
+      }
+
+      // logic + return later (Step 3+)
+    }
+
+    return { values, errors };
   }
 
   // ----------------
@@ -65,7 +167,7 @@ export class FunctionStore {
       stmt = {
         id,
         type: "return",
-        source: Value.literal(null),
+        source: Value.literal(NaN),
       } satisfies ReturnStatement;
     }
 
@@ -117,6 +219,42 @@ export class FunctionStore {
     for (const name of uniq) {
       this.fn.addParameter(name);
     }
+  }
+
+  getLogicAssignment(statementIdRaw: string): SimpleLogicAssignment | null {
+    const id = asStatementId(statementIdRaw);
+    const stmt = this.fn.getStatement(id);
+    if (!stmt || stmt.type !== "logic") return null;
+
+    const logic = stmt as LogicStatement;
+    const first = (logic.assignments ?? [])[0];
+    if (!first) return null;
+
+    const target = String(first.output ?? "").trim();
+    if (!target) return null;
+
+    return {
+      target,
+      expr: decodeExpr(String(first.expression ?? "")),
+    };
+  }
+
+  setLogicAssignment(statementIdRaw: string, a: SimpleLogicAssignment) {
+    const id = asStatementId(statementIdRaw);
+    const stmt = this.fn.getStatement(id);
+    if (!stmt || stmt.type !== "logic") return;
+
+    const logic = stmt as LogicStatement;
+
+    const target = a.target.trim();
+    if (!target) return;
+
+    logic.assignments = [
+      {
+        output: target,
+        expression: encodeExpr(a.expr),
+      },
+    ];
   }
 
   connectFlow(from: string, to: string) {
@@ -187,6 +325,7 @@ export class FunctionStore {
     source:
       | { kind: "literal"; value: unknown }
       | { kind: "symbolRef"; name: string }
+      | { kind: "expression"; expr: string }
   ) {
     const id = asStatementId(statementIdRaw);
     const stmt = this.fn.getStatement(id);
@@ -198,6 +337,7 @@ export class FunctionStore {
 
     if (source.kind === "literal") d.source = Value.literal(source.value);
     if (source.kind === "symbolRef") d.source = Value.ref(source.name);
+    if (source.kind === "expression") d.source = Value.expr(source.expr);
   }
 
   getVariableDeclarations(
@@ -208,6 +348,62 @@ export class FunctionStore {
     if (!stmt || stmt.type !== "variable") return [];
     const v = stmt as VariableStatement;
     return v.declarations.map((d) => ({ name: d.name, source: d.source }));
+  }
+
+  // --- Return helpers (Step 3) ---
+
+  getReturnSource(statementIdRaw: string): ValueSource | null {
+    const stmt = this.fn.getStatement(asStatementId(statementIdRaw));
+    if (!stmt || stmt.type !== "return") return null;
+    return (stmt as ReturnStatement).source ?? null;
+  }
+
+  setReturnSource(statementIdRaw: string, source: ValueSource) {
+    const stmt = this.fn.getStatement(asStatementId(statementIdRaw));
+    if (!stmt || stmt.type !== "return") return;
+
+    (stmt as ReturnStatement).source = source;
+  }
+
+  /**
+   * Compute return value by executing statements in topo order.
+   * - evaluates variables (as today)
+   * - when it reaches the Return node, evaluates its source against current scope
+   */
+  computeReturnValue(): {
+    value: number | null;
+    error?: string;
+    scopeValues: Record<string, number>;
+    scopeErrors: Record<string, string>;
+  } {
+    const { values, errors } = this.computeRuntimeValues();
+
+    // Build a scope that includes everything computeRuntimeValues produced
+    // (it already seeded params + ran variable declarations).
+    const scope: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(values)) scope[k] = v;
+    // NOTE: params were seeded as NaN inside computeRuntimeValues. That’s OK for now.
+
+    // Find the (single) return statement if present
+    const returnStmt = this.fn
+      .listStatements()
+      .find((s) => s.type === "return") as ReturnStatement | undefined;
+
+    if (!returnStmt) {
+      return { value: null, scopeValues: values, scopeErrors: errors };
+    }
+
+    try {
+      const num = this.evaluator.evaluate(returnStmt.source, scope);
+      return { value: num, scopeValues: values, scopeErrors: errors };
+    } catch (e: any) {
+      return {
+        value: null,
+        error: String(e?.message ?? e),
+        scopeValues: values,
+        scopeErrors: errors,
+      };
+    }
   }
 
   // ----------------

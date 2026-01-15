@@ -2,10 +2,24 @@
 
 import React, { useMemo, useState, useEffect } from "react";
 import { useFunctionDomain } from "./FunctionProvider";
+import { Value } from "../domain/model/ValueSource";
+
+/** --- helpers (UI-side) --- */
+function coerceLiteral(input: string): unknown {
+  const s = input.trim();
+  if (!s) return "";
+
+  // number?
+  const n = Number(s);
+  if (Number.isFinite(n) && s !== "") return n;
+
+  // keep as string for now (later: booleans/null/etc if you want)
+  return input;
+}
 
 /**
- * Resolve the owning function node for any node by walking "incoming" edges.
- * If we ever reach a fn/function node, that's the function scope owner.
+ * Walk backwards via incoming edges until we hit a fn/function node.
+ * Returns the owning function shape id or null.
  */
 function resolveOwningFunctionId(
   nodeId: string,
@@ -33,19 +47,6 @@ function resolveOwningFunctionId(
   return null;
 }
 
-function uniq(list: string[]) {
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const x of list) {
-    const t = String(x ?? "").trim();
-    if (!t) continue;
-    if (seen.has(t)) continue;
-    seen.add(t);
-    out.push(t);
-  }
-  return out;
-}
-
 export function LogicBuilderInspector({
   shapes,
   connections,
@@ -58,120 +59,70 @@ export function LogicBuilderInspector({
   selectedLogicTypeId?: string | null;
 }) {
   const { store: defaultStore, bump, version, getStore } = useFunctionDomain();
-  const [text, setText] = useState("");
 
   const isFunction = selectedLogicTypeId === "fn/function";
-  const isParam = selectedLogicTypeId === "fn/param";
   const isVariable = selectedLogicTypeId === "fn/var";
-  const isLogic = selectedLogicTypeId === "fn/add";
   const isReturn = selectedLogicTypeId === "fn/return";
+  const isLogic = selectedLogicTypeId === "fn/add";
+  const isParam = selectedLogicTypeId === "fn/param";
 
-  /**
-   * Pick the correct function store for the currently selected node.
-   * - If the selected node IS the function node: it owns itself -> fnId = selectedShapeId
-   * - Otherwise: walk incoming edges until we find fn/function
-   * - Fallback: fn_local
-   */
+  /** pick store based on owning function */
   const fnId = useMemo(() => {
     if (!selectedShapeId) return "fn_local";
-    if (isFunction) return selectedShapeId;
-
     return (
       resolveOwningFunctionId(selectedShapeId, shapes, connections) ??
       "fn_local"
     );
-  }, [selectedShapeId, isFunction, shapes, connections]);
+  }, [selectedShapeId, shapes, connections]);
 
   const fnStore = useMemo(() => {
     return fnId === "fn_local" ? defaultStore : getStore(fnId);
   }, [fnId, defaultStore, getStore]);
 
-  /**
-   * CRITICAL: Ensure the domain statement exists *inside the correct fnStore*
-   * once a node becomes owned by a function.
-   *
-   * This fixes the "Apply does nothing" problem when:
-   * - you drop a var node (statement created in default store / or not created),
-   * - later connect it to a function,
-   * - inspector switches to fnStore(functionId) and cannot find the statement.
-   */
-  useEffect(() => {
-    if (!selectedShapeId) return;
+  const [text, setText] = useState("");
 
-    // Only statements need backing domain statements
-    const needsStatement = isVariable || isLogic || isReturn;
-    if (!needsStatement) return;
-
-    // If it already exists in the current fnStore, do nothing
-    const existing = fnStore.getStatement(selectedShapeId);
-    if (existing) return;
-
-    // Create it in the correct store (based on node type)
-    try {
-      if (isVariable) fnStore.addStatementWithId("variable", selectedShapeId);
-      else if (isLogic) fnStore.addStatementWithId("logic", selectedShapeId);
-      else if (isReturn) fnStore.addStatementWithId("return", selectedShapeId);
-
-      bump();
-    } catch (e) {
-      console.warn("Failed to ensure statement in function store:", e);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedShapeId, fnStore, isVariable, isLogic, isReturn]);
-
-  // Visible symbols for the selected node (scoped)
+  /** Visible symbols for the selected node (scoped store) */
   const visibleSymbols = useMemo(() => {
     if (!selectedShapeId) return [];
-    try {
-      return fnStore.getVisibleSymbols(selectedShapeId).map((s: any) => s.name);
-    } catch {
-      return [];
-    }
+    return fnStore.getVisibleSymbols(selectedShapeId).map((s: any) => s.name);
   }, [selectedShapeId, fnStore, version]);
 
-  // Current declarations (with sources) for variable node
+  /** Params in this function (names) */
+  const paramNames = useMemo(() => {
+    return fnStore.getParameters();
+  }, [fnStore, version]);
+
+  /** For logic targets: prefer non-param symbols */
+  const variableSymbolCandidates = useMemo(() => {
+    const set = new Set(paramNames);
+    return visibleSymbols.filter((s) => !set.has(s));
+  }, [visibleSymbols, paramNames]);
+
+  /** Variable declarations (with sources) */
   const declarations = useMemo(() => {
     if (!selectedShapeId || !isVariable) return [];
     return fnStore.getVariableDeclarations(selectedShapeId);
   }, [selectedShapeId, isVariable, fnStore, version]);
 
-  // Parameters text (for param editor UI)
-  const paramsText = useMemo(() => {
-    return fnStore.getParameters().join("\n");
-  }, [fnStore, version]);
+  /** --- Logic node editor state (simple assignment v1) --- */
+  const [logicTarget, setLogicTarget] = useState("");
+  const [logicKind, setLogicKind] = useState<"literal" | "symbolRef">(
+    "literal"
+  );
+  const [logicLiteral, setLogicLiteral] = useState<string>("0");
+  const [logicRef, setLogicRef] = useState<string>("");
 
-  /**
-   * Function symbols:
-   * - params in this function store
-   * - ALL variable declaration names that exist in this function store
-   *
-   * Note: we intentionally do NOT include upstream-only filtering here;
-   * this is "what exists in the function" (good for debugging).
-   */
-  const functionSymbols = useMemo(() => {
-    if (!isFunction) return [];
-
-    const params = fnStore.getParameters();
-
-    const varDecls =
-      fnStore
-        .getStatements()
-        .filter((s: any) => s.type === "variable")
-        .flatMap((v: any) => (v.declarations ?? []).map((d: any) => d.name)) ??
-      [];
-
-    return uniq([...params, ...varDecls]);
-  }, [isFunction, fnStore, version]);
-
-  // Load text area content based on selected node type
+  /** Sync textarea for variable/param, and sync logic editor state for fn/add */
   useEffect(() => {
     if (!selectedShapeId) return;
 
+    // PARAM editor: simple list (one per line)
     if (isParam) {
-      setText(paramsText);
+      setText(fnStore.getParameters().join("\n"));
       return;
     }
 
+    // VARIABLE editor: list declarations (one per line)
     if (isVariable) {
       const stmt: any = fnStore.getStatement(selectedShapeId);
       const names = (stmt?.declarations ?? []).map((d: any) => d.name);
@@ -179,59 +130,68 @@ export function LogicBuilderInspector({
       return;
     }
 
-    // Function / Logic / Return currently don't use the textarea
+    // LOGIC editor: load v1 assignment if present
+    if (isLogic) {
+      const a = fnStore.getLogicAssignment?.(selectedShapeId) ?? null;
+
+      if (a) {
+        setLogicTarget(a.target ?? "");
+        if (a.expr?.kind === "symbolRef") {
+          setLogicKind("symbolRef");
+          setLogicRef(a.expr.name ?? "");
+          setLogicLiteral("0");
+        } else {
+          setLogicKind("literal");
+          setLogicLiteral(String(a.expr?.value ?? ""));
+          setLogicRef("");
+        }
+      } else {
+        // defaults
+        setLogicTarget(variableSymbolCandidates[0] ?? "");
+        setLogicKind("literal");
+        setLogicLiteral("0");
+        setLogicRef(visibleSymbols[0] ?? "");
+      }
+
+      setText("");
+      return;
+    }
+
+    // everything else
     setText("");
-  }, [selectedShapeId, isParam, isVariable, fnStore, version, paramsText]);
+  }, [
+    selectedShapeId,
+    isParam,
+    isVariable,
+    isLogic,
+    fnStore,
+    version,
+    variableSymbolCandidates,
+    visibleSymbols,
+  ]);
 
   if (!selectedShapeId) return null;
 
   return (
-    <div className="absolute top-4 right-4 z-40 w-[340px] bg-white/90 backdrop-blur rounded-xl shadow p-3 text-xs">
+    <div className="absolute top-4 right-4 z-40 w-[360px] bg-white/90 backdrop-blur rounded-xl shadow p-3 text-xs">
       <div className="font-semibold mb-2">Inspector</div>
 
       <div className="text-[11px] text-gray-500 mb-2 break-all">
-        {selectedLogicTypeId ?? "unknown"} · {selectedShapeId}
+        {selectedLogicTypeId ?? "unknown"} · {selectedShapeId} · store: {fnId}
       </div>
 
-      {/* FUNCTION */}
       {isFunction && (
-        <div className="flex flex-col gap-3">
-          <div className="font-medium">Function scope</div>
-
-          <div className="text-[11px] text-gray-500">
-            Symbols available inside this function (params + variables).
-          </div>
-
-          <div className="rounded-md border bg-white p-2">
-            {functionSymbols.length === 0 ? (
-              <div className="text-[11px] text-gray-500">(none)</div>
-            ) : (
-              <div className="flex flex-wrap gap-1">
-                {functionSymbols.map((s) => (
-                  <span
-                    key={s}
-                    className="px-2 py-1 rounded-full border text-[11px] bg-gray-50"
-                  >
-                    {s}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="text-[11px] text-gray-500">
-            Tip: params become available only when Param nodes belong to this
-            function (connected by flow).
-          </div>
+        <div className="text-sm">
+          Function node selected. (Editing name next — or whenever you say
+          “go”.)
         </div>
       )}
 
-      {/* PARAM */}
       {isParam && (
         <div className="flex flex-col gap-3">
           <div className="font-medium">Parameters</div>
           <div className="text-[11px] text-gray-500">
-            One per line. These are symbols available to nodes in this function.
+            One per line. Visible only inside this function’s graph.
           </div>
 
           <textarea
@@ -254,19 +214,19 @@ export function LogicBuilderInspector({
         </div>
       )}
 
-      {/* VARIABLE */}
       {isVariable && (
         <div className="flex flex-col gap-3">
           <div className="font-medium">Declarations</div>
           <div className="text-[11px] text-gray-500">
-            One per line. These become visible downstream.
+            One per line. These become visible downstream (within this
+            function).
           </div>
 
           <textarea
             className="w-full h-32 rounded-md border p-2 text-xs font-mono"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={"inc\nsav\nexp"}
+            placeholder={"total\nnet\nfee"}
           />
 
           <button
@@ -295,6 +255,7 @@ export function LogicBuilderInspector({
                     key={d.name}
                     name={d.name}
                     source={d.source}
+                    // Don’t let a declaration reference itself
                     visibleSymbols={visibleSymbols.filter((s) => s !== d.name)}
                     onChange={(next) => {
                       fnStore.setVariableDeclarationSource(
@@ -303,6 +264,7 @@ export function LogicBuilderInspector({
                         next
                       );
                       bump();
+                      console.log(fnStore.computeRuntimeValues());
                     }}
                   />
                 ))}
@@ -312,18 +274,120 @@ export function LogicBuilderInspector({
         </div>
       )}
 
-      {/* LOGIC */}
       {isLogic && (
-        <div className="text-sm">
-          Logic node editing comes next (simple assignment).
+        <div className="flex flex-col gap-3">
+          <div className="font-medium">Logic (v1 · assignment)</div>
+          <div className="text-[11px] text-gray-500">
+            Pick a target variable and assign a literal or a reference.
+          </div>
+
+          <div className="grid grid-cols-[90px_1fr] gap-2 items-center">
+            <div className="text-[11px] text-gray-600">Target</div>
+
+            {variableSymbolCandidates.length > 0 ? (
+              <select
+                className="border rounded-md px-2 py-1 text-xs"
+                value={logicTarget}
+                onChange={(e) => setLogicTarget(e.target.value)}
+              >
+                <option value="" disabled>
+                  Select variable…
+                </option>
+                {variableSymbolCandidates.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                className="border rounded-md px-2 py-1 text-xs"
+                value={logicTarget}
+                onChange={(e) => setLogicTarget(e.target.value)}
+                placeholder="e.g. total"
+              />
+            )}
+          </div>
+
+          <div className="grid grid-cols-[90px_1fr] gap-2 items-center">
+            <div className="text-[11px] text-gray-600">Expr kind</div>
+
+            <select
+              className="border rounded-md px-2 py-1 text-xs"
+              value={logicKind}
+              onChange={(e) => setLogicKind(e.target.value as any)}
+            >
+              <option value="literal">literal</option>
+              <option value="symbolRef">ref</option>
+            </select>
+          </div>
+
+          {logicKind === "literal" ? (
+            <div className="grid grid-cols-[90px_1fr] gap-2 items-center">
+              <div className="text-[11px] text-gray-600">Literal</div>
+              <input
+                className="border rounded-md px-2 py-1 text-xs"
+                value={logicLiteral}
+                onChange={(e) => setLogicLiteral(e.target.value)}
+                placeholder="e.g. 100"
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-[90px_1fr] gap-2 items-center">
+              <div className="text-[11px] text-gray-600">Ref</div>
+              <select
+                className="border rounded-md px-2 py-1 text-xs"
+                value={logicRef}
+                onChange={(e) => setLogicRef(e.target.value)}
+              >
+                <option value="" disabled>
+                  Select symbol…
+                </option>
+                {visibleSymbols.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <button
+            className="rounded-md bg-blue-600 text-white text-xs py-2"
+            onClick={() => {
+              const target = logicTarget.trim();
+              if (!target) return;
+
+              const expr =
+                logicKind === "symbolRef"
+                  ? { kind: "symbolRef" as const, name: logicRef }
+                  : {
+                      kind: "literal" as const,
+                      value: coerceLiteral(logicLiteral),
+                    };
+
+              fnStore.setLogicAssignment(selectedShapeId, { target, expr });
+              bump();
+            }}
+          >
+            Apply
+          </button>
+
+          <div className="text-[11px] text-gray-500">
+            Tip: typing <span className="font-mono">123</span> becomes number{" "}
+            <span className="font-mono">123</span>.
+          </div>
         </div>
       )}
 
-      {/* RETURN */}
       {isReturn && (
-        <div className="text-sm">
-          Return node editing comes next (choose symbol to return).
-        </div>
+        <ReturnEditor
+          key={`${selectedShapeId}:${version}`}
+          statementId={selectedShapeId}
+          fnStore={fnStore}
+          bump={bump}
+          visibleSymbols={visibleSymbols}
+        />
       )}
     </div>
   );
@@ -342,13 +406,21 @@ function DeclarationRow({
     next:
       | { kind: "literal"; value: unknown }
       | { kind: "symbolRef"; name: string }
+      | { kind: "expression"; expr: string }
   ) => void;
 }) {
-  const kind: "literal" | "symbolRef" =
-    source?.kind === "symbolRef" ? "symbolRef" : "literal";
+  const kind: "literal" | "symbolRef" | "expression" =
+    source?.kind === "symbolRef"
+      ? "symbolRef"
+      : source?.kind === "expression"
+      ? "expression"
+      : "literal";
 
   const literalValue = source?.kind === "literal" ? source.value ?? "" : "";
+
   const symbolName = source?.kind === "symbolRef" ? source.name ?? "" : "";
+
+  const exprText = source?.kind === "expression" ? source.expr ?? "" : "";
 
   return (
     <div className="grid grid-cols-[1fr_105px_1fr] gap-2 items-center">
@@ -360,13 +432,24 @@ function DeclarationRow({
         className="border rounded-md px-2 py-1 text-xs"
         value={kind}
         onChange={(e) => {
-          const nextKind = e.target.value as "literal" | "symbolRef";
-          if (nextKind === "literal") onChange({ kind: "literal", value: "" });
-          else onChange({ kind: "symbolRef", name: visibleSymbols[0] ?? "" });
+          const nextKind = e.target.value as typeof kind;
+
+          if (nextKind === "literal") {
+            onChange({ kind: "literal", value: "" });
+            return;
+          }
+
+          if (nextKind === "symbolRef") {
+            onChange({ kind: "symbolRef", name: visibleSymbols[0] ?? "" });
+            return;
+          }
+
+          onChange({ kind: "expression", expr: "" });
         }}
       >
         <option value="literal">literal</option>
         <option value="symbolRef">ref</option>
+        <option value="expression">expr</option>
       </select>
 
       {kind === "literal" ? (
@@ -376,7 +459,7 @@ function DeclarationRow({
           onChange={(e) => onChange({ kind: "literal", value: e.target.value })}
           placeholder="e.g. 100"
         />
-      ) : (
+      ) : kind === "symbolRef" ? (
         <select
           className="border rounded-md px-2 py-1 text-xs"
           value={symbolName}
@@ -393,7 +476,150 @@ function DeclarationRow({
             </option>
           ))}
         </select>
+      ) : (
+        <input
+          className="border rounded-md px-2 py-1 text-xs font-mono"
+          value={String(exprText)}
+          onChange={(e) =>
+            onChange({ kind: "expression", expr: e.target.value })
+          }
+          placeholder="e.g. subtotal * 5"
+        />
       )}
+    </div>
+  );
+}
+
+function ReturnEditor({
+  statementId,
+  fnStore,
+  bump,
+  visibleSymbols,
+}: {
+  statementId: string;
+  fnStore: any;
+  bump: () => void;
+  visibleSymbols: string[];
+}) {
+  const [kind, setKind] = useState<"literal" | "symbolRef" | "expression">(
+    "literal"
+  );
+  const [literal, setLiteral] = useState<string>("");
+  const [symbol, setSymbol] = useState<string>("");
+  const [expr, setExpr] = useState<string>("");
+
+  // Load current return source on mount/changes
+  useEffect(() => {
+    const src = fnStore.getReturnSource(statementId);
+    if (!src) return;
+
+    if (src.kind === "literal") {
+      setKind("literal");
+      setLiteral(src.value == null ? "" : String(src.value));
+      return;
+    }
+
+    if (src.kind === "symbolRef") {
+      setKind("symbolRef");
+      setSymbol(src.name ?? "");
+      return;
+    }
+
+    if (src.kind === "expression") {
+      setKind("expression");
+      setExpr(src.expr ?? "");
+      return;
+    }
+  }, [statementId, fnStore]);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="font-medium">Return</div>
+      <div className="text-[11px] text-gray-500">
+        Choose a value to return (within this function and upstream scope).
+      </div>
+
+      <div className="grid grid-cols-[105px_1fr] gap-2 items-center">
+        <select
+          className="border rounded-md px-2 py-1 text-xs"
+          value={kind}
+          onChange={(e) => setKind(e.target.value as any)}
+        >
+          <option value="literal">literal</option>
+          <option value="symbolRef">ref</option>
+          <option value="expression">expression</option>
+        </select>
+
+        {kind === "literal" && (
+          <input
+            className="border rounded-md px-2 py-1 text-xs"
+            value={literal}
+            onChange={(e) => setLiteral(e.target.value)}
+            placeholder="e.g. 500"
+          />
+        )}
+
+        {kind === "symbolRef" && (
+          <select
+            className="border rounded-md px-2 py-1 text-xs"
+            value={symbol}
+            onChange={(e) => setSymbol(e.target.value)}
+          >
+            <option value="" disabled>
+              Select symbol…
+            </option>
+            {visibleSymbols.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {kind === "expression" && (
+          <input
+            className="border rounded-md px-2 py-1 text-xs font-mono"
+            value={expr}
+            onChange={(e) => setExpr(e.target.value)}
+            placeholder="e.g. subtotal * 5"
+          />
+        )}
+      </div>
+
+      <button
+        className="rounded-md bg-blue-600 text-white text-xs py-2"
+        onClick={() => {
+          // if (kind === "literal") {
+          //   // auto-coerce numeric
+          //   const n = Number(literal);
+          //   const v = literal.trim() !== "" && Number.isFinite(n) ? n : literal;
+          //   fnStore.setReturnSource(statementId, Value.literal(v));
+          // } else if (kind === "symbolRef") {
+          //   fnStore.setReturnSource(statementId, Value.ref(symbol));
+          // } else {
+          //   fnStore.setReturnSource(statementId, Value.expr(expr));
+          // }
+          if (kind === "literal") {
+            const n = Number(literal);
+            const v = literal.trim() !== "" && Number.isFinite(n) ? n : literal;
+            fnStore.setReturnSource(statementId, Value.literal(v));
+          } else if (kind === "symbolRef") {
+            fnStore.setReturnSource(statementId, Value.ref(symbol));
+          } else {
+            const raw = expr.trim();
+            const isIdent = /^[A-Za-z_][A-Za-z0-9_]*$/.test(raw);
+
+            if (isIdent && visibleSymbols.includes(raw)) {
+              fnStore.setReturnSource(statementId, Value.ref(raw));
+            } else {
+              fnStore.setReturnSource(statementId, Value.expr(raw));
+            }
+          }
+          bump();
+        }}
+      >
+        Apply
+      </button>
     </div>
   );
 }
