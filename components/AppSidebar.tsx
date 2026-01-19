@@ -40,11 +40,11 @@ const data = {
       url: "/",
       //icon: Frame,
     },
-    // {
-    //   name: "Progress",
-    //   url: "/progress",
-    //   //icon: Frame,
-    // },
+    {
+      name: "Progress",
+      url: "/teams-dashboard",
+      //icon: Frame,
+    },
     {
       name: "Idea Brainstorm",
       url: "/idea-brainstorm",
