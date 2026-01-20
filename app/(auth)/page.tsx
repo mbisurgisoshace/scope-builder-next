@@ -18,6 +18,12 @@ import TodoStepper from "./_components/TodoStepper";
 import { StepClip } from "@/components/Stepper";
 import { Progress } from "@/components/ui/progress";
 import { CheckIcon, CircleCheckIcon } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 type GroupedTasks = Array<{
   task_list: TaskList;
@@ -125,36 +131,78 @@ export default async function Home({
               </div>
             </StepClip>
             <div className="px-[12px] py-[12px] flex flex-col gap-4">
-              {taskList.sections.map((section) => (
-                <div key={section.section_title.id}>
-                  <h5 className="text-[14px] text-[#111827] font-medium opacity-70 mb-3">
-                    {section.section_title.title}
-                  </h5>
-                  <ul className="flex gap-1 flex-col">
-                    {section.tasks.map((task) => {
-                      const isCompleted = completedTasks.some(
-                        (ct) => ct.task_id === task.id && ct.completed
-                      );
-                      const completedTask = completedTasks.find(
-                        (ct) => ct.task_id === task.id
-                      );
+              <Accordion
+                type="multiple"
+                defaultValue={taskList.sections.map(
+                  (section) => section.section_title.title
+                )}
+              >
+                {taskList.sections.map((section) => (
+                  <AccordionItem
+                    value={section.section_title.title}
+                    key={section.section_title.id}
+                  >
+                    <AccordionTrigger>
+                      <h5 className="text-[14px] text-[#111827] font-medium opacity-70 mb-3">
+                        {section.section_title.title}
+                      </h5>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ul className="flex gap-1 flex-col">
+                        {section.tasks.map((task) => {
+                          const isCompleted = completedTasks.some(
+                            (ct) => ct.task_id === task.id && ct.completed
+                          );
+                          const completedTask = completedTasks.find(
+                            (ct) => ct.task_id === task.id
+                          );
 
-                      return (
-                        <TaskCard
-                          task={task}
-                          key={task.id}
-                          isCompleted={isCompleted}
-                          data={
-                            completedTask
-                              ? (completedTask.data as Record<string, any>)
-                              : {}
-                          }
-                        />
-                      );
-                    })}
-                  </ul>
-                </div>
-              ))}
+                          return (
+                            <TaskCard
+                              task={task}
+                              key={task.id}
+                              isCompleted={isCompleted}
+                              data={
+                                completedTask
+                                  ? (completedTask.data as Record<string, any>)
+                                  : {}
+                              }
+                            />
+                          );
+                        })}
+                      </ul>
+                    </AccordionContent>
+                  </AccordionItem>
+                  // <div key={section.section_title.id}>
+                  // <h5 className="text-[14px] text-[#111827] font-medium opacity-70 mb-3">
+                  //   {section.section_title.title}
+                  // </h5>
+                  // <ul className="flex gap-1 flex-col">
+                  //   {section.tasks.map((task) => {
+                  //     const isCompleted = completedTasks.some(
+                  //       (ct) => ct.task_id === task.id && ct.completed
+                  //     );
+                  //     const completedTask = completedTasks.find(
+                  //       (ct) => ct.task_id === task.id
+                  //     );
+
+                  //     return (
+                  //       <TaskCard
+                  //         task={task}
+                  //         key={task.id}
+                  //         isCompleted={isCompleted}
+                  //         data={
+                  //           completedTask
+                  //             ? (completedTask.data as Record<string, any>)
+                  //             : {}
+                  //         }
+                  //       />
+                  //     );
+                  //   })}
+                  // </ul>
+                  // </div>
+                ))}
+              </Accordion>
             </div>
           </div>
         );
