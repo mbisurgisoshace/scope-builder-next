@@ -14,6 +14,9 @@ import {
   TaskWithListAndSection,
 } from "@/services/tasks";
 import TaskCard from "./_components/Task";
+import TodoStepper from "./_components/TodoStepper";
+import { StepClip } from "@/components/Stepper";
+import { Progress } from "@/components/ui/progress";
 
 type GroupedTasks = Array<{
   task_list: TaskList;
@@ -34,17 +37,40 @@ export default async function Home({
 
   return (
     <div className="flex flex-row p-10 gap-6 w-full pb-20">
-      {groupedTasks.map((taskList) => {
+      {groupedTasks.map((taskList, index) => {
+        console.log("taskList", taskList.sections);
+        const totalTasks = taskList.sections.reduce(
+          (sum, section) => sum + section.tasks.length,
+          0,
+        );
+        const completedTasksCount = taskList.sections.reduce((sum, section) => {
+          const completedInSection = section.tasks.filter((task) =>
+            completedTasks.some((ct) => ct.task_id === task.id && ct.completed),
+          ).length;
+          return sum + completedInSection;
+        }, 0);
+
+        console.log("totalTasks", totalTasks);
+        console.log("completedTasksCount", completedTasksCount);
+
         return (
           <div
             key={taskList.task_list.id}
-            className="border-2 bg-white border-white rounded-[12px] w-[345px] min-w-[345px] overflow-y-auto h-full max-h-600"
+            className="w-[345px] min-w-[345px] h-full max-h-600"
           >
-            <div className="px-[22px] py-[15px] bg-[#7559C3]">
+            {/* <div className="px-[22px] py-[15px] bg-[#7559C3]">
               <h3 className="text-[14px] font-semibold text-white">
                 {taskList.task_list.title}
               </h3>
-            </div>
+            </div> */}
+            <StepClip variant={index === 0 ? "first" : "middle"}>
+              <div>
+                <span className="text-xs font-bold text-[#111827]">
+                  {taskList.task_list.title}
+                </span>
+                {/* <Progress value={} /> */}
+              </div>
+            </StepClip>
             <div className="px-[12px] py-[12px] flex flex-col gap-4">
               {taskList.sections.map((section) => (
                 <div key={section.section_title.id}>
@@ -54,10 +80,10 @@ export default async function Home({
                   <ul className="flex gap-1 flex-col">
                     {section.tasks.map((task) => {
                       const isCompleted = completedTasks.some(
-                        (ct) => ct.task_id === task.id && ct.completed
+                        (ct) => ct.task_id === task.id && ct.completed,
                       );
                       const completedTask = completedTasks.find(
-                        (ct) => ct.task_id === task.id
+                        (ct) => ct.task_id === task.id,
                       );
 
                       return (
@@ -80,12 +106,13 @@ export default async function Home({
           </div>
         );
       })}
+      {/* <TodoStepper steps={[]} /> */}
     </div>
   );
 }
 
 function groupTasksByListAndSection(
-  tasks: TaskWithListAndSection[]
+  tasks: TaskWithListAndSection[],
 ): GroupedTasks {
   // First, build nested maps to avoid O(n^2) scans
   const listMap = new Map<
@@ -136,7 +163,7 @@ function groupTasksByListAndSection(
       task_list,
       sections: Array.from(sections.values())
         .sort(
-          (a, b) => (a.section_title.order ?? 0) - (b.section_title.order ?? 0)
+          (a, b) => (a.section_title.order ?? 0) - (b.section_title.order ?? 0),
         )
         .map(({ section_title, tasks }) => ({
           section_title,

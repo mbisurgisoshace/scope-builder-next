@@ -49,24 +49,12 @@ function Progress({
           {segments!.map((segment, idx) => {
             const widthPct =
               computedTotal === 0 ? 0 : (segment.value / computedTotal) * 100;
-            console.log(widthPct);
-
             return (
-              // <ProgressPrimitive.Indicator
-              //   data-slot="progress-indicator"
-              //   className={cn(
-              //     "bg-primary h-full w-full flex-1 transition-all",
-              //     segment.colorClass,
-              //   )}
-              //   //style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
-              //   style={{ width: `${widthPct}%` }}
-              // />
               <div
                 key={idx}
-                className={cn("h-full", segment.colorClass)}
+                className={cn("h-full ", segment.colorClass)}
                 style={{
                   width: `${widthPct}%`,
-                  //backgroundColor: segment.color ?? undefined,
                 }}
               />
             );

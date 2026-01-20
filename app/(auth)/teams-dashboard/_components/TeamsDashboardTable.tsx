@@ -44,7 +44,7 @@ const columns: ColumnDef<any>[] = [
     id: "interviews",
     header: ({ table }) => (
       <div className="flex flex-col">
-        <span className="text-gray-500">Interviews:</span>
+        <span className="text-[#697288]">Interviews:</span>
         <span>scheduled / conducted</span>
       </div>
     ),
@@ -72,7 +72,7 @@ const columns: ColumnDef<any>[] = [
     id: "hypothesis_stated",
     header: ({ table }) => (
       <div className="flex flex-col">
-        <span className="text-gray-500">Hypothesis</span>
+        <span className="text-[#697288]">Hypothesis</span>
         <span>stated</span>
       </div>
     ),
@@ -94,7 +94,7 @@ const columns: ColumnDef<any>[] = [
     id: "hypothesis",
     header: ({ table }) => (
       <div className="flex flex-col">
-        <span className="text-gray-500">Hypothesis</span>
+        <span className="text-[#697288]">Hypothesis</span>
         <span>validated / invalidated / testing</span>
       </div>
     ),
@@ -114,26 +114,26 @@ const columns: ColumnDef<any>[] = [
 
       return (
         <div className="flex flex-row items-center gap-2">
-          <span className="font-semibold text-gray-500">
-            <span className="text-green-500 underline">
+          <span className="font-semibold text-[#697288]">
+            <span className="text-[#58C184] underline">
               {" "}
               {validatedHypotheses}
             </span>{" "}
             /{" "}
-            <span className="text-red-500 underline">
+            <span className="text-[#C66B8F] underline">
               {invalidatedHypotheses}
             </span>{" "}
-            / <span className="text-gray-500">{testingHypotheses}</span>
+            / <span className="text-[#697288]">{testingHypotheses}</span>
           </span>
 
           <Progress
             className="w-[60%]"
-            progressClassname="bg-purple-500"
+            progressClassname="bg-[#6A35FF]"
             total={totalHypothesesWithoutStated}
             segments={[
-              { value: validatedHypotheses, colorClass: "bg-green-500" },
-              { value: invalidatedHypotheses, colorClass: "bg-red-500" },
-              { value: testingHypotheses, colorClass: "bg-gray-300" },
+              { value: validatedHypotheses, colorClass: "bg-[#58C184]" },
+              { value: invalidatedHypotheses, colorClass: "bg-[#C66B8F]" },
+              { value: testingHypotheses, colorClass: "bg-[#DDD9E9]" },
             ]}
           />
         </div>
