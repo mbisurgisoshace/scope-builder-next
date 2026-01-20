@@ -1,22 +1,27 @@
 import React from "react";
 import clsx from "clsx";
+import { cn } from "@/lib/utils";
 
 export function StepClip({
   variant,
   active,
   children,
+  completed,
 }: {
   variant: "first" | "middle";
   active?: boolean;
+  completed?: boolean;
   children?: React.ReactNode;
 }) {
-  const base = clsx(
+  const base = cn(
     "h-12 px-6 flex items-center justify-center text-sm font-medium",
-    variant === "first" ? "rounded-xl" : "",
-    active
-      ? "bg-violet-600 text-white border-violet-600"
-      : "bg-white text-gray-700",
+    variant === "first" ? "rounded-lg" : "",
+    active && !completed ? "bg-[#6935FD] text-white border-[#6935FD]" : "",
+    !active && completed ? "bg-white text-gray-700" : "",
+    !active && !completed ? "bg-[#D5D3FB]" : ""
   );
+
+  console.log("active", active);
 
   // Middle: left notch + right arrow
   // Coordinates are percentages; tweak until it matches your screenshot.
