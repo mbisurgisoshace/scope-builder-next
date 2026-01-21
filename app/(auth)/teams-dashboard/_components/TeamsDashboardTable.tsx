@@ -265,6 +265,7 @@ export default function TeamsDashboardTable({ data }: { data: any[] }) {
           {table.getRowModel().rows.map((row) => (
             <TableRow
               id={row.id}
+              key={row.id}
               className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
             >
               {row.getVisibleCells().map((cell) => (
