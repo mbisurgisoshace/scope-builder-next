@@ -106,11 +106,20 @@ export class FunctionStore {
     const paramValues = runtime?.params ?? {};
     for (const p of this.fn.listParameters()) {
       const name = p.name;
+
       if (name in paramValues) {
         const v = paramValues[name];
+
+        // Store raw param value in scope (can be number, array, object, etc.)
         scope[name] = v;
-        // you can expose params as values too (optional but helpful)
-        values[name] = v;
+
+        // Only expose numeric params in `values`
+        if (typeof v === "number" && Number.isFinite(v)) {
+          values[name] = v;
+        } else {
+          delete values[name];
+        }
+
         delete errors[name];
       } else {
         scope[name] = NaN;
@@ -139,9 +148,18 @@ export class FunctionStore {
           }
 
           try {
-            const num = this.evaluator.evaluate(src, scope);
-            scope[name] = num;
-            values[name] = num;
+            const result = this.evaluator.evaluate(src, scope);
+
+            // Store full result in scope (can be number, array, etc.)
+            scope[name] = result;
+
+            // Only publish numeric results into `values`
+            if (typeof result === "number" && Number.isFinite(result)) {
+              values[name] = result;
+            } else {
+              delete values[name];
+            }
+
             delete errors[name];
           } catch (e: any) {
             errors[name] = String(e?.message ?? e);
@@ -341,7 +359,7 @@ export class FunctionStore {
     source:
       | { kind: "literal"; value: unknown }
       | { kind: "symbolRef"; name: string }
-      | { kind: "expression"; expr: string }
+      | { kind: "expression"; expr: string },
   ) {
     const id = asStatementId(statementIdRaw);
     const stmt = this.fn.getStatement(id);
@@ -357,7 +375,7 @@ export class FunctionStore {
   }
 
   getVariableDeclarations(
-    statementIdRaw: string
+    statementIdRaw: string,
   ): Array<{ name: string; source: any }> {
     const id = asStatementId(statementIdRaw);
     const stmt = this.fn.getStatement(id);
@@ -392,16 +410,14 @@ export class FunctionStore {
    * - evaluates variables
    * - evaluates Return source against the computed scope
    */
-  computeReturnValue(runtime?: { params?: RuntimeParams }): {
+  computeReturnValue(): {
     value: number | null;
     error?: string;
     scopeValues: Record<string, number>;
     scopeErrors: Record<string, string>;
   } {
-    // ✅ IMPORTANT: use the scope produced by computeRuntimeValues (it includes runtime params)
-    const { values, errors, scope } = this.computeRuntimeValues(runtime);
+    const { values, errors, scope } = this.computeRuntimeValues();
 
-    // Find the (single) return statement if present
     const returnStmt = this.fn
       .listStatements()
       .find((s) => s.type === "return") as ReturnStatement | undefined;
@@ -410,30 +426,20 @@ export class FunctionStore {
       return { value: null, scopeValues: values, scopeErrors: errors };
     }
 
-    // If no return source yet, don't explode
-    if (!returnStmt.source) {
-      return {
-        value: null,
-        error: "Missing return source",
-        scopeValues: values,
-        scopeErrors: errors,
-      };
-    }
-
     try {
-      const num = this.evaluator.evaluate(returnStmt.source, scope);
+      const raw = this.evaluator.evaluate(returnStmt.source, scope);
 
-      // Optional safety: keep your UI consistent (you can remove this if evaluator guarantees numbers)
-      if (!Number.isFinite(num)) {
+      const n = Number(raw);
+      if (!Number.isFinite(n)) {
         return {
           value: null,
-          error: `Return is not a numeric: ${String(num)}`,
+          error: `Return is not numeric (value=${String(raw)})`,
           scopeValues: values,
           scopeErrors: errors,
         };
       }
 
-      return { value: num, scopeValues: values, scopeErrors: errors };
+      return { value: n, scopeValues: values, scopeErrors: errors };
     } catch (e: any) {
       return {
         value: null,

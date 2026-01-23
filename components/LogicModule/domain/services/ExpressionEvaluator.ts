@@ -1,24 +1,25 @@
-// domain/services/ExpressionEvaluator.ts
 import { ValueSource } from "../model/ValueSource";
 
 export class ExpressionEvaluator {
-  evaluate(source: ValueSource, scope: Record<string, unknown>): number {
+  /**
+   * Evaluate a ValueSource against the current scope.
+   * Returns:
+   *  - number   → for normal numeric expressions
+   *  - any      → for literals / arrays (we only really need this in scope)
+   */
+  evaluate(source: ValueSource, scope: Record<string, unknown>): any {
     switch (source.kind) {
       case "literal": {
-        const n = this.toNumber(source.value);
-        if (n == null)
-          throw new Error(`Literal is not numeric: ${source.value}`);
-        return n;
+        // For literals we trust the stored value (number, string, array, etc.)
+        return source.value;
       }
 
       case "symbolRef": {
         if (!(source.name in scope)) {
           throw new Error(`Unknown symbol: ${source.name}`);
         }
-        const n = this.toNumber(scope[source.name]);
-        if (n == null)
-          throw new Error(`Symbol "${source.name}" is not numeric.`);
-        return n;
+        // Forward whatever is in scope (number, array, etc.)
+        return scope[source.name];
       }
 
       case "expression": {
@@ -27,23 +28,88 @@ export class ExpressionEvaluator {
     }
   }
 
-  private evalExpression(expr: string, scope: Record<string, unknown>): number {
+  /**
+   * Evaluate a string expression like "subtotal * 5" or "sum(numbers)".
+   * We:
+   *  - pass all scope variables through *as-is* (no numeric coercion here),
+   *  - inject helpers like sum(), avg(), max(), min().
+   */
+  private evalExpression(expr: string, scope: Record<string, unknown>): any {
+    console.log("scope in evalExpression:", scope);
     const names = Object.keys(scope);
-    const values = Object.values(scope).map((v) => {
-      const n = this.toNumber(v);
-      // We pass NaN for non-numeric so expression can error cleanly after eval
-      return n ?? NaN;
-    });
+    const values = Object.values(scope); // <-- NO toNumber here
 
-    // Safe-ish sandbox: only variables you pass in are visible
-    // NOTE: later we can swap this to a real parser (expr-eval, mathjs) if you want.
-    const fn = new Function(...names, `"use strict"; return (${expr});`);
+    const toNumber = this.toNumber;
 
-    const out = fn(...values);
-    const n = this.toNumber(out);
-    if (n == null)
-      throw new Error(`Expression did not evaluate to a number: ${expr}`);
-    return n;
+    const sum = (arg: unknown): number => {
+      if (!Array.isArray(arg)) {
+        throw new Error("sum() expects an array");
+      }
+
+      let total = 0;
+      for (const v of arg) {
+        const n = toNumber(v);
+        if (n == null) {
+          throw new Error(`sum() element is not numeric: ${String(v)}`);
+        }
+        total += n;
+      }
+      return total;
+    };
+
+    const avg = (arg: unknown): number => {
+      if (!Array.isArray(arg)) {
+        throw new Error("avg() expects an array");
+      }
+      if (arg.length === 0) return 0;
+      return sum(arg) / arg.length;
+    };
+
+    const max = (arg: unknown): number => {
+      if (!Array.isArray(arg)) {
+        throw new Error("max() expects an array");
+      }
+      let best: number | null = null;
+      for (const v of arg) {
+        const n = toNumber(v);
+        if (n == null) continue;
+        best = best == null ? n : Math.max(best, n);
+      }
+      if (best == null) {
+        throw new Error("max() array has no numeric items");
+      }
+      return best;
+    };
+
+    const min = (arg: unknown): number => {
+      if (!Array.isArray(arg)) {
+        throw new Error("min() expects an array");
+      }
+      let best: number | null = null;
+      for (const v of arg) {
+        const n = toNumber(v);
+        if (n == null) continue;
+        best = best == null ? n : Math.min(best, n);
+      }
+      if (best == null) {
+        throw new Error("min() array has no numeric items");
+      }
+      return best;
+    };
+
+    // We expose:
+    //  - all scope variables as plain arguments
+    //  - helpers: sum, avg, max, min
+    const fn = new Function(
+      ...names,
+      "sum",
+      "avg",
+      "max",
+      "min",
+      `"use strict"; return (${expr});`,
+    );
+
+    return fn(...values, sum, avg, max, min);
   }
 
   private toNumber(v: unknown): number | null {
@@ -53,16 +119,12 @@ export class ExpressionEvaluator {
       const trimmed = v.trim();
       if (!trimmed) return null;
 
-      // basic coercion: "10", "10.5", "  10 "
       const n = Number(trimmed);
       if (Number.isFinite(n)) return n;
       return null;
     }
 
     if (typeof v === "boolean") return v ? 1 : 0;
-
-    // allow Date -> timestamp? (optional)
-    // if (v instanceof Date) return v.getTime();
 
     return null;
   }

@@ -9,11 +9,32 @@ function coerceLiteral(input: string): unknown {
   const s = input.trim();
   if (!s) return "";
 
+  // Try JSON array literal first: [1, 2, 3] or ["a","b"]
+  if (s.startsWith("[") && s.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) {
+        // Optionally auto-coerce numeric-looking items
+        return parsed.map((item) => {
+          if (typeof item === "string") {
+            const t = item.trim();
+            if (t !== "" && Number.isFinite(Number(t))) {
+              return Number(t);
+            }
+          }
+          return item;
+        });
+      }
+    } catch {
+      // fall through to number/string
+    }
+  }
+
   // number?
   const n = Number(s);
   if (Number.isFinite(n) && s !== "") return n;
 
-  // keep as string for now (later: booleans/null/etc if you want)
+  // otherwise keep as string
   return input;
 }
 
@@ -24,7 +45,7 @@ function coerceLiteral(input: string): unknown {
 function resolveOwningFunctionId(
   nodeId: string,
   shapes: any[],
-  connections: { fromShapeId: string; toShapeId: string }[]
+  connections: { fromShapeId: string; toShapeId: string }[],
 ): string | null {
   const byId = new Map(shapes.map((s) => [s.id, s] as const));
   const visited = new Set<string>();
@@ -107,7 +128,7 @@ export function LogicBuilderInspector({
   /** --- Logic node editor state (simple assignment v1) --- */
   const [logicTarget, setLogicTarget] = useState("");
   const [logicKind, setLogicKind] = useState<"literal" | "symbolRef">(
-    "literal"
+    "literal",
   );
   const [logicLiteral, setLogicLiteral] = useState<string>("0");
   const [logicRef, setLogicRef] = useState<string>("");
@@ -261,7 +282,7 @@ export function LogicBuilderInspector({
                       fnStore.setVariableDeclarationSource(
                         selectedShapeId,
                         d.name,
-                        next
+                        next,
                       );
                       bump();
                       console.log(fnStore.computeRuntimeValues());
@@ -406,21 +427,26 @@ function DeclarationRow({
     next:
       | { kind: "literal"; value: unknown }
       | { kind: "symbolRef"; name: string }
-      | { kind: "expression"; expr: string }
+      | { kind: "expression"; expr: string },
   ) => void;
 }) {
   const kind: "literal" | "symbolRef" | "expression" =
     source?.kind === "symbolRef"
       ? "symbolRef"
       : source?.kind === "expression"
-      ? "expression"
-      : "literal";
+        ? "expression"
+        : "literal";
 
-  const literalValue = source?.kind === "literal" ? source.value ?? "" : "";
+  // Show arrays/objects as JSON so they round-trip nicely
+  const literalValue =
+    source?.kind === "literal"
+      ? Array.isArray(source.value) || typeof source.value === "object"
+        ? JSON.stringify(source.value)
+        : (source.value ?? "")
+      : "";
 
-  const symbolName = source?.kind === "symbolRef" ? source.name ?? "" : "";
-
-  const exprText = source?.kind === "expression" ? source.expr ?? "" : "";
+  const symbolName = source?.kind === "symbolRef" ? (source.name ?? "") : "";
+  const exprText = source?.kind === "expression" ? (source.expr ?? "") : "";
 
   return (
     <div className="grid grid-cols-[1fr_105px_1fr] gap-2 items-center">
@@ -456,8 +482,13 @@ function DeclarationRow({
         <input
           className="border rounded-md px-2 py-1 text-xs"
           value={String(literalValue)}
-          onChange={(e) => onChange({ kind: "literal", value: e.target.value })}
-          placeholder="e.g. 100"
+          onChange={(e) =>
+            onChange({
+              kind: "literal",
+              value: coerceLiteral(e.target.value), // 👈 parse numbers & arrays
+            })
+          }
+          placeholder="e.g. 100 or [1,2,3,4]"
         />
       ) : kind === "symbolRef" ? (
         <select
@@ -502,7 +533,7 @@ function ReturnEditor({
   visibleSymbols: string[];
 }) {
   const [kind, setKind] = useState<"literal" | "symbolRef" | "expression">(
-    "literal"
+    "literal",
   );
   const [literal, setLiteral] = useState<string>("");
   const [symbol, setSymbol] = useState<string>("");
