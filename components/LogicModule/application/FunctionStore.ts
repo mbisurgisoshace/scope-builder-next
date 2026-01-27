@@ -1,5 +1,8 @@
 import { Value, ValueSource } from "../domain/model/ValueSource";
-import { LogicStatement } from "../domain/model/LogicStatement";
+import {
+  LogicStatement,
+  ReduceEachConfig,
+} from "../domain/model/LogicStatement";
 import { ScopeResolver } from "../domain/services/ScopeResolver";
 import { ReturnStatement } from "../domain/model/ReturnStatement";
 import { asFunctionId, asStatementId } from "../domain/model/ids";
@@ -10,7 +13,7 @@ import { FunctionDefinition } from "../domain/model/FunctionDefinition";
 import { FunctionValidator } from "../domain/services/FunctionValidator";
 import { ExpressionEvaluator } from "../domain/services/ExpressionEvaluator";
 
-export type RuntimeParams = Record<string, number>;
+export type RuntimeParams = Record<string, unknown>;
 
 export type RuntimeResult = {
   values: Record<string, number>;
@@ -56,7 +59,18 @@ export type FunctionSnapshot = {
         id: string;
         declarations: Array<{ name: string; source: any }>;
       }
-    | { type: "logic"; id: string; assignments: any[] }
+    | {
+        type: "logic";
+        id: string;
+        assignments: any[];
+        reduceEachConfig?: {
+          inputArray: string;
+          itemVar: string;
+          accVar: string;
+          initialExpr: string;
+          bodyExpr: string;
+        } | null;
+      }
     | { type: "return"; id: string; source?: any }
   >;
   flow: Array<{ from: string; to: string }>;
@@ -167,12 +181,78 @@ export class FunctionStore {
             values[name] = NaN;
           }
         }
+      } else if (stmt.type === "logic") {
+        const logic = stmt as LogicStatement;
+        const cfg = logic.reduceEachConfig;
+
+        // Only do something special if this logic node is a reduceEach node.
+        if (cfg) {
+          try {
+            this.executeReduceEach(cfg, scope, values, errors);
+          } catch (e: any) {
+            const accName = cfg.accVar || "(acc)";
+            errors[accName] = String(e?.message ?? e);
+            scope[accName] = NaN;
+            (values as any)[accName] = NaN;
+          }
+        }
+
+        // If you later want "simple assignment logic nodes" to also run here,
+        // we can extend this branch. For now: only reduceEach is interpreted.
       }
 
-      // logic nodes later (we’ll add after this runtime layer is stable)
+      // other node types are ignored by the numeric runtime for now
     }
 
     return { values, errors, scope };
+  }
+
+  private executeReduceEach(
+    cfg: ReduceEachConfig,
+    scope: Record<string, unknown>,
+    values: Record<string, number>,
+    errors: Record<string, string>,
+  ) {
+    const { inputArray, itemVar, accVar, initialExpr, bodyExpr } = cfg;
+
+    const accName = accVar?.trim();
+    if (!accName) {
+      throw new Error("reduceEach: accVar (accumulator symbol) is required.");
+    }
+
+    const arr = scope[inputArray];
+
+    if (!Array.isArray(arr)) {
+      errors[accName] = `reduceEach: "${inputArray}" is not an array`;
+      scope[accName] = NaN;
+      values[accName] = NaN;
+      return;
+    }
+
+    // 1) Initial accumulator value
+    let acc: any = this.evaluator.evaluate(Value.expr(initialExpr), scope);
+
+    // 2) Iterate over items
+    for (const item of arr) {
+      const localScope: Record<string, unknown> = {
+        ...scope,
+        [itemVar]: item,
+        [accName]: acc,
+      };
+
+      acc = this.evaluator.evaluate(Value.expr(bodyExpr), localScope);
+    }
+
+    // 3) Store final accumulator back into scope
+    scope[accName] = acc;
+
+    if (typeof acc === "number" && Number.isFinite(acc)) {
+      values[accName] = acc;
+    } else {
+      delete values[accName];
+    }
+
+    delete errors[accName];
   }
 
   // ----------------
@@ -477,10 +557,12 @@ export class FunctionStore {
         }
 
         if (s.type === "logic") {
+          const logic = s as LogicStatement;
           return {
             type: "logic",
             id: String(s.id),
             assignments: s.assignments ?? [],
+            reduceEachConfig: logic.reduceEachConfig ?? undefined,
           };
         }
 
@@ -539,6 +621,7 @@ export class FunctionStore {
           id,
           type: "logic",
           assignments: (s as any).assignments ?? [],
+          reduceEachConfig: (s as any).reduceEachConfig ?? undefined,
         };
         this.fn.addStatement(stmt);
         continue;

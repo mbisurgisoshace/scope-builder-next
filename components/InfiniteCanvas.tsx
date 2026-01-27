@@ -78,7 +78,7 @@ type Connection = {
 
 export function getAbsoluteAnchorPosition(
   shape: IShape,
-  anchor: { x: number; y: number }
+  anchor: { x: number; y: number },
 ): Position {
   return {
     x: shape.x + shape.width * anchor.x,
@@ -125,7 +125,7 @@ function getCenter(shape: RectShape) {
 
 function pickOrthogonalSides(
   fromShape: RectShape,
-  toShape: RectShape
+  toShape: RectShape,
 ): { fromSide: Side; toSide: Side } {
   const { cx: fx, cy: fy } = getCenter(fromShape);
   const { cx: tx, cy: ty } = getCenter(toShape);
@@ -232,7 +232,7 @@ export default function InfiniteCanvas({
   // const [connections, setConnections] = useState<Connection[]>([]);
 
   const [connectingMousePos, setConnectingMousePos] = useState<Position | null>(
-    null
+    null,
   );
 
   const guides = useSmartGuidesStore((s) => s.guides);
@@ -286,7 +286,7 @@ export default function InfiniteCanvas({
     connectingMousePos,
     shapes,
     scale,
-    connecting?.fromShapeId ?? null
+    connecting?.fromShapeId ?? null,
   );
 
   function isLogicBuilderFunctionShape(shape: any): boolean {
@@ -399,8 +399,8 @@ export default function InfiniteCanvas({
                 logicTypeId === "fn/var"
                   ? "variable"
                   : logicTypeId === "fn/add"
-                  ? "logic"
-                  : "return";
+                    ? "logic"
+                    : "return";
 
               // Only create if missing (so reconnecting doesn't explode)
               if (!storeForFn.getStatement(stmtId)) {
@@ -438,7 +438,7 @@ export default function InfiniteCanvas({
               resolveOwningFunctionId(
                 fromShape.id,
                 shapes,
-                edgesForResolution
+                edgesForResolution,
               ) ?? "fn_local";
             const toFnId =
               resolveOwningFunctionId(toShape.id, shapes, edgesForResolution) ??
@@ -449,7 +449,7 @@ export default function InfiniteCanvas({
               console.warn(
                 "Blocked connectFlow across different functions",
                 fromFnId,
-                toFnId
+                toFnId,
               );
               // Optional: remove the just-created visual edge here later
               return;
@@ -614,11 +614,11 @@ export default function InfiniteCanvas({
             .filter(
               (shape) =>
                 shape.type.includes("example") ||
-                shape.subtype?.includes("example")
+                shape.subtype?.includes("example"),
             )
             .map((s) => s.id);
           setShowDeleteConfirm(
-            selectedShapeIds.filter((id) => !exampleShapeIds.includes(id))
+            selectedShapeIds.filter((id) => !exampleShapeIds.includes(id)),
           );
           return;
         }
@@ -730,7 +730,7 @@ export default function InfiniteCanvas({
   const handleConnectorMouseDown = (
     e: React.MouseEvent,
     shapeId: string,
-    direction: "top" | "right" | "bottom" | "left"
+    direction: "top" | "right" | "bottom" | "left",
   ) => {
     e.preventDefault();
     if (!editable) return;
@@ -958,16 +958,6 @@ export default function InfiniteCanvas({
     addShape(type, x, y, id);
 
     if (type === "logic_node" && logicTypeId) {
-      // updateShape(id, (s) => ({
-      //   ...s,
-      //   logicTypeId,
-      //   logicConfig: s.logicConfig ?? {},
-      //   nodeTypeId: logicTypeId,
-      //   text: s.text ?? logicTypeId, // optional
-      //   width: 280,
-      //   height: 140,
-      // }));
-
       try {
         if (logicTypeId === "fn/function") {
           // create function shape
@@ -987,22 +977,6 @@ export default function InfiniteCanvas({
         }
 
         if (logicTypeId === "fn/param") {
-          // const paramName = `param_${id.slice(0, 4)}`;
-          // fnStore.addParameterNamed(paramName);
-
-          // // store paramName on the shape so we can delete/edit later
-          // updateShape(id, (s) => ({
-          //   ...s,
-          //   data: { ...(s as any).data, fnParamName: paramName },
-          // }));
-
-          // updateShape(id, (s) => ({
-          //   ...s,
-          //   logicTypeId,
-          //   text: `Param: ${paramName}`,
-          //   width: 260,
-          //   height: 110,
-          // }));
           updateShape(id, (s) => ({
             ...s,
             logicTypeId,
@@ -1035,6 +1009,8 @@ export default function InfiniteCanvas({
         }
 
         if (logicTypeId === "fn/return") {
+          console.log("id", id);
+          console.log("logicTypeId", logicTypeId);
           fnStore.addStatementWithId("return", id);
           updateShape(id, (s) => ({
             ...s,
@@ -1078,11 +1054,11 @@ export default function InfiniteCanvas({
   // plug your real uploader here (S3/Supabase/UploadThing/etc.)
   async function uploadToStorage(
     file: File,
-    onProgress: (p: number) => void
+    onProgress: (p: number) => void,
   ): Promise<{ url: string }> {
     // Example pattern using an API route that returns { uploadUrl, fileUrl }
     const resp = await fetch(
-      `/api/upload-url?filename=${encodeURIComponent(file.name)}`
+      `/api/upload-url?filename=${encodeURIComponent(file.name)}`,
     );
     if (!resp.ok) throw new Error("Failed to get upload URL");
     const { uploadUrl, fileUrl } = await resp.json();
@@ -1100,7 +1076,7 @@ export default function InfiniteCanvas({
       xhr.onerror = () => reject(new Error("Network error"));
       xhr.setRequestHeader(
         "Content-Type",
-        file.type || "application/octet-stream"
+        file.type || "application/octet-stream",
       );
       xhr.send(file);
     });
@@ -1120,7 +1096,7 @@ export default function InfiniteCanvas({
     e: React.DragEvent | React.MouseEvent,
     canvasEl: HTMLDivElement,
     position: { x: number; y: number },
-    scale: number
+    scale: number,
   ) {
     const rect = canvasEl.getBoundingClientRect();
     const x = (e.clientX - rect.left - position.x) / scale;
@@ -1346,7 +1322,7 @@ export default function InfiniteCanvas({
 
   const dbTableShapes = useMemo(
     () => shapes.filter((s) => s.type === "db_table"),
-    [shapes]
+    [shapes],
   );
 
   // Map tableId -> shape
@@ -1364,7 +1340,7 @@ export default function InfiniteCanvas({
   // Helper: get anchor point on a table’s side
   function getTableAnchor(
     shape: IShape,
-    side: "left" | "right" | "top" | "bottom"
+    side: "left" | "right" | "top" | "bottom",
   ) {
     const x = shape.x;
     const y = shape.y;
@@ -1479,7 +1455,7 @@ export default function InfiniteCanvas({
   function resolveOwningFunctionIdForDebug(
     nodeId: string,
     shapes: any[],
-    connections: { fromShapeId: string; toShapeId: string }[]
+    connections: { fromShapeId: string; toShapeId: string }[],
   ): string | null {
     const byId = new Map(shapes.map((s) => [s.id, s] as const));
 
@@ -1533,7 +1509,7 @@ export default function InfiniteCanvas({
   function resolveOwningFunctionId(
     nodeId: string,
     shapes: any[],
-    connections: { fromShapeId: string; toShapeId: string }[]
+    connections: { fromShapeId: string; toShapeId: string }[],
   ): string | null {
     const byId = new Map(shapes.map((s) => [s.id, s] as const));
     const visited = new Set<string>();
@@ -1579,7 +1555,7 @@ export default function InfiniteCanvas({
   // const debugStore = owningFnId ? getStore(owningFnId) : fnStore;
 
   const debugFnId = selectedId
-    ? resolveOwningFunctionId(selectedId, shapes, connections) ?? "fn_local"
+    ? (resolveOwningFunctionId(selectedId, shapes, connections) ?? "fn_local")
     : "fn_local";
 
   const debugStore = debugFnId === "fn_local" ? fnStore : getStore(debugFnId);
@@ -1616,7 +1592,7 @@ export default function InfiniteCanvas({
   const fnId = selectedId
     ? selectedLogicTypeId === "fn/function"
       ? selectedId // function owns itself
-      : resolveOwningFunctionId(selectedId, shapes, connections) ?? "fn_local"
+      : (resolveOwningFunctionId(selectedId, shapes, connections) ?? "fn_local")
     : "fn_local";
 
   const scopedStore = fnId === "fn_local" ? fnStore : getStore(fnId);
@@ -1635,7 +1611,7 @@ export default function InfiniteCanvas({
           .getStatements?.()
           ?.filter((s: any) => s.type === "variable")
           ?.flatMap((v: any) =>
-            (v.declarations ?? []).map((d: any) => d.name)
+            (v.declarations ?? []).map((d: any) => d.name),
           ) ?? [];
 
       return uniq([...params, ...declaredVars]);
@@ -1645,9 +1621,41 @@ export default function InfiniteCanvas({
     return scopedStore.getVisibleSymbols(selectedId).map((s: any) => s.name);
   }, [selectedId, selectedLogicTypeId, scopedStore, domainVersion]);
 
+  function coerceRuntimeValue(raw: string): unknown {
+    const s = raw.trim();
+    if (!s) return "";
+
+    // Try JSON array first: [1, 2, 3]
+    if (s.startsWith("[") && s.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => {
+            if (typeof item === "string") {
+              const t = item.trim();
+              if (t !== "" && Number.isFinite(Number(t))) {
+                return Number(t);
+              }
+            }
+            return item;
+          });
+        }
+      } catch {
+        // fall through
+      }
+    }
+
+    // Try number
+    const n = Number(s);
+    if (Number.isFinite(n)) return n;
+
+    // Fallback to string
+    return raw;
+  }
+
   // Runtime params, scoped per function id (so each Function can have its own test inputs)
   const [runtimeParamsByFn, setRuntimeParamsByFn] = useState<
-    Record<string, Record<string, number>>
+    Record<string, Record<string, string>>
   >({});
 
   // Small UX: "Run" can be explicit (button) or auto-run (inputs immediately apply).
@@ -1661,7 +1669,7 @@ export default function InfiniteCanvas({
     return runtimeParamsByFn[fnId] ?? {};
   }
 
-  function setRuntimeParam(fnId: string, name: string, value: number) {
+  function setRuntimeParam(fnId: string, name: string, value: string) {
     setRuntimeParamsByFn((prev) => ({
       ...prev,
       [fnId]: { ...(prev[fnId] ?? {}), [name]: value },
@@ -1679,11 +1687,11 @@ export default function InfiniteCanvas({
 
   const runtimeParams = useMemo(
     () => getRuntimeParams(runtimeFnId),
-    [runtimeFnId, runtimeParamsByFn]
+    [runtimeFnId, runtimeParamsByFn],
   );
 
   const runtimeRunNonce = runtimeFnId
-    ? runtimeRunNonceByFn[runtimeFnId] ?? 0
+    ? (runtimeRunNonceByFn[runtimeFnId] ?? 0)
     : 0;
 
   const runtime = useMemo(() => {
@@ -1702,7 +1710,7 @@ export default function InfiniteCanvas({
   // wherever you keep runtimeParams (see note below)
   const ret = useMemo(() => {
     try {
-      return debugStore.computeReturnValue({ params: runtimeParams });
+      return debugStore.computeReturnValue();
     } catch (e: any) {
       return { value: null, error: String(e?.message ?? e) };
     }
@@ -1943,21 +1951,6 @@ export default function InfiniteCanvas({
             draggable
             onDragStart={(e) => {
               e.dataTransfer.setData("shape-type", "logic_node");
-              e.dataTransfer.setData("logicTypeId", "fn/add");
-            }}
-            className="w-10 h-10 gap-1 flex flex-col items-center"
-            title="Add"
-          >
-            <SquarePlus className="text-[#111827] pointer-events-none" />
-            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-              Add
-            </span>
-          </button>
-
-          <button
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.setData("shape-type", "logic_node");
               e.dataTransfer.setData("logicTypeId", "fn/return");
             }}
             className="w-10 h-10 gap-1 flex flex-col items-center"
@@ -1966,6 +1959,21 @@ export default function InfiniteCanvas({
             <SquarePlus className="text-[#111827] pointer-events-none" />
             <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
               Return
+            </span>
+          </button>
+
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("shape-type", "logic_node");
+              e.dataTransfer.setData("logicTypeId", "fn/add");
+            }}
+            className="w-10 h-10 gap-1 flex flex-col items-center"
+            title="Add"
+          >
+            <SquarePlus className="text-[#111827] pointer-events-none" />
+            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
+              Add
             </span>
           </button>
         </div>
@@ -1982,7 +1990,7 @@ export default function InfiniteCanvas({
           {!validation.ok && (
             <div className="mt-1 text-red-700 break-all">
               {String(
-                (validation as any).error?.message ?? (validation as any).error
+                (validation as any).error?.message ?? (validation as any).error,
               )}
             </div>
           )}
@@ -2016,36 +2024,29 @@ export default function InfiniteCanvas({
                   return (
                     <div
                       key={p}
-                      className="grid grid-cols-[1fr_120px] gap-2 items-center"
+                      className="grid grid-cols-[1fr_160px] gap-2 items-center"
                     >
                       <div className="font-mono">{p}</div>
                       <input
                         className="border rounded-md px-2 py-1 text-xs font-mono"
-                        inputMode="decimal"
-                        value={display}
-                        placeholder="e.g. 100"
+                        value={runtimeParams[p] ?? ""}
+                        placeholder="e.g. 100 or [1,2,3]"
                         onChange={(e) => {
                           if (!runtimeFnId) return;
                           const raw = e.target.value;
 
-                          // allow clearing
-                          if (raw.trim() === "") {
-                            // store NaN or delete — I prefer delete so "Missing runtime param" shows
-                            setRuntimeParamsByFn((prev) => {
-                              const next = { ...(prev[runtimeFnId] ?? {}) };
-                              delete next[p];
-                              return { ...prev, [runtimeFnId]: next };
-                            });
-                            return;
-                          }
+                          // Allow clearing → remove param so FunctionStore can mark it "Missing"
+                          setRuntimeParamsByFn((prev) => {
+                            const currentFn = { ...(prev[runtimeFnId] ?? {}) };
 
-                          const n = Number(raw);
-                          if (Number.isFinite(n))
-                            setRuntimeParam(runtimeFnId, p, n);
-                          else {
-                            // if they type "-" or "1." mid-way, don't fight them — ignore until valid
-                            // (optional: keep a string map for draft editing, but this is ok for now)
-                          }
+                            if (raw.trim() === "") {
+                              delete currentFn[p];
+                            } else {
+                              currentFn[p] = raw;
+                            }
+
+                            return { ...prev, [runtimeFnId]: currentFn };
+                          });
                         }}
                       />
                     </div>
@@ -2085,9 +2086,37 @@ export default function InfiniteCanvas({
               ) : (
                 <div className="flex flex-col gap-1">
                   {symbols.map((s) => {
-                    const hasVal = s in runtime.values;
-                    const val = runtime.values[s];
+                    const hasNumericVal = s in runtime.values;
+                    const numericVal = runtime.values[s];
                     const err = runtime.errors[s];
+
+                    // NEW: full raw value (can be number, array, object, etc.)
+                    const rawScopeVal =
+                      (runtime as any).scope && s in (runtime as any).scope
+                        ? (runtime as any).scope[s]
+                        : undefined;
+
+                    let display: string;
+
+                    if (err) {
+                      display = `⚠ ${err}`;
+                    } else if (hasNumericVal) {
+                      // normal case: scalar number
+                      display = String(numericVal);
+                    } else if (Array.isArray(rawScopeVal)) {
+                      // show a compact array badge
+                      const preview = rawScopeVal.slice(0, 4).join(", ");
+                      const more = rawScopeVal.length > 4 ? ", …" : "";
+                      display = `[${preview}${more}] · ${rawScopeVal.length} items`;
+                    } else if (rawScopeVal !== undefined) {
+                      // some other non-numeric value (object, string, etc.)
+                      display =
+                        typeof rawScopeVal === "object" && rawScopeVal !== null
+                          ? "[object]"
+                          : String(rawScopeVal);
+                    } else {
+                      display = "—";
+                    }
 
                     return (
                       <div
@@ -2098,11 +2127,12 @@ export default function InfiniteCanvas({
                         <span
                           className={err ? "text-red-700" : "text-gray-900"}
                         >
-                          {err ? `⚠ ${err}` : hasVal ? String(val) : "—"}
+                          {display}
                         </span>
                       </div>
                     );
                   })}
+
                   {runtime.errors.__plan__ && (
                     <div className="text-red-700 mt-1">
                       ⚠ Plan: {runtime.errors.__plan__}
@@ -2121,7 +2151,7 @@ export default function InfiniteCanvas({
           <div className="mt-2">
             <div className="font-medium">Return</div>
             <div className="break-all">
-              {ret.error ? `ERROR: ${ret.error}` : ret.value ?? "(none)"}
+              {ret.error ? `ERROR: ${ret.error}` : (ret.value ?? "(none)")}
             </div>
           </div>
         </div>
@@ -2228,7 +2258,7 @@ export default function InfiniteCanvas({
               if (isValuePropCanvas) {
                 if (!problems) {
                   const toShape = shapes.find(
-                    (s) => s.id === endpoint.connection.toShapeId
+                    (s) => s.id === endpoint.connection.toShapeId,
                   );
 
                   if (
@@ -2243,7 +2273,7 @@ export default function InfiniteCanvas({
 
                 if (!solutions) {
                   const toShape = shapes.find(
-                    (s) => s.id === endpoint.connection.toShapeId
+                    (s) => s.id === endpoint.connection.toShapeId,
                   );
 
                   if (
@@ -2300,7 +2330,7 @@ export default function InfiniteCanvas({
                     onSelect={editable ? selectConnection : undefined}
                   />
                 );
-              }
+              },
             )}
 
           {shapes
@@ -2418,7 +2448,7 @@ export default function InfiniteCanvas({
                   zIndex: 250,
                 }}
               />
-            )
+            ),
           )}
 
           {/* <LogicConnectionsLayer shapes={shapes} mousePos={canvasMousePos} /> */}
@@ -2448,7 +2478,7 @@ function computePreviewOrthogonalPoints(
   tx: number,
   ty: number,
   fromSide?: Side,
-  toSide?: Side
+  toSide?: Side,
 ): { x: number; y: number }[] {
   const pts: { x: number; y: number }[] = [];
   pts.push({ x: fx, y: fy });
@@ -2562,7 +2592,7 @@ export const CurvedArrow: React.FC<CurvedArrowProps> = ({
     tx1,
     ty1,
     fromSide,
-    toSide
+    toSide,
   );
 
   const d =
@@ -2577,7 +2607,7 @@ export const CurvedArrow: React.FC<CurvedArrowProps> = ({
   // Unique marker id per instance so previews don't conflict
   const markerId = useMemo(
     () => `arrowhead-preview-${Math.random().toString(36).slice(2)}`,
-    []
+    [],
   );
 
   return (

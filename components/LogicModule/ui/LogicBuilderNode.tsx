@@ -48,7 +48,7 @@ export default function LogicBuilderNode({
       onMouseDown={interactive ? onMouseDown : undefined}
       className={cn(
         "absolute rounded-2xl shadow-sm border bg-white select-none",
-        isSelected ? "ring-2 ring-blue-500" : "ring-0"
+        isSelected ? "ring-2 ring-blue-500" : "ring-0",
       )}
       style={{
         left: shape.x,

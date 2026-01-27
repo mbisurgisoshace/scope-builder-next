@@ -133,6 +133,16 @@ export function LogicBuilderInspector({
   const [logicLiteral, setLogicLiteral] = useState<string>("0");
   const [logicRef, setLogicRef] = useState<string>("");
 
+  /** Logic mode: simple assignment vs reduceEach */
+  const [logicMode, setLogicMode] = useState<"simple" | "reduceEach">("simple");
+
+  /** reduceEach config state */
+  const [reduceInputArray, setReduceInputArray] = useState<string>("");
+  const [reduceItemVar, setReduceItemVar] = useState<string>("item");
+  const [reduceAccVar, setReduceAccVar] = useState<string>("");
+  const [reduceInitialExpr, setReduceInitialExpr] = useState<string>("0");
+  const [reduceBodyExpr, setReduceBodyExpr] = useState<string>("");
+
   /** Sync textarea for variable/param, and sync logic editor state for fn/add */
   useEffect(() => {
     if (!selectedShapeId) return;
@@ -151,27 +161,50 @@ export function LogicBuilderInspector({
       return;
     }
 
-    // LOGIC editor: load v1 assignment if present
+    // LOGIC editor: either "simple assignment" or "reduceEach" config
     if (isLogic) {
-      const a = fnStore.getLogicAssignment?.(selectedShapeId) ?? null;
+      const stmt: any = fnStore.getStatement(selectedShapeId);
+      const cfg = stmt?.reduceEachConfig ?? null;
 
-      if (a) {
-        setLogicTarget(a.target ?? "");
-        if (a.expr?.kind === "symbolRef") {
-          setLogicKind("symbolRef");
-          setLogicRef(a.expr.name ?? "");
-          setLogicLiteral("0");
-        } else {
-          setLogicKind("literal");
-          setLogicLiteral(String(a.expr?.value ?? ""));
-          setLogicRef("");
-        }
-      } else {
-        // defaults
-        setLogicTarget(variableSymbolCandidates[0] ?? "");
+      if (cfg) {
+        // ---- reduceEach mode ----
+        setLogicMode("reduceEach");
+
+        setReduceInputArray(cfg.inputArray ?? "");
+        setReduceItemVar(cfg.itemVar ?? "item");
+        setReduceAccVar(cfg.accVar ?? "");
+        setReduceInitialExpr(cfg.initialExpr ?? "0");
+        setReduceBodyExpr(cfg.bodyExpr ?? "");
+
+        // Clear simple-logic UI state (not used in this mode)
+        setLogicTarget("");
         setLogicKind("literal");
         setLogicLiteral("0");
-        setLogicRef(visibleSymbols[0] ?? "");
+        setLogicRef("");
+      } else {
+        // ---- simple assignment mode ----
+        setLogicMode("simple");
+
+        const a = fnStore.getLogicAssignment?.(selectedShapeId) ?? null;
+
+        if (a) {
+          setLogicTarget(a.target ?? "");
+          if (a.expr?.kind === "symbolRef") {
+            setLogicKind("symbolRef");
+            setLogicRef(a.expr.name ?? "");
+            setLogicLiteral("0");
+          } else {
+            setLogicKind("literal");
+            setLogicLiteral(String(a.expr?.value ?? ""));
+            setLogicRef("");
+          }
+        } else {
+          // defaults
+          setLogicTarget(variableSymbolCandidates[0] ?? "");
+          setLogicKind("literal");
+          setLogicLiteral("0");
+          setLogicRef(visibleSymbols[0] ?? "");
+        }
       }
 
       setText("");
@@ -297,85 +330,233 @@ export function LogicBuilderInspector({
 
       {isLogic && (
         <div className="flex flex-col gap-3">
-          <div className="font-medium">Logic (v1 · assignment)</div>
-          <div className="text-[11px] text-gray-500">
-            Pick a target variable and assign a literal or a reference.
-          </div>
+          <div className="font-medium">Logic node</div>
 
-          <div className="grid grid-cols-[90px_1fr] gap-2 items-center">
-            <div className="text-[11px] text-gray-600">Target</div>
-
-            {variableSymbolCandidates.length > 0 ? (
-              <select
-                className="border rounded-md px-2 py-1 text-xs"
-                value={logicTarget}
-                onChange={(e) => setLogicTarget(e.target.value)}
-              >
-                <option value="" disabled>
-                  Select variable…
-                </option>
-                {variableSymbolCandidates.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                className="border rounded-md px-2 py-1 text-xs"
-                value={logicTarget}
-                onChange={(e) => setLogicTarget(e.target.value)}
-                placeholder="e.g. total"
-              />
-            )}
-          </div>
-
-          <div className="grid grid-cols-[90px_1fr] gap-2 items-center">
-            <div className="text-[11px] text-gray-600">Expr kind</div>
-
-            <select
-              className="border rounded-md px-2 py-1 text-xs"
-              value={logicKind}
-              onChange={(e) => setLogicKind(e.target.value as any)}
+          {/* Mode selector */}
+          <div className="flex items-center gap-2 text-[11px]">
+            <span className="text-gray-600">Mode:</span>
+            <button
+              className={`px-2 py-1 rounded border text-xs ${
+                logicMode === "simple"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-700 border-gray-300"
+              }`}
+              onClick={() => setLogicMode("simple")}
             >
-              <option value="literal">literal</option>
-              <option value="symbolRef">ref</option>
-            </select>
+              Simple
+            </button>
+            <button
+              className={`px-2 py-1 rounded border text-xs ${
+                logicMode === "reduceEach"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-700 border-gray-300"
+              }`}
+              onClick={() => setLogicMode("reduceEach")}
+            >
+              ForEach / Reduce
+            </button>
           </div>
 
-          {logicKind === "literal" ? (
-            <div className="grid grid-cols-[90px_1fr] gap-2 items-center">
-              <div className="text-[11px] text-gray-600">Literal</div>
-              <input
-                className="border rounded-md px-2 py-1 text-xs"
-                value={logicLiteral}
-                onChange={(e) => setLogicLiteral(e.target.value)}
-                placeholder="e.g. 100"
-              />
-            </div>
+          {logicMode === "simple" ? (
+            <>
+              <div className="text-[11px] text-gray-500">
+                Assign a literal or a reference to a target variable.
+              </div>
+
+              <div className="grid grid-cols-[90px_1fr] gap-2 items-center">
+                <div className="text-[11px] text-gray-600">Target</div>
+
+                {variableSymbolCandidates.length > 0 ? (
+                  <select
+                    className="border rounded-md px-2 py-1 text-xs"
+                    value={logicTarget}
+                    onChange={(e) => setLogicTarget(e.target.value)}
+                  >
+                    <option value="" disabled>
+                      Select variable…
+                    </option>
+                    {variableSymbolCandidates.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    className="border rounded-md px-2 py-1 text-xs"
+                    value={logicTarget}
+                    onChange={(e) => setLogicTarget(e.target.value)}
+                    placeholder="e.g. total"
+                  />
+                )}
+              </div>
+
+              <div className="grid grid-cols-[90px_1fr] gap-2 items-center">
+                <div className="text-[11px] text-gray-600">Expr kind</div>
+
+                <select
+                  className="border rounded-md px-2 py-1 text-xs"
+                  value={logicKind}
+                  onChange={(e) => setLogicKind(e.target.value as any)}
+                >
+                  <option value="literal">literal</option>
+                  <option value="symbolRef">ref</option>
+                </select>
+              </div>
+
+              {logicKind === "literal" ? (
+                <div className="grid grid-cols-[90px_1fr] gap-2 items-center">
+                  <div className="text-[11px] text-gray-600">Literal</div>
+                  <input
+                    className="border rounded-md px-2 py-1 text-xs"
+                    value={logicLiteral}
+                    onChange={(e) => setLogicLiteral(e.target.value)}
+                    placeholder="e.g. 100"
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-[90px_1fr] gap-2 items-center">
+                  <div className="text-[11px] text-gray-600">Ref</div>
+                  <select
+                    className="border rounded-md px-2 py-1 text-xs"
+                    value={logicRef}
+                    onChange={(e) => setLogicRef(e.target.value)}
+                  >
+                    <option value="" disabled>
+                      Select symbol…
+                    </option>
+                    {visibleSymbols.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="text-[11px] text-gray-500">
+                Tip: typing <span className="font-mono">123</span> becomes
+                number <span className="font-mono">123</span>.
+              </div>
+            </>
           ) : (
-            <div className="grid grid-cols-[90px_1fr] gap-2 items-center">
-              <div className="text-[11px] text-gray-600">Ref</div>
-              <select
-                className="border rounded-md px-2 py-1 text-xs"
-                value={logicRef}
-                onChange={(e) => setLogicRef(e.target.value)}
-              >
-                <option value="" disabled>
-                  Select symbol…
-                </option>
-                {visibleSymbols.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <>
+              <div className="text-[11px] text-gray-500">
+                Iterate over an array symbol and accumulate into a target
+                variable using an expression.
+              </div>
+
+              {/* Input array symbol */}
+              <div className="grid grid-cols-[110px_1fr] gap-2 items-center">
+                <div className="text-[11px] text-gray-600">Input array</div>
+                <select
+                  className="border rounded-md px-2 py-1 text-xs"
+                  value={reduceInputArray}
+                  onChange={(e) => setReduceInputArray(e.target.value)}
+                >
+                  <option value="">Select symbol…</option>
+                  {visibleSymbols.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Item variable name */}
+              <div className="grid grid-cols-[110px_1fr] gap-2 items-center">
+                <div className="text-[11px] text-gray-600">Item variable</div>
+                <input
+                  className="border rounded-md px-2 py-1 text-xs font-mono"
+                  value={reduceItemVar}
+                  onChange={(e) => setReduceItemVar(e.target.value)}
+                  placeholder="e.g. item"
+                />
+              </div>
+
+              {/* Accumulator variable name */}
+              <div className="grid grid-cols-[110px_1fr] gap-2 items-center">
+                <div className="text-[11px] text-gray-600">
+                  Accumulator symbol
+                </div>
+                <input
+                  className="border rounded-md px-2 py-1 text-xs font-mono"
+                  value={reduceAccVar}
+                  onChange={(e) => setReduceAccVar(e.target.value)}
+                  placeholder="e.g. total"
+                />
+              </div>
+
+              {/* Initial expression */}
+              <div className="grid grid-cols-[110px_1fr] gap-2 items-center">
+                <div className="text-[11px] text-gray-600">Initial expr</div>
+                <input
+                  className="border rounded-md px-2 py-1 text-xs font-mono"
+                  value={reduceInitialExpr}
+                  onChange={(e) => setReduceInitialExpr(e.target.value)}
+                  placeholder="e.g. 0"
+                />
+              </div>
+
+              {/* Body expression */}
+              <div className="grid grid-cols-[110px_1fr] gap-2 items-center">
+                <div className="text-[11px] text-gray-600">Body expr</div>
+                <input
+                  className="border rounded-md px-2 py-1 text-xs font-mono"
+                  value={reduceBodyExpr}
+                  onChange={(e) => setReduceBodyExpr(e.target.value)}
+                  placeholder="e.g. acc + item"
+                />
+              </div>
+
+              <div className="text-[11px] text-gray-500">
+                At runtime:{" "}
+                <span className="font-mono">{reduceAccVar || "acc"}</span>{" "}
+                starts at{" "}
+                <span className="font-mono">{reduceInitialExpr || "0"}</span>{" "}
+                and for each element of{" "}
+                <span className="font-mono">{reduceInputArray || "array"}</span>{" "}
+                we evaluate{" "}
+                <span className="font-mono">
+                  {reduceBodyExpr || "acc + item"}
+                </span>
+                .
+              </div>
+            </>
           )}
 
           <button
             className="rounded-md bg-blue-600 text-white text-xs py-2"
             onClick={() => {
+              const stmt: any = fnStore.getStatement(selectedShapeId);
+              if (!stmt || stmt.type !== "logic") return;
+
+              if (logicMode === "reduceEach") {
+                const inputArray = reduceInputArray.trim();
+                const itemVar = (reduceItemVar || "item").trim();
+                const accVar = reduceAccVar.trim();
+                const initialExpr = (reduceInitialExpr || "0").trim();
+                const bodyExpr = reduceBodyExpr.trim();
+
+                if (!inputArray || !accVar || !bodyExpr) {
+                  // super simple guard; later we can surface a nicer error
+                  return;
+                }
+
+                stmt.reduceEachConfig = {
+                  inputArray,
+                  itemVar,
+                  accVar,
+                  initialExpr,
+                  bodyExpr,
+                };
+
+                // In reduceEach mode, we can ignore simple assignments
+                bump();
+                return;
+              }
+
+              // ---- simple assignment mode ----
               const target = logicTarget.trim();
               if (!target) return;
 
@@ -387,17 +568,17 @@ export function LogicBuilderInspector({
                       value: coerceLiteral(logicLiteral),
                     };
 
+              // Clear any reduceEach config when using simple mode
+              if (stmt) {
+                stmt.reduceEachConfig = undefined;
+              }
+
               fnStore.setLogicAssignment(selectedShapeId, { target, expr });
               bump();
             }}
           >
             Apply
           </button>
-
-          <div className="text-[11px] text-gray-500">
-            Tip: typing <span className="font-mono">123</span> becomes number{" "}
-            <span className="font-mono">123</span>.
-          </div>
         </div>
       )}
 

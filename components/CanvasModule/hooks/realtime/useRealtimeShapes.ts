@@ -93,22 +93,22 @@ export function useRealtimeShapes() {
           type === "text"
             ? 120
             : type === "interview"
-            ? 700
-            : type === "question"
-            ? 440
-            : type === "question_answer"
-            ? 1180
-            : 160,
+              ? 700
+              : type === "question"
+                ? 440
+                : type === "question_answer"
+                  ? 1180
+                  : 160,
         height:
           type === "text"
             ? 40
             : type === "interview"
-            ? 228
-            : type === "question"
-            ? 320
-            : type === "question_answer"
-            ? 320
-            : 112,
+              ? 228
+              : type === "question"
+                ? 320
+                : type === "question_answer"
+                  ? 320
+                  : 112,
         color: "#EAFBE3",
         cardTitle: "",
         text: type === "text" ? "New text" : undefined,
@@ -124,7 +124,7 @@ export function useRealtimeShapes() {
           tableRows: rows,
           tableCols: cols,
           tableData: Array.from({ length: rows }, () =>
-            Array.from({ length: cols }, () => "")
+            Array.from({ length: cols }, () => ""),
           ),
         };
       }
@@ -203,17 +203,22 @@ export function useRealtimeShapes() {
 
       list.push(toLiveShape(shape));
     },
-    []
+    [],
   );
 
   const updateShape = useMutation(
     ({ storage }, id: string, updater: (s: Shape) => Shape) => {
       const list = storage.get("shapes") as LiveList<LiveObject<any>>;
 
+      console.log("id", id);
+
       for (let i = 0; i < list.length; i++) {
         const lo = list.get(i)!;
         const s = fromLiveShape(lo);
+
         if (s.id === id) {
+          console.log("lo", lo);
+          console.log("s", s);
           // const ns = updater(s);
           // // batch updates to the LiveObject
           // lo.update({
@@ -243,7 +248,7 @@ export function useRealtimeShapes() {
         }
       }
     },
-    []
+    [],
   );
 
   const updateMany = useMutation(
@@ -264,7 +269,7 @@ export function useRealtimeShapes() {
         }
       }
     },
-    []
+    [],
   );
 
   const removeShapes = useMutation(({ storage }, ids: string[]) => {
