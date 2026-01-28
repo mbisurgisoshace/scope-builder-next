@@ -201,3 +201,14 @@ model OrgTask {
   @@unique([org_id, task_id])
   @@map("org_tasks")
 }
+
+model ExerciseResponse {
+  id               Int      @id @default(autoincrement())
+  org_id           String
+  excercise_number Int
+  responses        Json
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  @@map("exercise_responses")
+}
