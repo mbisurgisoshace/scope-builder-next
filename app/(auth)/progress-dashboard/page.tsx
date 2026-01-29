@@ -29,7 +29,10 @@ const TOPICS = [
       { id: 4, type: "lecture", completed: true },
       { id: 5, type: "article", completed: false },
     ],
-    excercises_tasks: [{ id: 1, type: "youtube", completed: false }],
+    excercises_tasks: [
+      { id: 1, type: "youtube", completed: false },
+      { id: 2, type: "comment", completed: false },
+    ],
     startup_tasks: [{ id: 1, type: "youtube", completed: false }],
     group_tasks: [{ id: 1, type: "youtube", completed: false }],
   },
@@ -38,10 +41,13 @@ const TOPICS = [
     name: "Topic #2",
     description:
       "Lorem ipsum dolor sit amet, consectetur adipiscing elit, seddo eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    concept_tasks: [],
-    excercises_tasks: [],
+    concept_tasks: [
+      { id: 1, type: "youtube", completed: false },
+      { id: 2, type: "youtube", completed: false },
+    ],
+    excercises_tasks: [{ id: 1, type: "youtube", completed: false }],
     startup_tasks: [],
-    group_tasks: [],
+    group_tasks: [{ id: 1, type: "youtube", completed: false }],
   },
   {
     id: 3,
@@ -51,7 +57,7 @@ const TOPICS = [
     concept_tasks: [],
     excercises_tasks: [],
     startup_tasks: [],
-    group_tasks: [],
+    group_tasks: [{ id: 1, type: "youtube", completed: false }],
   },
 ];
 
@@ -267,7 +273,9 @@ const TaskItem = ({
     return (
       <ProgressItem
         triggerEl={
-          <div className="size-10 bg-[#28BF58] flex items-center justify-center rounded-[8px] text-[#FFFFFF]">
+          <div
+            className={`size-10 ${completed ? "bg-[#28BF58] text-[#FFFFFF]" : "bg-[#EDF6F0] text-[#8F84AE]"} flex items-center justify-center rounded-[8px] `}
+          >
             <YoutubeIcon size={18} />
           </div>
         }
@@ -295,15 +303,28 @@ const TaskItem = ({
 
   if (type === "lecture")
     return (
-      <div className="size-10 bg-[#EDF6F0] flex items-center justify-center rounded-[8px] text-[#8F84AE]">
+      <div
+        className={`size-10 ${completed ? "bg-[#28BF58] text-[#FFFFFF]" : "bg-[#EDF6F0] text-[#8F84AE]"} flex items-center justify-center rounded-[8px] `}
+      >
         <BookOpenIcon size={18} />
       </div>
     );
 
   if (type === "article")
     return (
-      <div className="size-10 bg-[#EDF6F0] flex items-center justify-center rounded-[8px] text-[#8F84AE]">
+      <div
+        className={`size-10 ${completed ? "bg-[#28BF58] text-[#FFFFFF]" : "bg-[#EDF6F0] text-[#8F84AE]"} flex items-center justify-center rounded-[8px] `}
+      >
         <FileTextIcon size={18} />
+      </div>
+    );
+
+  if (type === "comment")
+    return (
+      <div
+        className={`size-10 ${completed ? "bg-[#28BF58] text-[#FFFFFF]" : "bg-[#EDF6F0] text-[#8F84AE]"} flex items-center justify-center rounded-[8px] `}
+      >
+        <MessageSquareMoreIcon size={18} />
       </div>
     );
 
