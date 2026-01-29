@@ -20,7 +20,7 @@ export default async function ProgressDashboardPage() {
   return (
     <div className="p-8 h-full bg-[#F0F1F5] flex justify-center">
       <div className="flex flex-col gap-5 max-w-[1182px] h-full">
-        <div className="grid grid-cols-5 pr-4">
+        <div className="grid grid-cols-5 pr-8 gap-8">
           <h1 className="text-[#111827] text-2xl font-semibold col-span-1">
             Progress
           </h1>
