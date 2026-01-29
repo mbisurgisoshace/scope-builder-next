@@ -16,6 +16,45 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 
+const TOPICS = [
+  {
+    id: 1,
+    name: "Topic #1",
+    description:
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, seddo eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    concept_tasks: [
+      { id: 1, type: "youtube", completed: false },
+      { id: 2, type: "youtube", completed: false },
+      { id: 3, type: "youtube", completed: true },
+      { id: 4, type: "lecture", completed: true },
+      { id: 5, type: "article", completed: false },
+    ],
+    excercises_tasks: [{ id: 1, type: "youtube", completed: false }],
+    startup_tasks: [{ id: 1, type: "youtube", completed: false }],
+    group_tasks: [{ id: 1, type: "youtube", completed: false }],
+  },
+  {
+    id: 2,
+    name: "Topic #2",
+    description:
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, seddo eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    concept_tasks: [],
+    excercises_tasks: [],
+    startup_tasks: [],
+    group_tasks: [],
+  },
+  {
+    id: 3,
+    name: "Topic #3",
+    description:
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, seddo eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    concept_tasks: [],
+    excercises_tasks: [],
+    startup_tasks: [],
+    group_tasks: [],
+  },
+];
+
 export default async function ProgressDashboardPage() {
   return (
     <div className="p-8 h-full bg-[#F0F1F5] flex justify-center">
@@ -39,7 +78,66 @@ export default async function ProgressDashboardPage() {
         </div>
 
         <div className="bg-white px-3.5 py-8 rounded-2xl w-full flex-1">
-          <div className="grid grid-cols-5 pr-4">
+          {TOPICS.map((topic) => (
+            <div key={topic.id} className="grid grid-cols-5 pr-4">
+              <div className="col-span-1 flex flex-row items-center ">
+                <div className="h-full flex flex-col items-center justify-center">
+                  <div className="w-[26px] h-[26px] bg-[#F4F0FF] rounded-full flex items-center justify-center">
+                    <ChevronDownIcon className="text-[#6A35FF]" size={18} />
+                  </div>
+                  <div className="w-1.5 bg-[#F4F0FF] h-full" />
+                </div>
+                <div className="h-full flex flex-col gap-4 px-3.5">
+                  <Badge className="bg-[#F4F0FF] text-[#6A35FF]">{`Topic # ${topic.id}`}</Badge>
+                  <h3 className="text-sm font-semibold">{topic.name}</h3>
+                  <p className="text-[11px] font-medium text-[#697288]">
+                    {topic.description}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 col-span-4  font-semibold border border-[#E4E5ED] rounded-[10px] mb-[30px]">
+                <div className="border-r border-[#E4E5ED] p-4 h-[172px] grid grid-cols-4 gap-2 content-start">
+                  {topic.concept_tasks.map((task) => (
+                    <TaskItem
+                      key={task.id}
+                      type={task.type}
+                      completed={task.completed}
+                    />
+                  ))}
+                </div>
+                <div className="border-r border-[#E4E5ED]  p-4 h-[172px] grid grid-cols-4 gap-8">
+                  {topic.excercises_tasks.map((task) => (
+                    <TaskItem
+                      key={task.id}
+                      type={task.type}
+                      completed={task.completed}
+                    />
+                  ))}
+                </div>
+                <div className="border-r border-[#E4E5ED]  p-4  h-[172px] grid grid-cols-4 gap-8">
+                  {topic.startup_tasks.map((task) => (
+                    <TaskItem
+                      key={task.id}
+                      type={task.type}
+                      completed={task.completed}
+                    />
+                  ))}
+                </div>
+                <div className="p-4 h-[172px] grid grid-cols-4 gap-8">
+                  {topic.group_tasks.map((task) => (
+                    <TaskItem
+                      key={task.id}
+                      type={task.type}
+                      completed={task.completed}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* <div className="grid grid-cols-5 pr-4">
             <div className="col-span-1 flex flex-row items-center ">
               <div className="h-full flex flex-col items-center justify-center">
                 <div className="w-[26px] h-[26px] bg-[#F4F0FF] rounded-full flex items-center justify-center">
@@ -80,9 +178,9 @@ export default async function ProgressDashboardPage() {
               <div className="border-r border-[#E4E5ED]  p-4  h-[172px] grid grid-cols-4 gap-8"></div>
               <div className="p-4 h-[172px] grid grid-cols-4 gap-8"></div>
             </div>
-          </div>
+          </div> */}
 
-          <div className="grid grid-cols-5 pr-4">
+          {/* <div className="grid grid-cols-5 pr-4">
             <div className="col-span-1 flex flex-row items-center ">
               <div className="h-full flex flex-col items-center justify-center">
                 <div className="w-[26px] h-[26px] bg-[#F4F0FF] rounded-full flex items-center justify-center">
@@ -151,12 +249,66 @@ export default async function ProgressDashboardPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
   );
 }
+
+const TaskItem = ({
+  type,
+  completed,
+}: {
+  type: string;
+  completed: boolean;
+}) => {
+  if (type === "youtube")
+    return (
+      <ProgressItem
+        triggerEl={
+          <div className="size-10 bg-[#28BF58] flex items-center justify-center rounded-[8px] text-[#FFFFFF]">
+            <YoutubeIcon size={18} />
+          </div>
+        }
+      >
+        <div>
+          <YouTubeEmbed
+            width={400}
+            height={226}
+            params="controls=0"
+            videoid="TZ43SRdTMs0"
+          />
+          <span className="text-[#697288] text-[11px] font-medium mt-4 mb-1 block">
+            YouTube
+          </span>
+          <h3 className="text-[#111827] text-sm font-semibold mb-3">
+            AI allocation in corporate management 2026{" "}
+          </h3>
+          <p className="text-[#697288] text-[11px] font-medium mb-1">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+            eiusmod tempor incididunt ut labore et dolore magna aliqua.{" "}
+          </p>
+        </div>
+      </ProgressItem>
+    );
+
+  if (type === "lecture")
+    return (
+      <div className="size-10 bg-[#EDF6F0] flex items-center justify-center rounded-[8px] text-[#8F84AE]">
+        <BookOpenIcon size={18} />
+      </div>
+    );
+
+  if (type === "article")
+    return (
+      <div className="size-10 bg-[#EDF6F0] flex items-center justify-center rounded-[8px] text-[#8F84AE]">
+        <FileTextIcon size={18} />
+      </div>
+    );
+
+  return null;
+};
 
 const ProgressItem = ({
   triggerEl,
