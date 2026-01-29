@@ -42,7 +42,8 @@ const data = {
     },
     {
       name: "Progress",
-      url: "/teams-dashboard",
+      //url: "/teams-dashboard",
+      url: "/progress-dashboard",
       //icon: Frame,
     },
     {
