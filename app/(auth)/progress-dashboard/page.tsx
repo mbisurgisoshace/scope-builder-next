@@ -66,10 +66,8 @@ export default async function ProgressDashboardPage() {
     <div className="p-8 h-full bg-[#F0F1F5] flex justify-center">
       <div className="flex flex-col gap-5 max-w-[1182px] h-full">
         <div className="grid grid-cols-5 pr-8 gap-8">
-          <h1 className="text-[#111827] text-2xl font-semibold col-span-1">
-            Progress
-          </h1>
-          <div className="grid grid-cols-4 col-span-4 bg-[#2E3545] text-white text-sm font-semibold border border-[#EFF0F4] rounded-[4px]">
+          <h1 className="text-[#111827] text-2xl font-semibold col-span-1"></h1>
+          <div className="grid grid-cols-4 h-[34px] col-span-4 bg-[#2E3545] text-white text-sm font-semibold border border-[#EFF0F4] rounded-[4px]">
             <div className="border-r border-[#F0F1F5] flex items-center px-4">
               Concept
             </div>

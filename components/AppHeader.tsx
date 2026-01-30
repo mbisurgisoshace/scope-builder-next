@@ -22,7 +22,7 @@ export default function AppHeader() {
     if (pathname.includes("/segments"))
       title = "Market/Customer/End-User Segments";
     if (pathname.includes("/progress")) title = "Progress snapshot";
-    if (pathname.includes("/progress-dashboard")) title = "";
+    if (pathname.includes("/progress-dashboard")) title = "Progress";
     if (pathname.includes("/ecosystem-map")) title = "Ecosystem Map";
     if (pathname.includes("/idea-brainstorm")) title = "Idea Brainstorm";
     if (pathname.includes("/value-proposition")) title = "Value Proposition";
