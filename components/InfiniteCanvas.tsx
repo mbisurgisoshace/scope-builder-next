@@ -72,7 +72,7 @@ type Connection = {
 
 export function getAbsoluteAnchorPosition(
   shape: IShape,
-  anchor: { x: number; y: number }
+  anchor: { x: number; y: number },
 ): Position {
   return {
     x: shape.x + shape.width * anchor.x,
@@ -93,6 +93,7 @@ interface InfiniteCanvasProps {
     rectangle: boolean;
     interview: boolean;
   };
+  valuePropCanvasMode?: boolean;
 }
 
 export default function InfiniteCanvas({
@@ -108,6 +109,7 @@ export default function InfiniteCanvas({
     rectangle: true,
     interview: true,
   },
+  valuePropCanvasMode = false,
 }: InfiniteCanvasProps) {
   const pathname = usePathname();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string[]>([]);
@@ -149,7 +151,7 @@ export default function InfiniteCanvas({
   // const [connections, setConnections] = useState<Connection[]>([]);
 
   const [connectingMousePos, setConnectingMousePos] = useState<Position | null>(
-    null
+    null,
   );
 
   const guides = useSmartGuidesStore((s) => s.guides);
@@ -203,7 +205,7 @@ export default function InfiniteCanvas({
     connectingMousePos,
     shapes,
     scale,
-    connecting?.fromShapeId ?? null
+    connecting?.fromShapeId ?? null,
   );
 
   useEffect(() => {
@@ -335,11 +337,11 @@ export default function InfiniteCanvas({
             .filter(
               (shape) =>
                 shape.type.includes("example") ||
-                shape.subtype?.includes("example")
+                shape.subtype?.includes("example"),
             )
             .map((s) => s.id);
           setShowDeleteConfirm(
-            selectedShapeIds.filter((id) => !exampleShapeIds.includes(id))
+            selectedShapeIds.filter((id) => !exampleShapeIds.includes(id)),
           );
           return;
         }
@@ -451,7 +453,7 @@ export default function InfiniteCanvas({
   const handleConnectorMouseDown = (
     e: React.MouseEvent,
     shapeId: string,
-    direction: "top" | "right" | "bottom" | "left"
+    direction: "top" | "right" | "bottom" | "left",
   ) => {
     e.preventDefault();
     if (!editable) return;
@@ -751,11 +753,11 @@ export default function InfiniteCanvas({
   // plug your real uploader here (S3/Supabase/UploadThing/etc.)
   async function uploadToStorage(
     file: File,
-    onProgress: (p: number) => void
+    onProgress: (p: number) => void,
   ): Promise<{ url: string }> {
     // Example pattern using an API route that returns { uploadUrl, fileUrl }
     const resp = await fetch(
-      `/api/upload-url?filename=${encodeURIComponent(file.name)}`
+      `/api/upload-url?filename=${encodeURIComponent(file.name)}`,
     );
     if (!resp.ok) throw new Error("Failed to get upload URL");
     const { uploadUrl, fileUrl } = await resp.json();
@@ -773,7 +775,7 @@ export default function InfiniteCanvas({
       xhr.onerror = () => reject(new Error("Network error"));
       xhr.setRequestHeader(
         "Content-Type",
-        file.type || "application/octet-stream"
+        file.type || "application/octet-stream",
       );
       xhr.send(file);
     });
@@ -793,7 +795,7 @@ export default function InfiniteCanvas({
     e: React.DragEvent | React.MouseEvent,
     canvasEl: HTMLDivElement,
     position: { x: number; y: number },
-    scale: number
+    scale: number,
   ) {
     const rect = canvasEl.getBoundingClientRect();
     const x = (e.clientX - rect.left - position.x) / scale;
@@ -987,21 +989,23 @@ export default function InfiniteCanvas({
 
   return (
     <div className="w-full h-full overflow-hidden bg-[#EFF0F4] relative flex">
-      <div className="absolute top-4 right-4 z-20 flex flex-row gap-6 bg-black p-2 rounded-md text-white">
-        <div className="flex items-center gap-3 ">
-          <Checkbox
-            id="example"
-            checked={examples}
-            onCheckedChange={() => setExamples(!examples)}
-            className={
-              "data-[state=checked]:bg-white data-[state=checked]:text-black"
-            }
-          />
-          <Label htmlFor="example">Examples</Label>
+      {!valuePropCanvasMode && (
+        <div className="absolute top-4 right-4 z-20 flex flex-row gap-6 bg-black p-2 rounded-md text-white">
+          <div className="flex items-center gap-3 ">
+            <Checkbox
+              id="example"
+              checked={examples}
+              onCheckedChange={() => setExamples(!examples)}
+              className={
+                "data-[state=checked]:bg-white data-[state=checked]:text-black"
+              }
+            />
+            <Label htmlFor="example">Examples</Label>
+          </div>
         </div>
-      </div>
+      )}
 
-      {isValuePropCanvas && (
+      {isValuePropCanvas && !valuePropCanvasMode && (
         <div className="absolute top-4 left-4 z-20 flex flex-row gap-6 bg-black p-2 rounded-md text-white">
           <div className="flex items-center gap-3 ">
             <Checkbox
@@ -1041,16 +1045,16 @@ export default function InfiniteCanvas({
         </div>
       )}
 
-      {editable && (
+      {editable && !valuePropCanvasMode && (
         <div className="absolute bottom-4 right-4 z-20">
           <Comments />
         </div>
       )}
 
       <div className="absolute bottom-4 right-35 z-20">
-        {isAnalysisCanvas && <HelperAnalysis />}
-        {isQuestionsCanvas && <HelperQuestions />}
-        {isValuePropCanvas && <HelperValueProp />}
+        {isAnalysisCanvas && !valuePropCanvasMode && <HelperAnalysis />}
+        {isQuestionsCanvas && !valuePropCanvasMode && <HelperQuestions />}
+        {isValuePropCanvas && !valuePropCanvasMode && <HelperValueProp />}
       </div>
 
       <AlertDialog
@@ -1444,7 +1448,7 @@ export default function InfiniteCanvas({
               if (isValuePropCanvas) {
                 if (!problems) {
                   const toShape = shapes.find(
-                    (s) => s.id === endpoint.connection.toShapeId
+                    (s) => s.id === endpoint.connection.toShapeId,
                   );
 
                   if (
@@ -1459,7 +1463,7 @@ export default function InfiniteCanvas({
 
                 if (!solutions) {
                   const toShape = shapes.find(
-                    (s) => s.id === endpoint.connection.toShapeId
+                    (s) => s.id === endpoint.connection.toShapeId,
                   );
 
                   if (
@@ -1516,7 +1520,7 @@ export default function InfiniteCanvas({
                     onSelect={editable ? selectConnection : undefined}
                   />
                 );
-              }
+              },
             )}
 
           {shapes
@@ -1633,7 +1637,7 @@ export default function InfiniteCanvas({
                   zIndex: 250,
                 }}
               />
-            )
+            ),
           )}
         </div>
       </div>
@@ -1661,7 +1665,7 @@ function computePreviewOrthogonalPoints(
   tx: number,
   ty: number,
   fromSide?: Side,
-  toSide?: Side
+  toSide?: Side,
 ): { x: number; y: number }[] {
   const pts: { x: number; y: number }[] = [];
   pts.push({ x: fx, y: fy });
@@ -1775,7 +1779,7 @@ export const CurvedArrow: React.FC<CurvedArrowProps> = ({
     tx1,
     ty1,
     fromSide,
-    toSide
+    toSide,
   );
 
   const d =
@@ -1790,7 +1794,7 @@ export const CurvedArrow: React.FC<CurvedArrowProps> = ({
   // Unique marker id per instance so previews don't conflict
   const markerId = useMemo(
     () => `arrowhead-preview-${Math.random().toString(36).slice(2)}`,
-    []
+    [],
   );
 
   return (

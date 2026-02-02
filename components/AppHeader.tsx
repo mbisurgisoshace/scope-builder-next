@@ -26,6 +26,8 @@ export default function AppHeader() {
     if (pathname.includes("/ecosystem-map")) title = "Ecosystem Map";
     if (pathname.includes("/idea-brainstorm")) title = "Idea Brainstorm";
     if (pathname.includes("/value-proposition")) title = "Value Proposition";
+    if (pathname.includes("/value-proposition-canvas"))
+      title = "Value Proposition Canvas";
     if (pathname.includes("/customer-discovery")) title = "Customer Discovery";
     if (pathname.includes("/common-vocabulary")) title = "Common Vocabulary";
     if (pathname.includes("/examples/laptop"))
