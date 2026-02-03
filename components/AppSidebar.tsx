@@ -68,6 +68,10 @@ const data = {
           title: "Ecosystem Map",
           url: "/ecosystem-map",
         },
+        {
+          title: "Hypotheses",
+          url: "/hypotheses",
+        },
       ],
     },
     {
