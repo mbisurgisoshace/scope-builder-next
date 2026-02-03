@@ -154,7 +154,7 @@ export default function HypothesesCard({ hypotheses }: HypothesesCardProps) {
               </div>
 
               {!hypotheses.questions.some(
-                (question) => question.answers.length > 0,
+                (question) => question.responses.length > 0,
               ) && (
                 <span className="text-[#697288] text-xs font-semibold">
                   No responses yet
@@ -162,7 +162,7 @@ export default function HypothesesCard({ hypotheses }: HypothesesCardProps) {
               )}
 
               {hypotheses.questions.some(
-                (question) => question.answers.length > 0,
+                (question) => question.responses.length > 0,
               ) && (
                 <span
                   className="text-[#6A35FF] text-xs font-semibold cursor-pointer"
@@ -186,22 +186,22 @@ export default function HypothesesCard({ hypotheses }: HypothesesCardProps) {
                 <div className="flex flex-row items-center gap-2 text-[#6E6588]">
                   <MessageCircleIcon size={18} />
                   <span className="font-semibold text-xs w-1.5">
-                    {question.answers.length}
+                    {question.responses.length}
                   </span>
                 </div>
               </div>
 
               {showResponses &&
-                question.answers.map((answer) => (
+                question.responses.map((response) => (
                   <div
-                    key={answer.id}
+                    key={response.id}
                     className="bg-[#F3F0FD] rounded-[5px] py-2.5 px-6 flex flex-row justify-between items-center"
                   >
                     <span className="text-sm font-medium text-[#111827]">
-                      {answer.content}
+                      {response.content}
                     </span>
                     <span className="text-xs font-semibold text-[#6E6588]">
-                      {answer.interviewee}
+                      {response.interviewee}
                     </span>
                   </div>
                 ))}

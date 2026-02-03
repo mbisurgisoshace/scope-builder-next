@@ -29,7 +29,7 @@ export default function HypothesesPage() {
               id: "q1",
               title:
                 "When you read an article before taking a quiz, how do you usually read it?",
-              answers: [
+              responses: [
                 {
                   id: "a1",
                   content: "From beginning to end carefully",
@@ -46,13 +46,13 @@ export default function HypothesesPage() {
               id: "q2",
               title:
                 "At what point do you typically stop reading an article (if you don’t finish it)?",
-              answers: [],
+              responses: [],
             },
             {
               id: "q3",
               title:
                 "What usually causes you to stop reading an article before the end?",
-              answers: [],
+              responses: [],
             },
           ],
           interviews: [
@@ -77,19 +77,19 @@ export default function HypothesesPage() {
               id: "q1",
               title:
                 "When you read an article before taking a quiz, how do you usually read it?",
-              answers: [],
+              responses: [],
             },
             {
               id: "q2",
               title:
                 "At what point do you typically stop reading an article (if you don’t finish it)?",
-              answers: [],
+              responses: [],
             },
             {
               id: "q3",
               title:
                 "What usually causes you to stop reading an article before the end?",
-              answers: [],
+              responses: [],
             },
           ],
           interviews: [
