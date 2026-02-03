@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import {
-  CircleCheckIcon,
+  MicIcon,
+  FlameIcon,
   CircleXIcon,
   EllipsisIcon,
-  FlameIcon,
   HourglassIcon,
+  CircleCheckIcon,
   MessageCircleIcon,
-  MicIcon,
 } from "lucide-react";
+import { useState } from "react";
 
 import {
   DropdownMenu,
@@ -17,7 +17,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
-type Answer = {
+/*
+  Hypotheses Table
+    id
+    type
+    title
+    priority
+    description
+    conclusion_status
+    conclusion_content
+
+  InterviewResponses Table
+    id
+    question_id
+    participant_id
+    response_content
+    attachments
+
+  Questions Tables
+    id
+    hypothesis_id
+    title
+*/
+
+type Response = {
   id: string;
   content: string;
   interviewee: string;
@@ -26,7 +49,7 @@ type Answer = {
 type Question = {
   id: string;
   title: string;
-  answers: Answer[];
+  responses: Response[];
 };
 
 type Hypotheses = {

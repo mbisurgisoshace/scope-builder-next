@@ -6,6 +6,7 @@ export default function HypothesesPage() {
       <HypothesesCard
         hypotheses={{
           id: "1",
+          priority: 0,
           description: "Test",
           title:
             "Users don’t read articles entirely and this leads to bad quiz results",
