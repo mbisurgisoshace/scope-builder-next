@@ -36,7 +36,7 @@ enum ParticipantStatus {
 }
 
 model Participant {
-  id                     String            @id @default(uuid())
+  id                     String              @id @default(uuid())
   name                   String
   org_id                 String
   role                   String?
@@ -46,10 +46,11 @@ model Participant {
   blocking_issues        String?
   hypothesis_to_validate String?
   learnings              String?
-  status                 ParticipantStatus @default(need_to_schedule)
+  status                 ParticipantStatus   @default(need_to_schedule)
   scheduled_date         DateTime?
-  created_at             DateTime          @default(now())
+  created_at             DateTime            @default(now())
   ParticipantRoom        ParticipantRoom?
+  interview_responses    InterviewResponse[]
 
   @@map("participants")
 }
@@ -262,4 +263,51 @@ model TopicProgress {
   @@unique([org_id, task_id])
   @@unique([org_id, topic_id])
   @@map("topic_progress")
+}
+
+model Hypothesis {
+  id                 Int     @id @default(autoincrement())
+  title              String
+  type               String?
+  description        String?
+  priority           Int     @default(0)
+  conclusion_status  String  @default("Testing")
+  conclusion_content String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  questions Question[]
+
+  @@map("hypotheses")
+}
+
+model Question {
+  id            Int    @id @default(autoincrement())
+  title         String
+  hypothesis_id Int
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  hypothesis          Hypothesis          @relation(fields: [hypothesis_id], references: [id], onDelete: Cascade)
+  interview_responses InterviewResponse[]
+
+  @@map("questions")
+}
+
+model InterviewResponse {
+  id               Int      @id @default(autoincrement())
+  question_id      Int
+  participant_id   String
+  response_content String
+  attachment_urls  String[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  question    Question    @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  participant Participant @relation(fields: [participant_id], references: [id], onDelete: Cascade)
+
+  @@map("interview_responses")
 }
