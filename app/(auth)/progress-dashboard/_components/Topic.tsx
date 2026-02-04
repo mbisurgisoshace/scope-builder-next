@@ -28,16 +28,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { markTopicAsCompleted } from "@/services/topics";
 
 type Topic = {
   id: number;
   name: string;
+  type: string;
   isDone: boolean;
-  description: string;
-  group_tasks: { id: number; type: string; completed: boolean }[];
-  concept_tasks: { id: number; type: string; completed: boolean }[];
-  startup_tasks: { id: number; type: string; completed: boolean }[];
-  excercises_tasks: { id: number; type: string; completed: boolean }[];
+  deadline: string;
+  description: string | null;
+  concept_tasks: { id: number; subtype: string; completed: boolean }[];
+  startup_tasks: { id: number; subtype: string; completed: boolean }[];
+  excercises_tasks: { id: number; subtype: string; completed: boolean }[];
 };
 
 interface TopicProps {
@@ -48,7 +50,8 @@ export default function Topic({ topic }: TopicProps) {
   const [isOpen, setIsOpen] = useState(!topic.isDone);
   const [topicState, setTopicState] = useState<Topic>(topic);
 
-  const markAsCompleted = () => {
+  const markAsCompleted = async () => {
+    await markTopicAsCompleted(topic.id);
     setTopicState({ ...topicState, isDone: true });
   };
 
@@ -59,8 +62,8 @@ export default function Topic({ topic }: TopicProps) {
   }, [topicState.isDone]);
 
   return (
-    <div key={topic.id} className="grid grid-cols-5 pr-4">
-      <div className="col-span-1 flex flex-row items-center ">
+    <div key={topic.id} className="grid grid-cols-7 pr-4">
+      <div className="col-span-2 flex flex-row items-center ">
         <div className="h-full flex flex-col items-center justify-center">
           <div
             onClick={() => setIsOpen(!isOpen)}
@@ -84,9 +87,14 @@ export default function Topic({ topic }: TopicProps) {
         </div>
         <div className="h-full flex flex-col gap-4 px-3.5 w-full">
           <div className="flex flex-row items-center justify-between">
-            <Badge
-              className={`${topicState.isDone ? "bg-[#E4F5E9] text-[#247C30]" : "bg-[#F4F0FF] text-[#6A35FF]"}`}
-            >{`Topic # ${topicState.id}`}</Badge>
+            <div className="flex flex-row gap-2">
+              <Badge
+                className={`${topicState.isDone ? "bg-[#E4F5E9] text-[#247C30]" : "bg-[#F4F0FF] text-[#6A35FF]"}`}
+              >{`${topicState.type}`}</Badge>
+              <Badge
+                className={`${topicState.isDone ? "bg-[#E4F5E9] text-[#247C30]" : "bg-[#F4F0FF] text-[#6A35FF]"}`}
+              >{`${topicState.deadline}`}</Badge>
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 {/* <Button variant="ghost" size="icon"> */}
@@ -121,12 +129,12 @@ export default function Topic({ topic }: TopicProps) {
       </div>
 
       {isOpen && (
-        <div className="grid grid-cols-4 col-span-4  font-semibold border border-gray-400 rounded-[10px] mb-[30px]">
+        <div className="grid grid-cols-3 col-span-5  font-semibold border border-gray-400 rounded-[10px] mb-[30px]">
           <div className="border-r border-gray-400 p-4 h-[172px] grid grid-cols-4 gap-2 content-start">
             {topicState.concept_tasks.map((task) => (
               <TaskItem
                 key={task.id}
-                type={task.type}
+                type={task.subtype}
                 completed={task.completed}
               />
             ))}
@@ -135,7 +143,7 @@ export default function Topic({ topic }: TopicProps) {
             {topicState.excercises_tasks.map((task) => (
               <TaskItem
                 key={task.id}
-                type={task.type}
+                type={task.subtype}
                 completed={task.completed}
               />
             ))}
@@ -144,16 +152,7 @@ export default function Topic({ topic }: TopicProps) {
             {topicState.startup_tasks.map((task) => (
               <TaskItem
                 key={task.id}
-                type={task.type}
-                completed={task.completed}
-              />
-            ))}
-          </div>
-          <div className="p-4 h-[172px] grid grid-cols-4 gap-8">
-            {topicState.group_tasks.map((task) => (
-              <TaskItem
-                key={task.id}
-                type={task.type}
+                type={task.subtype}
                 completed={task.completed}
               />
             ))}
