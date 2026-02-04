@@ -9,6 +9,8 @@ import {
   HourglassIcon,
   CircleCheckIcon,
   MessageCircleIcon,
+  XIcon,
+  CheckIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -38,7 +40,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { hypothesisFormSchema } from "@/schemas/hypothesis";
-import { createHypothesisQuestion } from "@/services/hypothesis";
+import {
+  createHypothesisQuestion,
+  updateHypothesisTitle,
+} from "@/services/hypothesis";
 
 /*
   Hypotheses Table
@@ -93,7 +98,9 @@ interface HypothesesCardProps {
 
 export default function HypothesesCard({ hypothesis }: HypothesesCardProps) {
   const [open, setOpen] = useState(false);
+  const [showEditTitle, setShowEditTitle] = useState(false);
   const [showResponses, setShowResponses] = useState(false);
+  const [editableTitle, setEditableTitle] = useState(hypothesis.title);
 
   const form = useForm<z.infer<typeof hypothesisFormSchema>>({
     resolver: zodResolver(hypothesisFormSchema),
@@ -154,7 +161,37 @@ export default function HypothesesCard({ hypothesis }: HypothesesCardProps) {
     <div className="bg-white rounded-2xl px-10 py-8 grid grid-cols-3 gap-10">
       <div className="w-full col-span-2 border-r border-r-[#E4E5ED] pr-10">
         <h3 className="text-lg font-semibold w-full flex justify-between items-center mb-5">
-          {hypothesis.title}
+          {showEditTitle ? (
+            <div className="flex flex-row items-center justify-between gap-2">
+              <Input
+                className="w-60"
+                value={editableTitle}
+                onChange={(e) => setEditableTitle(e.target.value)}
+              />
+              <div className="flex flex-row gap-2 items-center">
+                <CheckIcon
+                  size={18}
+                  className="text-[#247C30] cursor-pointer"
+                  onClick={async () => {
+                    await updateHypothesisTitle(hypothesis.id, editableTitle);
+                    setShowEditTitle(false);
+                  }}
+                />
+                <XIcon
+                  size={18}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setShowEditTitle(false);
+                    setEditableTitle(hypothesis.title);
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <span onDoubleClick={() => setShowEditTitle(true)}>
+              {hypothesis.title}
+            </span>
+          )}
           <Sheet open={open} onOpenChange={setOpen}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

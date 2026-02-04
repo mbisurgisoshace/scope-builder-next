@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma";
+import { orderBy } from "lodash";
+import { id } from "date-fns/locale";
 
 export type HypothesisWithQuestions = Prisma.HypothesisGetPayload<{
   include: { questions: true };
@@ -19,6 +21,7 @@ export async function getHypothesis() {
   if (!orgId) redirect("/pick-startup");
 
   const hypotheses = await prisma.hypothesis.findMany({
+    orderBy: { id: "asc" },
     include: { questions: true },
   });
 
@@ -36,6 +39,24 @@ export async function createHypothesis() {
     data: {
       title: "New Hypothesis",
     },
+  });
+
+  revalidatePath("/hypotheses");
+}
+
+export async function updateHypothesisTitle(
+  hypothesisId: number,
+  title: string,
+) {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) redirect("/pick-startup");
+
+  const hypothesis = await prisma.hypothesis.update({
+    where: { id: hypothesisId },
+    data: { title },
   });
 
   revalidatePath("/hypotheses");
