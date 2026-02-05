@@ -6,8 +6,6 @@ import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma";
-import { orderBy } from "lodash";
-import { id } from "date-fns/locale";
 
 export type HypothesisWithQuestions = Prisma.HypothesisGetPayload<{
   include: { questions: true };
