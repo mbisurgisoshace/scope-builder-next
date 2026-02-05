@@ -36,66 +36,81 @@ import CollapsibleSidebar from "./MainSidebar";
 const data = {
   subMain: [
     {
-      name: "Todo's",
-      url: "/",
+      name: "Leaderboard",
+      url: "/teams-dashboard",
       //icon: Frame,
     },
     {
-      name: "Progress",
+      name: "My Progress",
       //url: "/teams-dashboard",
       url: "/progress-dashboard",
       //icon: Frame,
     },
     {
-      name: "Idea Brainstorm",
+      name: "Brainstorm",
       url: "/idea-brainstorm",
+      //icon: PieChart,
+    },
+    {
+      name: "Value Prop Canvas",
+      url: "/value-proposition-canvas",
+      //icon: PieChart,
+    },
+    {
+      name: "Hypothesis",
+      url: "/hypotheses",
+      //icon: PieChart,
+    },
+    {
+      name: "Participants & Interviews",
+      url: "/participants",
       //icon: PieChart,
     },
   ],
   navMain: [
-    {
-      title: "Hypothesize",
-      items: [
-        {
-          title: "Segments",
-          url: "/segments",
-        },
-        {
-          title: "Value Proposition",
-          url: "/value-proposition",
-        },
-        {
-          title: "Ecosystem Map",
-          url: "/ecosystem-map",
-        },
-        {
-          title: "Hypotheses",
-          url: "/hypotheses",
-        },
-      ],
-    },
-    {
-      title: "Validate",
-      items: [
-        {
-          title: "Questions",
-          url: "/questions",
-          isActive: true,
-        },
-        {
-          title: "Participants",
-          url: "/participants",
-        },
-        // {
-        //   title: "Interviews",
-        //   url: "/interviews",
-        // },
-        {
-          title: "Analysis",
-          url: "/analysis",
-        },
-      ],
-    },
+    // {
+    //   title: "Hypothesize",
+    //   items: [
+    //     {
+    //       title: "Segments",
+    //       url: "/segments",
+    //     },
+    //     {
+    //       title: "Value Proposition",
+    //       url: "/value-proposition",
+    //     },
+    //     {
+    //       title: "Ecosystem Map",
+    //       url: "/ecosystem-map",
+    //     },
+    //     {
+    //       title: "Hypotheses",
+    //       url: "/hypotheses",
+    //     },
+    //   ],
+    // },
+    // {
+    //   title: "Validate",
+    //   items: [
+    //     {
+    //       title: "Questions",
+    //       url: "/questions",
+    //       isActive: true,
+    //     },
+    //     {
+    //       title: "Participants",
+    //       url: "/participants",
+    //     },
+    //     // {
+    //     //   title: "Interviews",
+    //     //   url: "/interviews",
+    //     // },
+    //     {
+    //       title: "Analysis",
+    //       url: "/analysis",
+    //     },
+    //   ],
+    // },
     {
       title: "Resources",
       items: [
@@ -113,36 +128,36 @@ const data = {
         },
       ],
     },
-    {
-      title: "Excercises",
-      items: [
-        {
-          title: "Excercise 1",
-          url: "/excercises/excercise-1",
-        },
-        {
-          title: "Excercise 2",
-          url: "/excercises/excercise-2",
-        },
-      ],
-    },
-    {
-      title: "Examples",
-      items: [
-        {
-          title: "Pickup Truck",
-          url: "/examples/pickup-truck",
-        },
-        {
-          title: "Laptop",
-          url: "/examples/laptop",
-        },
-        {
-          title: "Ecosystem Maps",
-          url: "/examples/ecosystem-maps",
-        },
-      ],
-    },
+    // {
+    //   title: "Excercises",
+    //   items: [
+    //     {
+    //       title: "Excercise 1",
+    //       url: "/excercises/excercise-1",
+    //     },
+    //     {
+    //       title: "Excercise 2",
+    //       url: "/excercises/excercise-2",
+    //     },
+    //   ],
+    // },
+    // {
+    //   title: "Examples",
+    //   items: [
+    //     {
+    //       title: "Pickup Truck",
+    //       url: "/examples/pickup-truck",
+    //     },
+    //     {
+    //       title: "Laptop",
+    //       url: "/examples/laptop",
+    //     },
+    //     {
+    //       title: "Ecosystem Maps",
+    //       url: "/examples/ecosystem-maps",
+    //     },
+    //   ],
+    // },
     // {
     //   title: "Needs",
     //   url: "/needs",

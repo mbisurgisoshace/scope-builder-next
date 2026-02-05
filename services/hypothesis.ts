@@ -19,6 +19,22 @@ export async function getHypothesis() {
   if (!orgId) redirect("/pick-startup");
 
   const hypotheses = await prisma.hypothesis.findMany({
+    where: {
+      org_id: orgId,
+    },
+    orderBy: { id: "asc" },
+    include: { questions: true },
+  });
+
+  return hypotheses;
+}
+
+export async function getAllHypothesis() {
+  const { userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  const hypotheses = await prisma.hypothesis.findMany({
     orderBy: { id: "asc" },
     include: { questions: true },
   });
@@ -35,6 +51,7 @@ export async function createHypothesis() {
 
   const hypotheses = await prisma.hypothesis.create({
     data: {
+      org_id: orgId,
       title: "New Hypothesis",
     },
   });
@@ -44,7 +61,7 @@ export async function createHypothesis() {
 
 export async function updateHypothesisTitle(
   hypothesisId: number,
-  title: string,
+  title: string
 ) {
   const { orgId, userId } = await auth();
 
@@ -62,7 +79,7 @@ export async function updateHypothesisTitle(
 
 export async function createHypothesisQuestion(
   hypothesisId: number,
-  title: string,
+  title: string
 ) {
   const { orgId, userId } = await auth();
 
@@ -93,6 +110,21 @@ export async function getInterviewResponses() {
         org_id: orgId,
       },
     },
+    include: {
+      question: true,
+      participant: true,
+    },
+  });
+
+  return responses;
+}
+
+export async function getAllInterviewResponses() {
+  const { userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  const responses = await prisma.interviewResponse.findMany({
     include: {
       question: true,
       participant: true,

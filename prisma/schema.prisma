@@ -267,6 +267,7 @@ model TopicProgress {
 
 model Hypothesis {
   id                 Int     @id @default(autoincrement())
+  org_id             String  @default("")
   title              String
   type               String?
   description        String?
