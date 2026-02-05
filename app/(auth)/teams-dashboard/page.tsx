@@ -29,11 +29,23 @@ export default async function TeamsDashboardPage() {
     };
   };
 
-  const getHypothesisData = () => {
+  const getHypothesisData = (orgId: string) => {
+    const orgHypotheses = hypothesis.filter((h) => h.org_id === orgId);
+
+    const testingHypotheses = orgHypotheses.filter(
+      (h) => h.conclusion_status === "Testing"
+    ).length;
+    const validatedHypotheses = orgHypotheses.filter(
+      (h) => h.conclusion_status === "Validated"
+    ).length;
+    const invalidatedHypotheses = orgHypotheses.filter(
+      (h) => h.conclusion_status === "Invalidated"
+    ).length;
+
     return {
-      testing: 1,
-      validated: 1,
-      invalidated: 0,
+      testing: testingHypotheses,
+      validated: validatedHypotheses,
+      invalidated: invalidatedHypotheses,
     };
   };
 
@@ -41,11 +53,9 @@ export default async function TeamsDashboardPage() {
     orgId: org.id,
     orgName: org.name,
     interviews: getInterviewsData(org.id),
-    hypothesisStatus: getHypothesisData(),
+    hypothesisStatus: getHypothesisData(org.id),
     hypothesis: hypothesis.filter((h) => h.org_id === org.id).length,
   }));
-
-  console.log("dashboardData", dashboardData);
 
   return (
     <div className="p-8 h-full bg-white">
