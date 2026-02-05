@@ -81,3 +81,25 @@ export async function createHypothesisQuestion(
 
   revalidatePath("/hypotheses");
 }
+
+export async function getInterviewResponses() {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) redirect("/pick-startup");
+
+  const responses = await prisma.interviewResponse.findMany({
+    where: {
+      participant: {
+        org_id: orgId,
+      },
+    },
+    include: {
+      question: true,
+      participant: true,
+    },
+  });
+
+  return responses;
+}

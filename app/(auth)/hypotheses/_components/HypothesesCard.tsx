@@ -69,9 +69,11 @@ import {
 */
 
 type Response = {
-  id: string;
+  id: number;
   content: string;
+  questionId: number;
   interviewee: string;
+  hypothesysId: number;
 };
 
 type Question = {
@@ -258,7 +260,9 @@ export default function HypothesesCard({ hypothesis }: HypothesesCardProps) {
           <div className="mb-9">
             <div className="flex flex-row items-center justify-between">
               <div className="flex flex-row items-center gap-0.5">
-                <MicIcon className="text-[#697288] mr-3" size={24} />
+                {hypothesis.interviews.length > 0 && (
+                  <MicIcon className="text-[#697288] mr-3" size={24} />
+                )}
                 {hypothesis.interviews.map((interview, index) => {
                   return (
                     <div key={index}>
