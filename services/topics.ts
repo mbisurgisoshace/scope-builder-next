@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma";
-import { topicFormSchema } from "@/schemas/topic";
+import { topicFormSchema, topicTaskFormSchema } from "@/schemas/topic";
 import z from "zod";
 
 export type TopicWithTasks = Prisma.TopicGetPayload<{
@@ -49,6 +49,24 @@ export async function createTopic(values: z.infer<typeof topicFormSchema>) {
   if (!orgId) redirect("/pick-startup");
 
   await prisma.topic.create({
+    data: {
+      ...values,
+    },
+  });
+
+  revalidatePath("/admin-panel");
+}
+
+export async function createTopicTask(
+  values: z.infer<typeof topicTaskFormSchema>,
+) {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) redirect("/pick-startup");
+
+  await prisma.topicTask.create({
     data: {
       ...values,
     },

@@ -7,3 +7,10 @@ export const topicFormSchema = z.object({
   deadline: z.string().min(1, "Deadline is required."),
   order: z.number().min(0, "Order must be a positive number."),
 });
+
+export const topicTaskFormSchema = z.object({
+  topic_id: z.number().min(1, "Topic is required."),
+  type: z.string().min(1, "Type is required."),
+  subtype: z.string().min(1, "Subtype is required."),
+  order: z.number().min(0, "Order must be a positive number."),
+});

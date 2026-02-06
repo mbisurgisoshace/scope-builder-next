@@ -98,7 +98,13 @@ export default function TopicsTable({ data }: { data: Topic[] }) {
     <div>
       <h3 className="w-full flex justify-between items-center font-semibold text-2xl text-[#111827] mb-5">
         Topics
-        <Sheet open={open} onOpenChange={setOpen}>
+        <Sheet
+          open={open}
+          onOpenChange={(open) => {
+            setOpen(open);
+            form.reset();
+          }}
+        >
           <SheetTrigger asChild>
             <Button className="cursor-pointer ">Add Topic</Button>
           </SheetTrigger>

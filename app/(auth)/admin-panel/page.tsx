@@ -14,7 +14,7 @@ export default async function AdminPanelPage() {
   return (
     <div className="p-8 h-full flex flex-col gap-3">
       <TopicsTable data={topics} />
-      <TopicTasksTable data={topicTasksWithTopicName} />
+      <TopicTasksTable data={topicTasksWithTopicName} topics={topics} />
     </div>
   );
 }
