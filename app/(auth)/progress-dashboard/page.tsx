@@ -24,54 +24,6 @@ TopicProgress Table
   completed
 */
 
-// const TOPICS = [
-//   {
-//     id: 1,
-//     name: "Topic #1",
-//     description:
-//       "Lorem ipsum dolor sit amet, consectetur adipiscing elit, seddo eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-//     concept_tasks: [
-//       { id: 1, type: "youtube", completed: false },
-//       { id: 2, type: "youtube", completed: false },
-//       { id: 3, type: "youtube", completed: true },
-//       { id: 4, type: "lecture", completed: true },
-//       { id: 5, type: "article", completed: false },
-//     ],
-//     excercises_tasks: [
-//       { id: 1, type: "youtube", completed: false },
-//       { id: 2, type: "comment", completed: false },
-//     ],
-//     startup_tasks: [{ id: 1, type: "youtube", completed: false }],
-//     group_tasks: [{ id: 1, type: "youtube", completed: false }],
-//     isDone: false,
-//   },
-//   {
-//     id: 2,
-//     name: "Topic #2",
-//     description:
-//       "Lorem ipsum dolor sit amet, consectetur adipiscing elit, seddo eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-//     concept_tasks: [
-//       { id: 1, type: "youtube", completed: false },
-//       { id: 2, type: "youtube", completed: false },
-//     ],
-//     excercises_tasks: [{ id: 1, type: "youtube", completed: false }],
-//     startup_tasks: [],
-//     group_tasks: [{ id: 1, type: "youtube", completed: false }],
-//     isDone: false,
-//   },
-//   {
-//     id: 3,
-//     name: "Topic #3",
-//     description:
-//       "Lorem ipsum dolor sit amet, consectetur adipiscing elit, seddo eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-//     concept_tasks: [],
-//     excercises_tasks: [],
-//     startup_tasks: [],
-//     group_tasks: [{ id: 1, type: "youtube", completed: false }],
-//     isDone: false,
-//   },
-// ];
-
 export default async function ProgressDashboardPage() {
   const topics = await getTopics();
   const topicProgress = await getTopicProgress();

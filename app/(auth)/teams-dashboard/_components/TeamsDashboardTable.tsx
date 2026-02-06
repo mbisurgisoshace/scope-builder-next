@@ -18,19 +18,19 @@ import {
 import { StarIcon } from "lucide-react";
 
 const columns: ColumnDef<any>[] = [
-  {
-    id: "favorite",
-    header: ({ table }) => (
-      <div>
-        <StarIcon size={20} />
-      </div>
-    ),
-    cell: ({ row }) => (
-      <div>
-        <StarIcon size={20} />
-      </div>
-    ),
-  },
+  // {
+  //   id: "favorite",
+  //   header: ({ table }) => (
+  //     <div>
+  //       <StarIcon size={20} />
+  //     </div>
+  //   ),
+  //   cell: ({ row }) => (
+  //     <div>
+  //       <StarIcon size={20} />
+  //     </div>
+  //   ),
+  // },
   {
     id: "orgName",
     header: "Team",
@@ -160,7 +160,7 @@ export default function TeamsDashboardTable({ data }: { data: any[] }) {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 );
