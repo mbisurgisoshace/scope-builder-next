@@ -37,6 +37,7 @@ export default function AppHeader() {
     if (pathname.includes("/examples/ecosystem-maps"))
       title = "Ecosystem Map Examples";
     if (pathname.includes("/hypotheses")) title = "Hypotheses";
+    if (pathname.includes("/admin-panel")) title = "Admin Panel";
 
     if (pathname.includes("/participants/")) {
       const participantId = pathname.split("/participants/")[1];

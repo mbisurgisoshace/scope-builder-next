@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma";
+import { topicFormSchema } from "@/schemas/topic";
+import z from "zod";
 
 export type TopicWithTasks = Prisma.TopicGetPayload<{
   include: { topic_tasks: true; topic_progresses: true };
@@ -23,6 +25,36 @@ export async function getTopics() {
   });
 
   return topics;
+}
+
+export async function getTopicTasks() {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) redirect("/pick-startup");
+
+  const topicTasks = await prisma.topicTask.findMany({
+    include: { topic: true },
+  });
+
+  return topicTasks;
+}
+
+export async function createTopic(values: z.infer<typeof topicFormSchema>) {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) redirect("/pick-startup");
+
+  await prisma.topic.create({
+    data: {
+      ...values,
+    },
+  });
+
+  revalidatePath("/admin-panel");
 }
 
 export async function getTopicProgress() {
