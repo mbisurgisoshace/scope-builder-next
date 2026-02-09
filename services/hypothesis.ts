@@ -114,6 +114,26 @@ export async function updateHypothesisType(hypothesisId: number, type: string) {
   revalidatePath("/hypotheses");
 }
 
+export async function updateHypothesisConclusion(
+  hypothesisId: number,
+  conclusion: string,
+) {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) redirect("/pick-startup");
+
+  const question = await prisma.hypothesis.update({
+    where: { id: hypothesisId },
+    data: {
+      conclusion_content: conclusion,
+    },
+  });
+
+  revalidatePath("/hypotheses");
+}
+
 export async function getInterviewResponses() {
   const { orgId, userId } = await auth();
 

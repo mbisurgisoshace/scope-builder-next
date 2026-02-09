@@ -42,6 +42,7 @@ import { Button } from "@/components/ui/button";
 import { hypothesisFormSchema } from "@/schemas/hypothesis";
 import {
   createHypothesisQuestion,
+  updateHypothesisConclusion,
   updateHypothesisTitle,
   updateHypothesisType,
 } from "@/services/hypothesis";
@@ -53,6 +54,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 /*
   Hypotheses Table
@@ -112,8 +114,12 @@ export default function HypothesesCard({ hypothesis }: HypothesesCardProps) {
   const [openType, setOpenType] = useState(false);
   const [showEditTitle, setShowEditTitle] = useState(false);
   const [showResponses, setShowResponses] = useState(false);
+  const [openConclusion, setOpenConclusion] = useState(false);
   const [editableTitle, setEditableTitle] = useState(hypothesis.title);
   const [type, setType] = useState(hypothesis.conclusion_status || "");
+  const [conclusionContent, setConclusionContent] = useState(
+    hypothesis.conclusion_content || "",
+  );
 
   const form = useForm<z.infer<typeof hypothesisFormSchema>>({
     resolver: zodResolver(hypothesisFormSchema),
@@ -175,6 +181,11 @@ export default function HypothesesCard({ hypothesis }: HypothesesCardProps) {
     setOpenType(false);
   }
 
+  async function onUpdateConclusion() {
+    await updateHypothesisConclusion(hypothesis.id, conclusionContent);
+    setOpenConclusion(false);
+  }
+
   return (
     <div className="bg-white rounded-2xl px-10 py-8 grid grid-cols-3 gap-10">
       <div className="w-full col-span-2 border-r border-r-[#E4E5ED] pr-10">
@@ -226,6 +237,11 @@ export default function HypothesesCard({ hypothesis }: HypothesesCardProps) {
               <DropdownMenuItem onClick={() => setOpenType(true)}>
                 {/* <SheetTrigger className="w-full text-left"> */}
                 Update Hypothesis Type
+                {/* </SheetTrigger> */}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setOpenConclusion(true)}>
+                {/* <SheetTrigger className="w-full text-left"> */}
+                Update Conclusion
                 {/* </SheetTrigger> */}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -347,6 +363,44 @@ export default function HypothesesCard({ hypothesis }: HypothesesCardProps) {
                     <Button
                       type="button"
                       onClick={onUpdateType}
+                      className="bg-[#162A4F] cursor-pointer ml-auto"
+                    >
+                      Update
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          <Sheet
+            open={openConclusion}
+            onOpenChange={(open) => {
+              setOpenConclusion(open);
+              setType(hypothesis.conclusion_content || "");
+            }}
+          >
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle className="text-[26px] font-medium text-[#162A4F]">
+                  Update conclusion
+                </SheetTitle>
+              </SheetHeader>
+              <div className="h-full flex flex-col gap-8 overflow-auto">
+                <div className="space-y-8 p-4">
+                  <div className="flex flex-col gap-2">
+                    <Label>Conclusion</Label>
+
+                    <Textarea
+                      value={conclusionContent}
+                      onChange={(e) => setConclusionContent(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex ">
+                    <Button
+                      type="button"
+                      onClick={onUpdateConclusion}
                       className="bg-[#162A4F] cursor-pointer ml-auto"
                     >
                       Update
