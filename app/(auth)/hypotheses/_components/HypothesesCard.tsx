@@ -43,7 +43,16 @@ import { hypothesisFormSchema } from "@/schemas/hypothesis";
 import {
   createHypothesisQuestion,
   updateHypothesisTitle,
+  updateHypothesisType,
 } from "@/services/hypothesis";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 /*
   Hypotheses Table
@@ -100,9 +109,11 @@ interface HypothesesCardProps {
 
 export default function HypothesesCard({ hypothesis }: HypothesesCardProps) {
   const [open, setOpen] = useState(false);
+  const [openType, setOpenType] = useState(false);
   const [showEditTitle, setShowEditTitle] = useState(false);
   const [showResponses, setShowResponses] = useState(false);
   const [editableTitle, setEditableTitle] = useState(hypothesis.title);
+  const [type, setType] = useState(hypothesis.conclusion_status || "");
 
   const form = useForm<z.infer<typeof hypothesisFormSchema>>({
     resolver: zodResolver(hypothesisFormSchema),
@@ -159,6 +170,11 @@ export default function HypothesesCard({ hypothesis }: HypothesesCardProps) {
     form.reset();
   }
 
+  async function onUpdateType() {
+    await updateHypothesisType(hypothesis.id, type);
+    setOpenType(false);
+  }
+
   return (
     <div className="bg-white rounded-2xl px-10 py-8 grid grid-cols-3 gap-10">
       <div className="w-full col-span-2 border-r border-r-[#E4E5ED] pr-10">
@@ -194,21 +210,68 @@ export default function HypothesesCard({ hypothesis }: HypothesesCardProps) {
               {hypothesis.title}
             </span>
           )}
+          {/* <Sheet open={open} onOpenChange={setOpen}> */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <EllipsisIcon />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => setOpen(true)}>
+                {/* <SheetTrigger className="w-full text-left"> */}
+                Create Question
+                {/* </SheetTrigger> */}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setOpenType(true)}>
+                {/* <SheetTrigger className="w-full text-left"> */}
+                Update Hypothesis Type
+                {/* </SheetTrigger> */}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {/* <SheetContent>
+              <SheetHeader>
+                <SheetTitle className="text-[26px] font-medium text-[#162A4F]">
+                  Create a new question
+                </SheetTitle>
+              </SheetHeader>
+              <div className="h-full flex flex-col gap-8 overflow-auto">
+                <Form {...form}>
+                  <form
+                    onSubmit={form.handleSubmit(onSubmit)}
+                    className="space-y-8 p-4"
+                  >
+                    <FormField
+                      control={form.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Title</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex ">
+                      <Button
+                        type="submit"
+                        className="bg-[#162A4F] cursor-pointer ml-auto"
+                      >
+                        Create
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </div>
+            </SheetContent> */}
+          {/* </Sheet> */}
+
           <Sheet open={open} onOpenChange={setOpen}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <EllipsisIcon />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem>
-                  <SheetTrigger className="w-full text-left">
-                    Create Question
-                  </SheetTrigger>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
             <SheetContent>
               <SheetHeader>
                 <SheetTitle className="text-[26px] font-medium text-[#162A4F]">
@@ -246,6 +309,50 @@ export default function HypothesesCard({ hypothesis }: HypothesesCardProps) {
                     </div>
                   </form>
                 </Form>
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          <Sheet
+            open={openType}
+            onOpenChange={(open) => {
+              setOpenType(open);
+              setType(hypothesis.conclusion_status || "");
+            }}
+          >
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle className="text-[26px] font-medium text-[#162A4F]">
+                  Update type
+                </SheetTitle>
+              </SheetHeader>
+              <div className="h-full flex flex-col gap-8 overflow-auto">
+                <div className="space-y-8 p-4">
+                  <div className="flex flex-col gap-2">
+                    <Label>Type</Label>
+
+                    <Select value={type} onValueChange={setType}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Testing">Testing</SelectItem>
+                        <SelectItem value="Validated">Validated</SelectItem>
+                        <SelectItem value="Invalidated">Invalidated</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex ">
+                    <Button
+                      type="button"
+                      onClick={onUpdateType}
+                      className="bg-[#162A4F] cursor-pointer ml-auto"
+                    >
+                      Update
+                    </Button>
+                  </div>
+                </div>
               </div>
             </SheetContent>
           </Sheet>
