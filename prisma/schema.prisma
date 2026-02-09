@@ -310,6 +310,7 @@ model InterviewResponse {
   question    Question    @relation(fields: [question_id], references: [id], onDelete: Cascade)
   participant Participant @relation(fields: [participant_id], references: [id], onDelete: Cascade)
 
+  @@unique([question_id, participant_id])
   @@map("interview_responses")
 }
 

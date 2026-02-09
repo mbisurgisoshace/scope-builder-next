@@ -61,7 +61,7 @@ export async function createHypothesis() {
 
 export async function updateHypothesisTitle(
   hypothesisId: number,
-  title: string
+  title: string,
 ) {
   const { orgId, userId } = await auth();
 
@@ -79,7 +79,7 @@ export async function updateHypothesisTitle(
 
 export async function createHypothesisQuestion(
   hypothesisId: number,
-  title: string
+  title: string,
 ) {
   const { orgId, userId } = await auth();
 
@@ -119,6 +119,26 @@ export async function getInterviewResponses() {
   return responses;
 }
 
+export async function getParticipantInterviewResponses(participantId: string) {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) redirect("/pick-startup");
+
+  const responses = await prisma.interviewResponse.findMany({
+    where: {
+      participant_id: participantId,
+    },
+    include: {
+      question: true,
+      participant: true,
+    },
+  });
+
+  return responses;
+}
+
 export async function getAllInterviewResponses() {
   const { userId } = await auth();
 
@@ -132,4 +152,35 @@ export async function getAllInterviewResponses() {
   });
 
   return responses;
+}
+
+export async function upsertInterviewResponse(
+  questionId: number,
+  participantId: string,
+  responseContent: string,
+) {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) redirect("/pick-startup");
+
+  const response = await prisma.interviewResponse.upsert({
+    where: {
+      question_id_participant_id: {
+        question_id: questionId,
+        participant_id: participantId,
+      },
+    },
+    update: {
+      response_content: responseContent,
+    },
+    create: {
+      question_id: questionId,
+      participant_id: participantId,
+      response_content: responseContent,
+    },
+  });
+
+  revalidatePath(`/participants/${participantId}/interview`);
 }
