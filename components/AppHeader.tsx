@@ -39,8 +39,13 @@ export default function AppHeader() {
     if (pathname.includes("/hypotheses")) title = "Hypotheses";
     if (pathname.includes("/admin-panel")) title = "Admin Panel";
 
-    if (pathname.includes("/participants/")) {
-      const participantId = pathname.split("/participants/")[1];
+    if (
+      pathname.includes("/participants/") ||
+      pathname.includes("/interview")
+    ) {
+      const path = pathname.split("/");
+
+      const participantId = pathname.includes("/interview") ? path[2] : path[1];
       const participant = await getParticipant(participantId);
 
       setHeader(
