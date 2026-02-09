@@ -312,3 +312,13 @@ model InterviewResponse {
 
   @@map("interview_responses")
 }
+
+model KanbanBoardCategory {
+  id        Int      @id @default(autoincrement())
+  room_id   String
+  name      String
+  order     Int      @default(0)
+  shape_ids String[]
+
+  @@map("kanban_board_categories")
+}
