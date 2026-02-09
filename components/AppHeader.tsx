@@ -5,6 +5,7 @@ import { UserButton, useUser } from "@clerk/nextjs";
 import { getParticipant } from "@/services/participants";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import Notes from "./Notes";
 
 export default function AppHeader() {
   const { user } = useUser();
@@ -73,6 +74,7 @@ export default function AppHeader() {
         <span className="text-xs font-bold text-[#111827]">
           {user?.fullName || user?.primaryEmailAddress?.emailAddress}
         </span>
+        <Notes />
       </div>
     </header>
   );

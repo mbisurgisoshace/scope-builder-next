@@ -323,3 +323,19 @@ model KanbanBoardCategory {
 
   @@map("kanban_board_categories")
 }
+
+model Note {
+  id                 Int      @id @default(autoincrement())
+  org_id             String
+  content            String
+  user_id            String
+  author_name        String
+  author_email       String
+  share_with_startup Boolean  @default(false)
+  attachment_urls    String[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("notes")
+}
