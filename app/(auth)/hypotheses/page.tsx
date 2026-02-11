@@ -35,6 +35,47 @@ export default async function HypothesesPage() {
     conclusion_status: hypothesis.conclusion_status,
   }));
 
+  const hypothesesExampleData = [
+    {
+      id: 1,
+      title: "This is an example hypothesis",
+      priority: 1,
+      description:
+        "This is an example description for the hypothesis. It should give more details about the hypothesis and what it entails.",
+      interviews: ["John Doe", "Jane Smith"],
+      questions: [
+        {
+          id: 1,
+          title: "What do you think about this hypothesis?",
+          responses: [
+            {
+              id: 1,
+              questionId: 1,
+              content: "I think it's a great hypothesis!",
+              interviewee: "John Doe",
+              hypothesysId: 1,
+            },
+          ],
+        },
+      ],
+      conclusion_content:
+        "This is an example conclusion for the hypothesis. It should summarize the findings from the interviews and whether the hypothesis was validated or not.",
+      conclusion_status: "Validated",
+    },
+    {
+      id: 2,
+      title: "This is an another example hypothesis",
+      priority: 0,
+      description:
+        "This is an example description for the hypothesis. It should give more details about the hypothesis and what it entails.",
+      interviews: ["John Doe", "Jane Smith"],
+      questions: [],
+      conclusion_content:
+        "This is an example conclusion for the hypothesis. It should summarize the findings from the interviews and whether the hypothesis was validated or not.",
+      conclusion_status: "Testing",
+    },
+  ];
+
   return (
     <div className="flex flex-col p-4 gap-4 ">
       <Tabs defaultValue="hypothesis" className="h-full">
@@ -52,7 +93,15 @@ export default async function HypothesesPage() {
         </TabsContent>
 
         <TabsContent value="examples" className="h-full flex flex-col gap-4">
-          Example
+          <div className="flex flex-col gap-4">
+            {hypothesesExampleData.map((hypothesis) => (
+              <HypothesesCard
+                example
+                key={hypothesis.id}
+                hypothesis={hypothesis}
+              />
+            ))}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

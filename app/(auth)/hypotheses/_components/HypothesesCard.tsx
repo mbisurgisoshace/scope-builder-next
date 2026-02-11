@@ -106,10 +106,14 @@ type Hypotheses = {
 };
 
 interface HypothesesCardProps {
+  example?: boolean;
   hypothesis: Hypotheses;
 }
 
-export default function HypothesesCard({ hypothesis }: HypothesesCardProps) {
+export default function HypothesesCard({
+  example,
+  hypothesis,
+}: HypothesesCardProps) {
   const [open, setOpen] = useState(false);
   const [openType, setOpenType] = useState(false);
   const [showEditTitle, setShowEditTitle] = useState(false);
@@ -228,64 +232,26 @@ export default function HypothesesCard({ hypothesis }: HypothesesCardProps) {
                 <EllipsisIcon />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setOpen(true)}>
-                {/* <SheetTrigger className="w-full text-left"> */}
-                Create Question
-                {/* </SheetTrigger> */}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setOpenType(true)}>
-                {/* <SheetTrigger className="w-full text-left"> */}
-                Update Hypothesis Type
-                {/* </SheetTrigger> */}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setOpenConclusion(true)}>
-                {/* <SheetTrigger className="w-full text-left"> */}
-                Update Conclusion
-                {/* </SheetTrigger> */}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
+            {!example && (
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => setOpen(true)}>
+                  {/* <SheetTrigger className="w-full text-left"> */}
+                  Create Question
+                  {/* </SheetTrigger> */}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setOpenType(true)}>
+                  {/* <SheetTrigger className="w-full text-left"> */}
+                  Update Hypothesis Type
+                  {/* </SheetTrigger> */}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setOpenConclusion(true)}>
+                  {/* <SheetTrigger className="w-full text-left"> */}
+                  Update Conclusion
+                  {/* </SheetTrigger> */}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            )}
           </DropdownMenu>
-          {/* <SheetContent>
-              <SheetHeader>
-                <SheetTitle className="text-[26px] font-medium text-[#162A4F]">
-                  Create a new question
-                </SheetTitle>
-              </SheetHeader>
-              <div className="h-full flex flex-col gap-8 overflow-auto">
-                <Form {...form}>
-                  <form
-                    onSubmit={form.handleSubmit(onSubmit)}
-                    className="space-y-8 p-4"
-                  >
-                    <FormField
-                      control={form.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Title</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="flex ">
-                      <Button
-                        type="submit"
-                        className="bg-[#162A4F] cursor-pointer ml-auto"
-                      >
-                        Create
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </div>
-            </SheetContent> */}
-          {/* </Sheet> */}
 
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetContent>
