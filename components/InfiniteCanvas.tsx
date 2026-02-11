@@ -496,7 +496,7 @@ export default function InfiniteCanvas({
     clientY: number,
     canvasEl: HTMLDivElement,
     position: { x: number; y: number },
-    scale: number
+    scale: number,
   ) {
     const rect = canvasEl.getBoundingClientRect();
     const x = (clientX - rect.left - position.x) / scale;
@@ -784,7 +784,7 @@ export default function InfiniteCanvas({
   };
 
   const handleCanvasPointerDownCapture = (
-    e: React.PointerEvent<HTMLDivElement>
+    e: React.PointerEvent<HTMLDivElement>,
   ) => {
     if (!editable) return;
     if (e.button !== 0) return; // left click only
@@ -805,7 +805,7 @@ export default function InfiniteCanvas({
       e.clientY,
       canvasRef.current,
       position,
-      scale
+      scale,
     );
 
     e.preventDefault();
@@ -1134,7 +1134,7 @@ export default function InfiniteCanvas({
 
   return (
     <div className="w-full h-full overflow-hidden bg-[#EFF0F4] relative flex">
-      {!valuePropCanvasMode && (
+      {/* {!valuePropCanvasMode && (
         <div className="absolute top-4 right-4 z-20 flex flex-row gap-6 bg-black p-2 rounded-md text-white">
           <div className="flex items-center gap-3 ">
             <Checkbox
@@ -1148,7 +1148,7 @@ export default function InfiniteCanvas({
             <Label htmlFor="example">Examples</Label>
           </div>
         </div>
-      )}
+      )} */}
 
       {isValuePropCanvas && !valuePropCanvasMode && (
         <div className="absolute top-4 left-4 z-20 flex flex-row gap-6 bg-black p-2 rounded-md text-white">

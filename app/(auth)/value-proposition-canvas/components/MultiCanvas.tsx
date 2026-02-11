@@ -16,7 +16,13 @@ const VIEW_OPTIONS = [
   "Products & Services",
 ];
 
-export default function MultiCanvas({ orgId }: { orgId?: string | null }) {
+export default function MultiCanvas({
+  orgId,
+  example,
+}: {
+  orgId?: string | null;
+  example?: boolean;
+}) {
   const [shownCanvases, setShownCanvases] = useState<string[]>(VIEW_OPTIONS);
 
   const shownCount = shownCanvases.length;
@@ -62,7 +68,9 @@ export default function MultiCanvas({ orgId }: { orgId?: string | null }) {
         {shownCanvases.includes("Gains") && (
           <div className="border-2 relative">
             <Badge className="absolute z-50 top-1 left-1">Gains</Badge>
-            <Room roomId={`value-proposition-gains-${orgId}`}>
+            <Room
+              roomId={`value-proposition-gains-${orgId}${example ? "-example" : ""}`}
+            >
               <InfiniteCanvas
                 toolbarOptions={{
                   text: false,
@@ -76,6 +84,7 @@ export default function MultiCanvas({ orgId }: { orgId?: string | null }) {
                   interview: false,
                 }}
                 valuePropCanvasMode
+                editable={!example}
               />
             </Room>
           </div>
@@ -84,7 +93,9 @@ export default function MultiCanvas({ orgId }: { orgId?: string | null }) {
         {shownCanvases.includes("Pains") && (
           <div className="border-2 relative">
             <Badge className="absolute z-50 top-1 left-1">Pains</Badge>
-            <Room roomId={`value-proposition-pains-${orgId}`}>
+            <Room
+              roomId={`value-proposition-pains-${orgId}${example ? "-example" : ""}`}
+            >
               <InfiniteCanvas
                 toolbarOptions={{
                   text: false,
@@ -106,7 +117,9 @@ export default function MultiCanvas({ orgId }: { orgId?: string | null }) {
         {shownCanvases.includes("Customer Jobs") && (
           <div className="border-2 relative">
             <Badge className="absolute z-50 top-1 left-1">Customer Jobs</Badge>
-            <Room roomId={`value-proposition-customer-jobs-${orgId}`}>
+            <Room
+              roomId={`value-proposition-customer-jobs-${orgId}${example ? "-example" : ""}`}
+            >
               <InfiniteCanvas
                 toolbarOptions={{
                   text: false,
@@ -128,7 +141,9 @@ export default function MultiCanvas({ orgId }: { orgId?: string | null }) {
         {shownCanvases.includes("Gain Creators") && (
           <div className="border-2 relative">
             <Badge className="absolute z-50 top-1 left-1">Gain Creators</Badge>
-            <Room roomId={`value-proposition-gain-creators-${orgId}`}>
+            <Room
+              roomId={`value-proposition-gain-creators-${orgId}${example ? "-example" : ""}`}
+            >
               <InfiniteCanvas
                 toolbarOptions={{
                   text: false,
@@ -150,7 +165,9 @@ export default function MultiCanvas({ orgId }: { orgId?: string | null }) {
         {shownCanvases.includes("Pain Relievers") && (
           <div className="border-2 relative">
             <Badge className="absolute z-50 top-1 left-1">Pain Relievers</Badge>
-            <Room roomId={`value-proposition-pain-relievers-${orgId}`}>
+            <Room
+              roomId={`value-proposition-pain-relievers-${orgId}${example ? "-example" : ""}`}
+            >
               <InfiniteCanvas
                 toolbarOptions={{
                   text: false,
@@ -174,7 +191,9 @@ export default function MultiCanvas({ orgId }: { orgId?: string | null }) {
             <Badge className="absolute z-50 top-1 left-1">
               Products & Services
             </Badge>
-            <Room roomId={`value-proposition-products-services-${orgId}`}>
+            <Room
+              roomId={`value-proposition-products-services-${orgId}${example ? "-example" : ""}`}
+            >
               <InfiniteCanvas
                 toolbarOptions={{
                   text: false,
