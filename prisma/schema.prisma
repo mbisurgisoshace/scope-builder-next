@@ -325,14 +325,14 @@ model KanbanBoardCategory {
 }
 
 model Note {
-  id                 Int      @id @default(autoincrement())
+  id                 Int     @id @default(autoincrement())
   org_id             String
   content            String
   user_id            String
   author_name        String
   author_email       String
-  share_with_startup Boolean  @default(false)
-  attachment_urls    String[]
+  share_with_startup Boolean @default(false)
+  attachments        Json[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt

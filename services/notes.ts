@@ -24,7 +24,11 @@ export async function getNotes() {
   return notes;
 }
 
-export async function createNote(content: string, shareWithStartup: boolean) {
+export async function createNote(
+  content: string,
+  shareWithStartup: boolean,
+  attachments: any[],
+) {
   const { orgId, userId } = await auth();
 
   if (!userId) redirect("/sign-in");
@@ -41,6 +45,7 @@ export async function createNote(content: string, shareWithStartup: boolean) {
       author_name: user?.fullName || "Unknown",
       author_email: user?.emailAddresses[0]?.emailAddress || "",
       share_with_startup: shareWithStartup,
+      attachments,
     },
   });
 
