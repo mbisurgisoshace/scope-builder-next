@@ -115,3 +115,30 @@ export async function markTopicAsCompleted(topicId: number) {
 
   revalidatePath("/progress-dashboard");
 }
+
+export async function markTaskAsCompleted(taskId: number) {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) redirect("/pick-startup");
+
+  await prisma.topicProgress.upsert({
+    where: {
+      org_id_task_id: {
+        org_id: orgId,
+        task_id: taskId,
+      },
+    },
+    create: {
+      org_id: orgId,
+      task_id: taskId,
+      completed: true,
+    },
+    update: {
+      completed: true,
+    },
+  });
+
+  revalidatePath("/progress-dashboard");
+}

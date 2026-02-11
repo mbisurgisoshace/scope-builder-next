@@ -28,7 +28,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { markTopicAsCompleted } from "@/services/topics";
+import { markTaskAsCompleted, markTopicAsCompleted } from "@/services/topics";
+import { Button } from "@/components/ui/button";
 
 type Topic = {
   id: number;
@@ -53,6 +54,22 @@ export default function Topic({ topic }: TopicProps) {
   const markAsCompleted = async () => {
     await markTopicAsCompleted(topic.id);
     setTopicState({ ...topicState, isDone: true });
+  };
+
+  const completeTask = async (taskId: number) => {
+    await markTaskAsCompleted(taskId);
+    setTopicState({
+      ...topicState,
+      concept_tasks: topicState.concept_tasks.map((t) =>
+        t.id === taskId ? { ...t, completed: true } : t,
+      ),
+      excercises_tasks: topicState.excercises_tasks.map((t) =>
+        t.id === taskId ? { ...t, completed: true } : t,
+      ),
+      startup_tasks: topicState.startup_tasks.map((t) =>
+        t.id === taskId ? { ...t, completed: true } : t,
+      ),
+    });
   };
 
   useEffect(() => {
@@ -136,6 +153,7 @@ export default function Topic({ topic }: TopicProps) {
                 key={task.id}
                 type={task.subtype}
                 completed={task.completed}
+                onComplete={() => completeTask(task.id)}
               />
             ))}
           </div>
@@ -145,6 +163,7 @@ export default function Topic({ topic }: TopicProps) {
                 key={task.id}
                 type={task.subtype}
                 completed={task.completed}
+                onComplete={() => completeTask(task.id)}
               />
             ))}
           </div>
@@ -154,6 +173,7 @@ export default function Topic({ topic }: TopicProps) {
                 key={task.id}
                 type={task.subtype}
                 completed={task.completed}
+                onComplete={() => completeTask(task.id)}
               />
             ))}
           </div>
@@ -168,13 +188,16 @@ export default function Topic({ topic }: TopicProps) {
 const TaskItem = ({
   type,
   completed,
+  onComplete,
 }: {
   type: string;
   completed: boolean;
+  onComplete: () => Promise<void>;
 }) => {
   if (type === "youtube")
     return (
       <ProgressItem
+        isCompleted={completed}
         triggerEl={
           <div
             className={`size-10 border ${completed ? "bg-[#28BF58] text-[#FFFFFF] border-[#28BF58]" : "bg-[#EDF6F0] text-[#8F84AE] border-gray-400"} flex items-center justify-center rounded-[8px] `}
@@ -182,6 +205,7 @@ const TaskItem = ({
             <YoutubeIcon size={20} />
           </div>
         }
+        onComplete={onComplete}
       >
         <div>
           <YouTubeEmbed
@@ -206,43 +230,73 @@ const TaskItem = ({
 
   if (type === "lecture")
     return (
-      <div
-        className={`size-10 ${completed ? "bg-[#28BF58] text-[#FFFFFF]" : "bg-[#EDF6F0] text-[#8F84AE]"} flex items-center justify-center rounded-[8px] `}
+      <ProgressItem
+        isCompleted={completed}
+        triggerEl={
+          <div
+            className={`size-10 ${completed ? "bg-[#28BF58] text-[#FFFFFF]" : "bg-[#EDF6F0] text-[#8F84AE]"} flex items-center justify-center rounded-[8px] `}
+          >
+            <BookOpenIcon size={20} />
+          </div>
+        }
+        onComplete={onComplete}
       >
-        <BookOpenIcon size={20} />
-      </div>
+        <div>Lecture</div>
+      </ProgressItem>
     );
 
   if (type === "article")
     return (
-      <div
-        className={`size-10 border ${completed ? "bg-[#28BF58] text-[#FFFFFF] border-[#28BF58]" : "bg-[#EDF6F0] text-[#8F84AE] border-gray-400"} flex items-center justify-center rounded-[8px] `}
+      <ProgressItem
+        isCompleted={completed}
+        triggerEl={
+          <div
+            className={`size-10 border ${completed ? "bg-[#28BF58] text-[#FFFFFF] border-[#28BF58]" : "bg-[#EDF6F0] text-[#8F84AE] border-gray-400"} flex items-center justify-center rounded-[8px] `}
+          >
+            <FileTextIcon size={20} />
+          </div>
+        }
+        onComplete={onComplete}
       >
-        <FileTextIcon size={20} />
-      </div>
+        <div>This is the content for the article modal</div>
+      </ProgressItem>
     );
 
   if (type === "comment")
     return (
-      <div
-        className={`size-10 border ${completed ? "bg-[#28BF58] text-[#FFFFFF] border-[#28BF58]" : "bg-[#EDF6F0] text-[#8F84AE] border-gray-400"} flex items-center justify-center rounded-[8px] `}
+      <ProgressItem
+        isCompleted={completed}
+        triggerEl={
+          <div
+            className={`size-10 border ${completed ? "bg-[#28BF58] text-[#FFFFFF] border-[#28BF58]" : "bg-[#EDF6F0] text-[#8F84AE] border-gray-400"} flex items-center justify-center rounded-[8px] `}
+          >
+            <MessageSquareMoreIcon size={20} />
+          </div>
+        }
+        onComplete={onComplete}
       >
-        <MessageSquareMoreIcon size={20} />
-      </div>
+        <div>Comment</div>
+      </ProgressItem>
     );
 
   return null;
 };
 
 const ProgressItem = ({
-  triggerEl,
   children,
+  triggerEl,
+  onComplete,
+  isCompleted,
 }: {
-  triggerEl: React.ReactNode;
+  isCompleted: boolean;
   children: React.ReactNode;
+  triggerEl: React.ReactNode;
+  onComplete: () => Promise<void>;
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger className="cursor-pointer" asChild>
         {triggerEl}
       </DialogTrigger>
@@ -251,6 +305,17 @@ const ProgressItem = ({
           <DialogTitle>Details</DialogTitle>
         </DialogHeader>
         {children}
+        {!isCompleted && (
+          <Button
+            size={"sm"}
+            onClick={async () => {
+              await onComplete();
+              setIsOpen(false);
+            }}
+          >
+            Mark as Completed
+          </Button>
+        )}
       </DialogContent>
     </Dialog>
   );

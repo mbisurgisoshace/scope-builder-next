@@ -72,6 +72,8 @@ export default async function ProgressDashboardPage() {
     };
   });
 
+  console.log("topicWithProgress", JSON.stringify(topicWithProgress));
+
   return (
     <div className="p-8 h-full bg-[#F0F1F5] flex justify-center">
       <div className="flex flex-col gap-5 max-w-[1182px] h-full">

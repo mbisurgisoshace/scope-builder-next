@@ -39,32 +39,38 @@ const data = {
       name: "Leaderboard",
       url: "/teams-dashboard",
       //icon: Frame,
+      conditionalMenu: true,
     },
     {
       name: "My Progress",
       //url: "/teams-dashboard",
       url: "/progress-dashboard",
       //icon: Frame,
+      conditionalMenu: false,
     },
     {
       name: "Brainstorm",
       url: "/idea-brainstorm",
       //icon: PieChart,
+      conditionalMenu: true,
     },
     {
       name: "Value Prop Canvas",
       url: "/value-proposition-canvas",
       //icon: PieChart,
+      conditionalMenu: true,
     },
     {
       name: "Hypothesis",
       url: "/hypotheses",
       //icon: PieChart,
+      conditionalMenu: true,
     },
     {
       name: "Participants & Interviews",
       url: "/participants",
       //icon: PieChart,
+      conditionalMenu: true,
     },
   ],
   navMain: [
@@ -187,6 +193,11 @@ export function AppSidebar({
   const { user } = useUser();
   const { organization } = useOrganization();
 
+  const showAllPages = process.env.NEXT_PUBLIC_SHOW_ALL_PAGES === "true";
+
+  console.log("showAllPages", showAllPages);
+  console.log("isAdminOrMentor", isAdminOrMentor);
+
   return (
     <Sidebar className="bg-white" {...props}>
       <SidebarHeader className="bg-white p-3 flex gap-4">
@@ -257,7 +268,14 @@ export function AppSidebar({
       <SidebarContent className="p-3 bg-white border-t flex justify-between">
         <div>
           <SecondarySidebar
-            items={data.subMain}
+            items={data.subMain.filter((item) => {
+              if (showAllPages) return true;
+
+              if (!showAllPages && item.conditionalMenu && !isAdminOrMentor)
+                return false;
+
+              return true;
+            })}
             isAdminOrMentor={isAdminOrMentor}
           />
           <CollapsibleSidebar items={data.navMain} />
