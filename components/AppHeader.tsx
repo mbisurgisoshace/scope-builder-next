@@ -15,7 +15,7 @@ export default function AppHeader() {
   const renderTitle = async (pathname: string) => {
     let title = "";
 
-    if (pathname === "/") title = "To-do's";
+    if (pathname === "/") title = "My Progress";
     if (pathname === "/startups") title = "Startups";
     if (pathname.includes("/analysis")) title = "Interview Response Analysis";
     if (pathname.includes("/questions")) title = "Interview Questions";
@@ -23,7 +23,7 @@ export default function AppHeader() {
     if (pathname.includes("/segments"))
       title = "Market/Customer/End-User Segments";
     if (pathname.includes("/progress")) title = "Progress snapshot";
-    if (pathname.includes("/progress-dashboard")) title = "Progress";
+    if (pathname.includes("/progress-dashboard")) title = "My Progress";
     if (pathname.includes("/ecosystem-map")) title = "Ecosystem Map";
     if (pathname.includes("/idea-brainstorm")) title = "Idea Brainstorm";
     if (pathname.includes("/value-proposition")) title = "Value Proposition";
@@ -39,6 +39,7 @@ export default function AppHeader() {
       title = "Ecosystem Map Examples";
     if (pathname.includes("/hypotheses")) title = "Hypotheses";
     if (pathname.includes("/admin-panel")) title = "Admin Panel";
+    if (pathname.includes("/todos")) title = "Tasks & Todos";
 
     if (
       pathname.includes("/participants/") ||
