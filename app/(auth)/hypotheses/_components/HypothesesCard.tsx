@@ -93,9 +93,10 @@ type Question = {
   responses: Response[];
 };
 
-type Hypotheses = {
+export type Hypotheses = {
   id: number;
   title: string;
+  order: number;
   priority: number;
   interviews: string[];
   type?: string | null;

@@ -2,6 +2,7 @@ import { getHypothesis, getInterviewResponses } from "@/services/hypothesis";
 import HypothesesCard from "./_components/HypothesesCard";
 import CreateHypothesisButton from "./_components/CreateHypothesisButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import HypothesesList from "./_components/HypothesesList";
 
 export default async function HypothesesPage() {
   const hypotheses = await getHypothesis();
@@ -19,6 +20,7 @@ export default async function HypothesesPage() {
     id: hypothesis.id,
     type: hypothesis.type,
     title: hypothesis.title,
+    order: hypothesis.order,
     priority: hypothesis.priority,
     description: hypothesis.description,
     interviews: interviewResponsesData
@@ -38,6 +40,7 @@ export default async function HypothesesPage() {
   const hypothesesExampleData = [
     {
       id: 1,
+      order: 0,
       title: "This is an example hypothesis",
       priority: 1,
       description:
@@ -64,6 +67,7 @@ export default async function HypothesesPage() {
     },
     {
       id: 2,
+      order: 1,
       title: "This is an another example hypothesis",
       priority: 0,
       description:
@@ -76,6 +80,11 @@ export default async function HypothesesPage() {
     },
   ];
 
+  const getMaxOrder = () => {
+    if (hypothesesData.length === 0) return 0;
+    return Math.max(...hypothesesData.map((hypothesis) => hypothesis.order));
+  };
+
   return (
     <div className="flex flex-col p-4 gap-4 ">
       <Tabs defaultValue="hypothesis" className="h-full">
@@ -84,12 +93,13 @@ export default async function HypothesesPage() {
           <TabsTrigger value="examples">Examples</TabsTrigger>
         </TabsList>
         <TabsContent value="hypothesis" className="h-full flex flex-col gap-4">
-          <CreateHypothesisButton />
-          <div className="flex flex-col gap-4">
+          <CreateHypothesisButton maxOrder={getMaxOrder()} />
+          {/* <div className="flex flex-col gap-4">
             {hypothesesData.map((hypothesis) => (
               <HypothesesCard key={hypothesis.id} hypothesis={hypothesis} />
             ))}
-          </div>
+          </div> */}
+          <HypothesesList hypotheses={hypothesesData} />
         </TabsContent>
 
         <TabsContent value="examples" className="h-full flex flex-col gap-4">

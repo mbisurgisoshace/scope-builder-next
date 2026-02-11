@@ -28,10 +28,6 @@ export default async function InterviewPage({
     })),
   }));
 
-  console.log("participantResponses", participantResponses);
-
-  console.log("formattedHypotheses", formattedHypotheses);
-
   return (
     <div className="flex flex-col h-full">
       <div className="h-full">

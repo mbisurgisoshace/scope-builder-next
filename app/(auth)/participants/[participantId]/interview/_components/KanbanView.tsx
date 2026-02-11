@@ -23,7 +23,7 @@ export default function KanbanView({
   participantId,
 }: KanbanViewProps) {
   return (
-    <div className="p-8 h-full flex flex-row gap-4">
+    <div className="p-8 h-full flex flex-row gap-4 overflow-x-scroll">
       {hypotheses.map((hypothesis) => (
         <KanbanViewItem
           key={hypothesis.id}

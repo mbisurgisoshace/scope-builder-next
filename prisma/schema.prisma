@@ -272,6 +272,7 @@ model Hypothesis {
   type               String?
   description        String?
   priority           Int     @default(0)
+  order              Int     @default(0)
   conclusion_status  String  @default("Testing")
   conclusion_content String?
 

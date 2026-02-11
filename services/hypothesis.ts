@@ -22,7 +22,7 @@ export async function getHypothesis() {
     where: {
       org_id: orgId,
     },
-    orderBy: { id: "asc" },
+    orderBy: { order: "asc" },
     include: { questions: true },
   });
 
@@ -42,7 +42,7 @@ export async function getAllHypothesis() {
   return hypotheses;
 }
 
-export async function createHypothesis() {
+export async function createHypothesis(nextOrder: number) {
   const { orgId, userId } = await auth();
 
   if (!userId) redirect("/sign-in");
@@ -52,6 +52,7 @@ export async function createHypothesis() {
   const hypotheses = await prisma.hypothesis.create({
     data: {
       org_id: orgId,
+      order: nextOrder,
       title: "New Hypothesis",
     },
   });
@@ -130,6 +131,25 @@ export async function updateHypothesisConclusion(
       conclusion_content: conclusion,
     },
   });
+
+  revalidatePath("/hypotheses");
+}
+
+export async function updateHypothesisOrder(
+  newOrdering: { id: number; order: number }[],
+) {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) redirect("/pick-startup");
+
+  for (const { id, order } of newOrdering) {
+    await prisma.hypothesis.update({
+      where: { id },
+      data: { order },
+    });
+  }
 
   revalidatePath("/hypotheses");
 }

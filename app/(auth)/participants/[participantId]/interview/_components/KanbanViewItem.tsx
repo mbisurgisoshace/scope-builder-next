@@ -18,7 +18,7 @@ export default function KanbanViewItem({
   participantId,
 }: KanbanViewItemProps) {
   return (
-    <Card className="w-[440px]">
+    <Card className="w-[440px] min-w-[440px]">
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-[#111827]">
           {hypothesis.title}
