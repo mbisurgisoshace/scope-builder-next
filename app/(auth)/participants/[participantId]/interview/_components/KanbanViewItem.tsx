@@ -11,24 +11,23 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import {
+  Sheet,
+  SheetTitle,
+  SheetHeader,
+  SheetContent,
+} from "@/components/ui/sheet";
+import {
   DropdownMenu,
   DropdownMenuItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Hypothesis } from "./KanbanView";
-import QuestionResponse from "./QuestionResponse";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { createHypothesisQuestion } from "@/services/hypothesis";
+import { Button } from "@/components/ui/button";
+import QuestionResponse from "./QuestionResponse";
 import { Textarea } from "@/components/ui/textarea";
+import { createHypothesisQuestion } from "@/services/hypothesis";
 
 interface KanbanViewItemProps {
   participantId: string;

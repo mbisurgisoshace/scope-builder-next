@@ -3,6 +3,7 @@ import {
   getParticipantInterviewResponses,
 } from "@/services/hypothesis";
 import KanbanView from "./_components/KanbanView";
+import { Attachment } from "@/components/Notes";
 
 export default async function InterviewPage({
   params,
@@ -25,6 +26,9 @@ export default async function InterviewPage({
       interviewResponse:
         participantResponses.find((response) => response.question_id === q.id)
           ?.response_content || null,
+      attachments:
+        (participantResponses.find((response) => response.question_id === q.id)
+          ?.attachments as Attachment[]) || [],
     })),
   }));
 

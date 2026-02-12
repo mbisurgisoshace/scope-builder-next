@@ -299,11 +299,11 @@ model Question {
 }
 
 model InterviewResponse {
-  id               Int      @id @default(autoincrement())
+  id               Int    @id @default(autoincrement())
   question_id      Int
   participant_id   String
   response_content String
-  attachment_urls  String[]
+  attachments      Json[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt

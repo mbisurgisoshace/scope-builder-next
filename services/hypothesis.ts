@@ -215,6 +215,7 @@ export async function upsertInterviewResponse(
   questionId: number,
   participantId: string,
   responseContent: string,
+  attachments?: any[],
 ) {
   const { orgId, userId } = await auth();
 
@@ -231,11 +232,13 @@ export async function upsertInterviewResponse(
     },
     update: {
       response_content: responseContent,
+      attachments,
     },
     create: {
       question_id: questionId,
       participant_id: participantId,
       response_content: responseContent,
+      attachments,
     },
   });
 

@@ -28,7 +28,7 @@ import { createNote, deleteNote, getNotes, updateNote } from "@/services/notes";
 import { uploadToSupabase } from "@/lib/uploadToSupabase";
 import Link from "next/link";
 
-type Attachment = {
+export type Attachment = {
   url: string;
   name: string;
   size?: string;

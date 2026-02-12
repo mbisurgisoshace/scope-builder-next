@@ -1,9 +1,11 @@
+import { Attachment } from "@/components/Notes";
 import KanbanViewItem from "./KanbanViewItem";
 
 export type Question = {
   id: number;
   title: string;
   interviewResponse: string | null;
+  attachments: Attachment[];
 };
 
 export type Hypothesis = {
