@@ -274,7 +274,7 @@ export default function HypothesesCard({
                         <FormItem>
                           <FormLabel>Title</FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Textarea {...field} />
                           </FormControl>
 
                           <FormMessage />
