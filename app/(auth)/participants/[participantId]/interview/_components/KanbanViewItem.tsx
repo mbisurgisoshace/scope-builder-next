@@ -48,7 +48,7 @@ export default function KanbanViewItem({
   };
 
   return (
-    <Card className="w-[440px] min-w-[440px] relative">
+    <Card className="w-[440px] min-w-[440px] relative overflow-y-scroll">
       <CardHeader className="">
         <CardTitle className="text-lg font-semibold text-[#111827]">
           {hypothesis.title}

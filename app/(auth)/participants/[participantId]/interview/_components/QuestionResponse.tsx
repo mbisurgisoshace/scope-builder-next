@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState } from "react";
-import { EllipsisIcon, LoaderIcon } from "lucide-react";
+import { EllipsisIcon, FileTextIcon, LoaderIcon } from "lucide-react";
 
 import { Question } from "./KanbanView";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { uploadToSupabase } from "@/lib/uploadToSupabase";
 import { Attachment } from "@/components/Notes";
+import { cn } from "@/lib/utils";
 
 interface QuestionResponseProps {
   question: Question;
@@ -103,6 +105,35 @@ export default function QuestionResponse({
         onBlur={onUpdateResponse}
         onChange={(e) => setResponse(e.target.value)}
       />
+      {question.attachments.length > 0 && (
+        <div className="flex flex-col gap-1.5 px-2.5">
+          {question.attachments.map((attachment) => (
+            <div key={attachment.url}>
+              <Link
+                href={attachment.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  "flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors text-black no-underline bg-foreground/10",
+                  "border-primary-foreground/20 hover:bg-primary-foreground/10",
+                )}
+              >
+                <FileTextIcon className="h-4 w-4 shrink-0 opacity-70" />
+                <div className="flex flex-col min-w-0">
+                  <span className="truncate text-xs font-medium">
+                    {attachment.name}
+                  </span>
+                  {attachment.size && (
+                    <span className="text-[10px] opacity-60">
+                      {attachment.size}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            </div>
+          ))}
+        </div>
+      )}
       {isLoading && (
         <LoaderIcon
           size={16}
