@@ -286,9 +286,22 @@ const TaskItem = ({
             YouTube
           </span>
           {/* <h3 className="text-[#111827] text-sm font-semibold mb-3">{title}</h3> */}
-          <p className="text-[#697288] text-[16px] font-medium mb-1">
+          {/* <p className="text-[#697288] text-[16px] font-medium mb-1">
             {description}
-          </p>
+          </p> */}
+          <div
+            data-todo-content
+            className={`text-[14px] font-medium text-[#2E3545] break-words overflow-wrap-anywhere `}
+            dangerouslySetInnerHTML={{
+              __html: description || "",
+            }}
+            style={
+              {
+                //maxHeight: !isExpanded && needsShowMore ? "4.5rem" : "none",
+                //overflow: !isExpanded && needsShowMore ? "hidden" : "visible",
+              }
+            }
+          />
         </div>
       </ProgressItem>
     );
@@ -320,9 +333,22 @@ const TaskItem = ({
             Image
           </span>
           {/* <h3 className="text-[#111827] text-sm font-semibold mb-3">{title}</h3> */}
-          <p className="text-[#697288] text-[16px] font-medium mb-1">
+          {/* <p className="text-[#697288] text-[16px] font-medium mb-1">
             {description}
-          </p>
+          </p> */}
+          <div
+            data-todo-content
+            className={`text-[14px] font-medium text-[#2E3545] break-words overflow-wrap-anywhere `}
+            dangerouslySetInnerHTML={{
+              __html: description || "",
+            }}
+            style={
+              {
+                //maxHeight: !isExpanded && needsShowMore ? "4.5rem" : "none",
+                //overflow: !isExpanded && needsShowMore ? "hidden" : "visible",
+              }
+            }
+          />
         </div>
       </ProgressItem>
     );
@@ -350,9 +376,22 @@ const TaskItem = ({
             Video
           </span>
           {/* <h3 className="text-[#111827] text-sm font-semibold mb-3">{title}</h3> */}
-          <p className="text-[#697288] text-[16px] font-medium mb-1">
+          {/* <p className="text-[#697288] text-[16px] font-medium mb-1">
             {description}
-          </p>
+          </p> */}
+          <div
+            data-todo-content
+            className={`text-[14px] font-medium text-[#2E3545] break-words overflow-wrap-anywhere `}
+            dangerouslySetInnerHTML={{
+              __html: description || "",
+            }}
+            style={
+              {
+                //maxHeight: !isExpanded && needsShowMore ? "4.5rem" : "none",
+                //overflow: !isExpanded && needsShowMore ? "hidden" : "visible",
+              }
+            }
+          />
         </div>
       </ProgressItem>
     );
