@@ -49,6 +49,7 @@ import {
   updateHypothesisType,
   deleteHypothesis,
   updateHypothesisQuestion,
+  deleteHypothesisQuestion,
 } from "@/services/hypothesis";
 import {
   Select,
@@ -141,6 +142,7 @@ export default function HypothesesCard({
     hypothesis.conclusion_content || "",
   );
   const [type, setType] = useState(hypothesis.type || "");
+  const [openQuestionDelete, setOpenQuestionDelete] = useState(false);
   const [editableTitle, setEditableTitle] = useState(hypothesis.title);
   const [status, setStatus] = useState(hypothesis.conclusion_status || "");
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(
@@ -232,6 +234,14 @@ export default function HypothesesCard({
       setOpenQuestion(false);
       setSelectedQuestion(null);
       setEditableQuestionTitle("");
+    }
+  }
+
+  async function onDeleteQuestion() {
+    if (selectedQuestion) {
+      await deleteHypothesisQuestion(selectedQuestion.id);
+      setSelectedQuestion(null);
+      setOpenQuestionDelete(false);
     }
   }
 
@@ -530,6 +540,29 @@ export default function HypothesesCard({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          <AlertDialog
+            open={openQuestionDelete}
+            onOpenChange={setOpenQuestionDelete}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Are you sure you want to delete?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the
+                  question.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={onDeleteQuestion}>
+                  Continue
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </h3>
         {hypothesis.questions.length === 0 && (
           <span className="text-[#697288] font-semibold text-xs">
@@ -611,6 +644,15 @@ export default function HypothesesCard({
                           }}
                         >
                           Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => {
+                            setOpenQuestionDelete(true);
+                            setSelectedQuestion(question);
+                          }}
+                        >
+                          Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     )}
