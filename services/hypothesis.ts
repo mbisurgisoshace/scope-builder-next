@@ -98,6 +98,26 @@ export async function createHypothesisQuestion(
   revalidatePath("/hypotheses");
 }
 
+export async function updateHypothesisQuestion(
+  questionId: number,
+  title: string,
+) {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) redirect("/pick-startup");
+
+  const question = await prisma.question.update({
+    where: { id: questionId },
+    data: {
+      title,
+    },
+  });
+
+  revalidatePath("/hypotheses");
+}
+
 export async function updateHypothesisType(hypothesisId: number, type: string) {
   const { orgId, userId } = await auth();
 
