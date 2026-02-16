@@ -399,6 +399,12 @@ export default function HypothesesCard({
                         <SelectValue placeholder="Select a type" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="Identify which Stakeholder role">
+                          Gather information
+                        </SelectItem>
+                        <SelectItem value="Identify which Stakeholder role">
+                          Identify which Stakeholder role
+                        </SelectItem>
                         <SelectItem value="Identify which Market Segment">
                           Identify which Market Segment
                         </SelectItem>
@@ -765,7 +771,7 @@ export default function HypothesesCard({
       </div>
 
       <div className="flex flex-col gap-4">
-        <div className="flex flex-row items-center justify-between">
+        <div className="flex flex-col items-start gap-2">
           <div className="bg-[#F3F0FD] text-xs rounded-full text-[#6E6588] font-semibold px-2 py-0.5">
             {hypothesis.type || "No type"}
           </div>
