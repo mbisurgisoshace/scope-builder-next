@@ -164,11 +164,11 @@ export default function HypothesesCard({
     if (!priority) return "No priority";
     switch (priority) {
       case 1:
-        return "Low priority";
+        return "Priority";
       case 2:
-        return "Medium priority";
+        return "Priority";
       case 3:
-        return "High priority";
+        return "Priority";
       default:
         return "No priority";
     }
@@ -771,11 +771,11 @@ export default function HypothesesCard({
       </div>
 
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col items-start gap-2">
+        <div className="flex flex-row items-center justify-between">
           <div className="bg-[#F3F0FD] text-xs rounded-full text-[#6E6588] font-semibold px-2 py-0.5">
             {hypothesis.type || "No type"}
           </div>
-          <div className="flex flex-row items-center gap-2.5">
+          <div className="flex flex-col items-center gap-2.5">
             {hypothesis.priority > 0 && (
               <div className="flex flex-row items-center">
                 <FlameIcon
