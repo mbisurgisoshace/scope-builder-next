@@ -386,9 +386,27 @@ export default function HypothesesCard({
                         <SelectValue placeholder="Select a type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1">1</SelectItem>
-                        <SelectItem value="2">2</SelectItem>
-                        <SelectItem value="3">3</SelectItem>
+                        <SelectItem value="Identify which Market Segment">
+                          Identify which Market Segment
+                        </SelectItem>
+                        <SelectItem value="Identify Job to be Done">
+                          Identify Job to be Done
+                        </SelectItem>
+                        <SelectItem value="Identify Pains">
+                          Identify Pains
+                        </SelectItem>
+                        <SelectItem value="Identify Pains">
+                          Identify Gains
+                        </SelectItem>
+                        <SelectItem value="Identify Pains">
+                          Identify Market Size
+                        </SelectItem>
+                        <SelectItem value="Identify Pains">
+                          Identify Pains Severity
+                        </SelectItem>
+                        <SelectItem value="Identify Pains">
+                          Identify Gains Significance
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
