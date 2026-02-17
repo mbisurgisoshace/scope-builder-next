@@ -825,6 +825,12 @@ export default function InfiniteCanvas({
         ...s,
 
         subtype: placementTool.subtype,
+        width:
+          placementTool.subtype === "value_prop_card"
+            ? 500
+            : placementTool.subtype === "problem_statement_card"
+              ? 500
+              : 440,
       }));
     }
     setSelectedShapeIds([id]);
