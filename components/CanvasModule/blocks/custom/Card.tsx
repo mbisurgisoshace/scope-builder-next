@@ -35,7 +35,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@radix-ui/react-dropdown-menu";
-import { ProblemStatement, ProblemStatementCard } from "./ProblemStatement";
+import { ProblemStatementCard } from "./ProblemStatement";
 import { Interview } from "./InterviewCard";
 import { JobsToBeDone } from "./JobsToBeDone";
 import { Pains } from "./Pains";
