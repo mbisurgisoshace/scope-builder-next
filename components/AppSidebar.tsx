@@ -44,7 +44,7 @@ const data = {
     {
       name: "My Progress",
       //url: "/teams-dashboard",
-      url: "/progress-dashboard",
+      url: "/",
       //icon: Frame,
       conditionalMenu: false,
     },

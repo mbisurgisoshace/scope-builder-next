@@ -321,12 +321,12 @@ const TaskItem = ({
         onComplete={onComplete}
       >
         <div>
-          <div className="w-full flex items-center justify-center">
+          <div className="w-full flex items-center justify-center h-[500px]">
             <img
               width={"100%"}
-              height={"100%"}
               src={url || ""}
               alt={title || "Image"}
+              className="object-contain h-full"
             />
           </div>
           <span className="text-[#697288] text-xs font-medium mt-4 mb-1 block">
