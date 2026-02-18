@@ -292,7 +292,7 @@ export default function TopicTasksTable({
                           <FormItem>
                             <FormLabel>Description</FormLabel>
                             <FormControl>
-                              <Input {...field} />
+                              <Textarea {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -531,7 +531,14 @@ export default function TopicTasksTable({
                       )}
                     />
 
-                    {["image", "video", "youtube"].includes(subtype) && (
+                    {[
+                      "image",
+                      "video",
+                      "youtube",
+                      "book",
+                      "tool",
+                      "excercise",
+                    ].includes(subtype) && (
                       <>
                         <FormField
                           name="url"
@@ -568,7 +575,7 @@ export default function TopicTasksTable({
                             <FormItem>
                               <FormLabel>Description</FormLabel>
                               <FormControl>
-                                <Input {...field} />
+                                <Textarea {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
