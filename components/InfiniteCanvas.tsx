@@ -835,9 +835,9 @@ export default function InfiniteCanvas({
         subtype: placementTool.subtype,
         width:
           placementTool.subtype === "value_prop_card"
-            ? 500
+            ? 650
             : placementTool.subtype === "problem_statement_card"
-              ? 500
+              ? 650
               : 440,
       }));
     }
