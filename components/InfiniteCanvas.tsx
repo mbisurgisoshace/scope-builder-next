@@ -7,7 +7,7 @@ import {
   useHistory,
   useCanRedo,
 } from "@liveblocks/react";
-import { Hand } from "lucide-react";
+import { Hand, LayoutListIcon } from "lucide-react";
 import { useRef, useState, useEffect, useMemo } from "react";
 import "./styles.css";
 
@@ -1443,7 +1443,10 @@ export default function InfiniteCanvas({
                         <ToolItem
                           label="Problem Statement"
                           icon={
-                            <SquarePlus className="text-[#111827]" size={18} />
+                            <LayoutListIcon
+                              className="text-[#111827]"
+                              size={18}
+                            />
                           }
                           active={
                             placementTool?.kind === "card" &&
@@ -1460,7 +1463,10 @@ export default function InfiniteCanvas({
                         <ToolItem
                           label="Value Prop"
                           icon={
-                            <SquarePlus className="text-[#111827]" size={18} />
+                            <LayoutListIcon
+                              className="text-[#111827]"
+                              size={18}
+                            />
                           }
                           active={
                             placementTool?.kind === "card" &&
@@ -1481,7 +1487,7 @@ export default function InfiniteCanvas({
                           <ToolItem
                             label="Jobs To Be Done"
                             icon={
-                              <SquarePlus
+                              <LayoutListIcon
                                 className="text-[#111827]"
                                 size={18}
                               />
@@ -1503,7 +1509,7 @@ export default function InfiniteCanvas({
                           <ToolItem
                             label="Pains"
                             icon={
-                              <SquarePlus
+                              <LayoutListIcon
                                 className="text-[#111827]"
                                 size={18}
                               />
@@ -1525,7 +1531,7 @@ export default function InfiniteCanvas({
                           <ToolItem
                             label="Gains"
                             icon={
-                              <SquarePlus
+                              <LayoutListIcon
                                 className="text-[#111827]"
                                 size={18}
                               />
@@ -1548,7 +1554,7 @@ export default function InfiniteCanvas({
                           <ToolItem
                             label="Products & Services"
                             icon={
-                              <SquarePlus
+                              <LayoutListIcon
                                 className="text-[#111827]"
                                 size={18}
                               />
@@ -1571,7 +1577,7 @@ export default function InfiniteCanvas({
                           <ToolItem
                             label="Pain Relievers"
                             icon={
-                              <SquarePlus
+                              <LayoutListIcon
                                 className="text-[#111827]"
                                 size={18}
                               />
@@ -1594,7 +1600,7 @@ export default function InfiniteCanvas({
                           <ToolItem
                             label="Gain Creators"
                             icon={
-                              <SquarePlus
+                              <LayoutListIcon
                                 className="text-[#111827]"
                                 size={18}
                               />
