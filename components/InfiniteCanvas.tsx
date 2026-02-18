@@ -378,8 +378,9 @@ export default function InfiniteCanvas({
           const exampleShapeIds = shapes
             .filter(
               (shape) =>
-                shape.type.includes("example") ||
-                shape.subtype?.includes("example"),
+                //shape.type.includes("example") ||
+                //shape.subtype?.includes("example"),
+                false,
             )
             .map((s) => s.id);
           setShowDeleteConfirm(

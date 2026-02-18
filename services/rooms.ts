@@ -153,7 +153,6 @@ export async function initializeExampleCards(
 
   if (!hasExample && createExamples) {
     const exampleCards = await createExamples();
-    console.log("Initializing example cards", exampleCards);
 
     await liveblocks.mutateStorage(roomId, ({ root }) => {
       const shapes = root.get("shapes");
