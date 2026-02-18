@@ -52,13 +52,13 @@ const data = {
       name: "Brainstorm",
       url: "/idea-brainstorm",
       //icon: PieChart,
-      conditionalMenu: true,
+      conditionalMenu: false,
     },
     {
       name: "Value Prop Canvas",
       url: "/value-proposition-canvas",
       //icon: PieChart,
-      conditionalMenu: true,
+      conditionalMenu: false,
     },
     {
       name: "Hypothesis",
