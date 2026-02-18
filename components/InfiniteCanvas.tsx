@@ -1331,6 +1331,7 @@ export default function InfiniteCanvas({
             {/* Shapes group */}
             <button
               onClick={() => {
+                setPanToolEnabled(false); // disable pan when opening a tool group
                 setOpenToolGroup((g) => (g === "shapes" ? null : "shapes"));
               }}
               className={`w-13 h-13 flex flex-col items-center justify-center rounded-xl
@@ -1357,6 +1358,7 @@ export default function InfiniteCanvas({
             {/* Cards group */}
             <button
               onClick={() => {
+                setPanToolEnabled(false); // disable pan when opening a tool group
                 setOpenToolGroup((g) => (g === "cards" ? null : "cards"));
               }}
               className={`w-13 h-13 flex flex-col items-center justify-center rounded-xl
