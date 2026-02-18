@@ -59,6 +59,7 @@ type TopicTaskWithTopicName = TopicTask & { topic_name: string };
 
 const columns: ColumnDef<TopicTaskWithTopicName>[] = [
   { accessorKey: "id", header: "Id" },
+  { accessorKey: "title", header: "Title" },
   { accessorKey: "topic_name", header: "Topic Name" },
   { accessorKey: "type", header: "Type" },
   { accessorKey: "subtype", header: "Subtype" },
