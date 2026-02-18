@@ -1230,11 +1230,11 @@ export default function InfiniteCanvas({
         </div>
       )}
 
-      {editable && !valuePropCanvasMode && (
+      {/* {editable && !valuePropCanvasMode && (
         <div className="absolute bottom-4 right-4 z-20">
           <Comments />
         </div>
-      )}
+      )} */}
 
       <div className="absolute bottom-4 right-35 z-20">
         {isAnalysisCanvas && !valuePropCanvasMode && <HelperAnalysis />}
