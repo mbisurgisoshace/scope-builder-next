@@ -92,12 +92,14 @@ export default async function HypothesesPage() {
   return (
     <div className="flex flex-col p-4 gap-4 ">
       <Tabs defaultValue="hypothesis" className="h-full ">
-        <TabsList className="bg-white">
-          <TabsTrigger value="hypothesis">Hypothesis</TabsTrigger>
-          <TabsTrigger value="examples">Examples</TabsTrigger>
-        </TabsList>
-        <TabsContent value="hypothesis" className="h-full flex flex-col gap-4">
+        <div className="flex flex-row justify-between">
+          <TabsList className="bg-white">
+            <TabsTrigger value="hypothesis">Hypothesis</TabsTrigger>
+            <TabsTrigger value="examples">Examples</TabsTrigger>
+          </TabsList>
           <CreateHypothesisButton maxOrder={getMaxOrder()} />
+        </div>
+        <TabsContent value="hypothesis" className="h-full flex flex-col gap-4">
           {/* <div className="flex flex-col gap-4">
             {hypothesesData.map((hypothesis) => (
               <HypothesesCard key={hypothesis.id} hypothesis={hypothesis} />
