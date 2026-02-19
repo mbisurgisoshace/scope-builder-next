@@ -269,8 +269,8 @@ const TaskItem = ({
       const url = input;
       // url https://vimeo.com/125172324?fl=pl&fe=cm
       if (url.includes("vimeo.com")) {
-
-        const vimeoRegex = /(?:vimeo\.com\/)(?:channels\/[\w|^\/]+\/|groups\/[\w|^\/]+\/|album\/\d+\/video\/|video\/|)(\d{9,11})(?:(?:\?|\/|)\S*)/; 
+        const vimeoRegex =
+          /(?:vimeo\.com\/)(?:channels\/[\w|^\/]+\/|groups\/[\w|^\/]+\/|album\/\d+\/video\/|video\/|)(\d{9,11})(?:(?:\?|\/|)\S*)/;
         const match = url.match(vimeoRegex);
         const videoId = match ? match[1] : null;
 
@@ -342,7 +342,7 @@ const TaskItem = ({
       </ProgressItem>
     );
 
-   if (type === "vimeo")
+  if (type === "vimeo")
     return (
       <ProgressItem
         title={title}
@@ -358,11 +358,15 @@ const TaskItem = ({
       >
         <div>
           <div className="w-full flex items-center justify-center">
-            <YouTubeEmbed
-              width={700}
+            <iframe
+              src={"https://player.vimeo.com/video/125172324"}
+              title={title ?? "Vimeo video player"}
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              width={600}
               height={400}
-              params="controls=0"
-              videoid={getVimeoVideoId(url || "")}
+              // absolutely fill the wrapper
+              //className="absolute left-0 top-0 border-0"
             />
           </div>
           <span className="text-[#697288] text-xs font-medium mt-4 mb-1 block">
@@ -387,7 +391,7 @@ const TaskItem = ({
           />
         </div>
       </ProgressItem>
-    );  
+    );
 
   if (type === "image") {
     return (
