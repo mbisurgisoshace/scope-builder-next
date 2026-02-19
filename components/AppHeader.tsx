@@ -165,6 +165,22 @@ export default function AppHeader() {
       );
     }
 
+    if (pathname === "/teams-dashboard") {
+      content = (
+        <>
+          <b>Quick tutorial on how to use the Leaderboard page:</b>
+          <br/><br/>
+          <video
+            controls
+            className="w-full"
+            src={
+              "https://zuazpraxvbtqlpkzayfj.supabase.co/storage/v1/object/public/attachments/videos/2026-02-19/Spring2026%20-%20Leaderboard%20-%20Tutorial.mp4"
+            }
+          />
+        </>
+      );
+    }
+
     setContent(content);
   };
 
