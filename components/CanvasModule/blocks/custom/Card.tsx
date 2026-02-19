@@ -271,6 +271,8 @@ export const Card: React.FC<CardProps> = (props) => {
         return "#E6CFFF";
       case "problem_statement_card":
         return "#6A35FFBF";
+      case "value_prop_card":
+        return "#007547BF";  
       default:
         return "#FFFFFF";
     }
@@ -626,7 +628,7 @@ export const Card: React.FC<CardProps> = (props) => {
       {...props}
       headerBg={getColor()}
       headerTextColor={
-        subtype === "summary_card" || subtype === "problem_statement_card"
+        subtype === "summary_card" || subtype === "problem_statement_card" || subtype === "value_prop_card"
           ? "white"
           : "black"
       }
@@ -634,7 +636,7 @@ export const Card: React.FC<CardProps> = (props) => {
       header={
         <div className="w-full flex flex-row items-center justify-between">
           <span
-            className={`font-manrope font-semibold font-weight-600  text-[13px] ${subtype === "summary_card" || subtype === "problem_statement_card" ? "text-white" : "text-black"}`}
+            className={`font-manrope font-semibold font-weight-600  text-[13px] ${subtype === "summary_card" || subtype === "problem_statement_card" || subtype === "value_prop_card" ? "text-white" : "text-black"}`}
           >
             {getTitle()}
           </span>
