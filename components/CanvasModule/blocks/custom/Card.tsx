@@ -269,6 +269,8 @@ export const Card: React.FC<CardProps> = (props) => {
         return "#CCF6EA";
       case "additional_stakeholder_card":
         return "#E6CFFF";
+      case "problem_statement_card":
+        return "#6A35FFBF";
       default:
         return "#FFFFFF";
     }
@@ -623,11 +625,17 @@ export const Card: React.FC<CardProps> = (props) => {
     <CardFrame
       {...props}
       headerBg={getColor()}
-      headerTextColor={subtype === "summary_card" ? "white" : "black"}
+      headerTextColor={
+        subtype === "summary_card" || subtype === "problem_statement_card"
+          ? "white"
+          : "black"
+      }
       useAttachments={useAttachments()}
       header={
         <div className="w-full flex flex-row items-center justify-between">
-          <span className="font-manrope font-semibold font-weight-600  text-[13px] text-[#111827]">
+          <span
+            className={`font-manrope font-semibold font-weight-600  text-[13px] ${subtype === "summary_card" || subtype === "problem_statement_card" ? "text-white" : "text-black"}`}
+          >
             {getTitle()}
           </span>
           {/* <DropdownMenu defaultOpen={subtype === "select_subtype"}>
