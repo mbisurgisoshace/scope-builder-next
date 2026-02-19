@@ -45,7 +45,8 @@ export default async function HypothesesPage() {
     {
       id: 1,
       order: 0,
-      title: "Transportation - Passenger Vehicles - Drivers of luxury light-duty pickup trucks configured to tow recreational vehicles 7,500+ miles",
+      title:
+        "Transportation - Passenger Vehicles - Drivers of luxury light-duty pickup trucks configured to tow recreational vehicles 7,500+ miles",
       priority: 1,
       description: "test",
       interviews: ["John Doe", "Jane Smith"],
@@ -64,7 +65,8 @@ export default async function HypothesesPage() {
           ],
         },
       ],
-      conclusion_content: "This is an example of the conclusion for the hypothesis.",
+      conclusion_content:
+        "This is an example of the conclusion for the hypothesis.",
       conclusion_status: "Validated",
     },
     // {
@@ -89,8 +91,8 @@ export default async function HypothesesPage() {
 
   return (
     <div className="flex flex-col p-4 gap-4 ">
-      <Tabs defaultValue="hypothesis" className="h-full">
-        <TabsList>
+      <Tabs defaultValue="hypothesis" className="h-full ">
+        <TabsList className="bg-white">
           <TabsTrigger value="hypothesis">Hypothesis</TabsTrigger>
           <TabsTrigger value="examples">Examples</TabsTrigger>
         </TabsList>
