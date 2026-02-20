@@ -20,6 +20,10 @@ function toLiveShape(shape: Shape) {
     subtype: shape.subtype ?? null,
     cardTitle: shape.cardTitle ?? null,
     data: shape.data ?? null,
+    logicTypeId: shape.logicTypeId ?? null,
+    nodeTypeId: shape.nodeTypeId ?? null,
+    // whatever your registry type id is
+    nodeConfig: shape.nodeConfig ?? null,
   });
 }
 
@@ -43,9 +47,12 @@ function fromLiveShape(obj: LiveObject<any>): Shape {
     width: obj.get("width")!,
     height: obj.get("height")!,
     color: obj.get("color")!,
+    logicTypeId: obj.get("logicTypeId") ?? undefined,
     cardTitle: obj.get("cardTitle") ?? undefined,
     text: obj.get("text") ?? undefined,
     data: obj.get("data") ?? undefined,
+    nodeTypeId: obj.get("nodeTypeId") ?? undefined,
+    nodeConfig: obj.get("nodeConfig") ?? undefined,
   };
 }
 
@@ -86,22 +93,22 @@ export function useRealtimeShapes() {
           type === "text"
             ? 120
             : type === "interview"
-            ? 700
-            : type === "question"
-            ? 440
-            : type === "question_answer"
-            ? 1180
-            : 160,
+              ? 700
+              : type === "question"
+                ? 440
+                : type === "question_answer"
+                  ? 1180
+                  : 160,
         height:
           type === "text"
             ? 40
             : type === "interview"
-            ? 228
-            : type === "question"
-            ? 320
-            : type === "question_answer"
-            ? 320
-            : 112,
+              ? 228
+              : type === "question"
+                ? 320
+                : type === "question_answer"
+                  ? 320
+                  : 112,
         color: "#EAFBE3",
         cardTitle: "",
         text: type === "text" ? "New text" : undefined,
@@ -117,7 +124,7 @@ export function useRealtimeShapes() {
           tableRows: rows,
           tableCols: cols,
           tableData: Array.from({ length: rows }, () =>
-            Array.from({ length: cols }, () => "")
+            Array.from({ length: cols }, () => ""),
           ),
         };
       }
@@ -187,28 +194,31 @@ export function useRealtimeShapes() {
       if (type === "logic_node") {
         shape = {
           ...shape,
-          width: 260,
-          height: 220,
-          color: "#0f172a",
-          // por ahora un único tipo de nodo
-          logicTypeId: "logic/if",
-          cardTitle: "If",
+          width: 280,
+          height: 140,
+          nodeTypeId: "fn/param", // whatever your registry type id is
+          nodeConfig: {},
         };
       }
 
       list.push(toLiveShape(shape));
     },
-    []
+    [],
   );
 
   const updateShape = useMutation(
     ({ storage }, id: string, updater: (s: Shape) => Shape) => {
       const list = storage.get("shapes") as LiveList<LiveObject<any>>;
 
+      console.log("id", id);
+
       for (let i = 0; i < list.length; i++) {
         const lo = list.get(i)!;
         const s = fromLiveShape(lo);
+
         if (s.id === id) {
+          console.log("lo", lo);
+          console.log("s", s);
           // const ns = updater(s);
           // // batch updates to the LiveObject
           // lo.update({
@@ -238,7 +248,7 @@ export function useRealtimeShapes() {
         }
       }
     },
-    []
+    [],
   );
 
   const updateMany = useMutation(
@@ -259,7 +269,7 @@ export function useRealtimeShapes() {
         }
       }
     },
-    []
+    [],
   );
 
   const removeShapes = useMutation(({ storage }, ids: string[]) => {

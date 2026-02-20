@@ -7,6 +7,7 @@ import {
   useHistory,
   useCanRedo,
 } from "@liveblocks/react";
+import { Hand } from "lucide-react";
 import { useRef, useState, useEffect, useMemo, JSX } from "react";
 
 import {
@@ -59,6 +60,9 @@ import { useDbSchema } from "./CanvasModule/db/DbSchemaContext";
 import { useLogicGraph } from "./CanvasModule/logic-builder/LogicGraphContext";
 import { NodeInstanceId, PortId } from "./CanvasModule/logic-builder/types";
 import { LogicConnectionsLayer } from "./CanvasModule/logic-builder/LogicConnectionsLayer";
+import { OrthogonalArrow } from "./CanvasModule/OrthogonalArrow";
+import { useFunctionDomain } from "./LogicModule/ui/FunctionProvider";
+import { LogicBuilderInspector } from "./LogicModule/ui/LogicBuilderInspector";
 
 type RelativeAnchor = {
   x: number; // valor entre 0 y 1, representa el porcentaje del ancho
@@ -74,7 +78,7 @@ type Connection = {
 
 export function getAbsoluteAnchorPosition(
   shape: IShape,
-  anchor: { x: number; y: number }
+  anchor: { x: number; y: number },
 ): Position {
   return {
     x: shape.x + shape.width * anchor.x,
@@ -106,6 +110,12 @@ type RectShape = {
 
 //type Side = "left" | "right" | "top" | "bottom";
 
+function isLogicBuilderStatementShape(shape: any): boolean {
+  // We only treat these as domain statements
+  const t = shape?.logicTypeId;
+  return t === "fn/var" || t === "fn/add" || t === "fn/return";
+}
+
 function getCenter(shape: RectShape) {
   return {
     cx: shape.x + shape.width / 2,
@@ -115,7 +125,7 @@ function getCenter(shape: RectShape) {
 
 function pickOrthogonalSides(
   fromShape: RectShape,
-  toShape: RectShape
+  toShape: RectShape,
 ): { fromSide: Side; toSide: Side } {
   const { cx: fx, cy: fy } = getCenter(fromShape);
   const { cx: tx, cy: ty } = getCenter(toShape);
@@ -174,6 +184,13 @@ export default function InfiniteCanvas({
   },
 }: InfiniteCanvasProps) {
   const pathname = usePathname();
+  const {
+    getStore,
+    store: fnStore,
+    bump: bumpDomain,
+    version: domainVersion,
+  } = useFunctionDomain();
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string[]>([]);
   const { scale, canvasRef, position, setPosition, setScale, zoomIn, zoomOut } =
     useCanvasTransform();
@@ -183,12 +200,13 @@ export default function InfiniteCanvas({
   const isMarketSegmentsCanvas = pathname.includes("/segments");
   const isValuePropCanvas = pathname.includes("/value-proposition");
 
-  const { service: logicService, refresh: logicRefresh } = useLogicGraph();
+  // const { service: logicService, refresh: logicRefresh } = useLogicGraph();
 
   const [problems, setProblems] = useState(true);
   const [examples, setExamples] = useState(true);
   const [solutions, setSolutions] = useState(true);
   const [valueArea, setValueArea] = useState(false);
+  const [panToolEnabled, setPanToolEnabled] = useState(false);
 
   const undo = useUndo();
   const redo = useRedo();
@@ -214,7 +232,7 @@ export default function InfiniteCanvas({
   // const [connections, setConnections] = useState<Connection[]>([]);
 
   const [connectingMousePos, setConnectingMousePos] = useState<Position | null>(
-    null
+    null,
   );
 
   const guides = useSmartGuidesStore((s) => s.guides);
@@ -268,8 +286,51 @@ export default function InfiniteCanvas({
     connectingMousePos,
     shapes,
     scale,
-    connecting?.fromShapeId ?? null
+    connecting?.fromShapeId ?? null,
   );
+
+  function isLogicBuilderFunctionShape(shape: any): boolean {
+    return shape?.logicTypeId === "fn/function";
+  }
+
+  function isLogicBuilderStatementShape(shape: any): boolean {
+    const t = shape?.logicTypeId;
+    return t === "fn/var" || t === "fn/add" || t === "fn/return";
+  }
+
+  // function resolveOwningFunctionId(
+  //   nodeId: string,
+  //   shapes: IShape[],
+  //   connections: { fromShapeId: string; toShapeId: string }[]
+  // ): string | null {
+  //   // Walk "upstream": who points INTO me?
+  //   const byId = new Map(shapes.map((s) => [s.id, s] as const));
+
+  //   const visited = new Set<string>();
+  //   const queue: string[] = [nodeId];
+
+  //   while (queue.length) {
+  //     const cur = queue.shift()!;
+  //     if (visited.has(cur)) continue;
+  //     visited.add(cur);
+
+  //     // Find incoming edges: X -> cur
+  //     const incoming = connections.filter((c) => c.toShapeId === cur);
+
+  //     for (const edge of incoming) {
+  //       const from = edge.fromShapeId;
+  //       const fromShape = byId.get(from);
+
+  //       if (fromShape && isLogicBuilderFunctionShape(fromShape)) {
+  //         return fromShape.id; // function shape id acts as fnId
+  //       }
+
+  //       queue.push(from);
+  //     }
+  //   }
+
+  //   return null;
+  // }
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -304,6 +365,159 @@ export default function InfiniteCanvas({
           snapResult, // { shapeId, snappedPosition }
           shapes,
         });
+
+        try {
+          // ✅ NEW: If this edge connects a Function block to a Param/Statement node,
+          // ensure the node exists in the Function store (not just in fn_local).
+          const fromIsFn = (fromShape as any)?.logicTypeId === "fn/function";
+          const toIsFn = (toShape as any)?.logicTypeId === "fn/function";
+
+          const fromIsParam = (fromShape as any)?.logicTypeId === "fn/param";
+          const toIsParam = (toShape as any)?.logicTypeId === "fn/param";
+
+          const fromIsStmt = isLogicBuilderStatementShape(fromShape);
+          const toIsStmt = isLogicBuilderStatementShape(toShape);
+
+          // Function <-> Param OR Function <-> Statement
+          if (
+            (fromIsFn && (toIsParam || toIsStmt)) ||
+            (toIsFn && (fromIsParam || fromIsStmt))
+          ) {
+            const fnShape = fromIsFn ? fromShape : toShape;
+            const otherShape =
+              fnShape.id === fromShape.id ? toShape : fromShape;
+
+            const fnId = fnShape.id; // 👈 function store key is the function shape id
+            const storeForFn = fnId === "fn_local" ? fnStore : getStore(fnId);
+
+            // If connecting a STATEMENT node to the function, ensure statement exists in this store
+            if (isLogicBuilderStatementShape(otherShape)) {
+              const stmtId = otherShape.id;
+
+              const logicTypeId = (otherShape as any)?.logicTypeId;
+              const stmtType =
+                logicTypeId === "fn/var"
+                  ? "variable"
+                  : logicTypeId === "fn/add"
+                    ? "logic"
+                    : "return";
+
+              // Only create if missing (so reconnecting doesn't explode)
+              if (!storeForFn.getStatement(stmtId)) {
+                storeForFn.addStatementWithId(stmtType as any, stmtId);
+              }
+            }
+
+            // If connecting a PARAM node to the function:
+            // right now params are edited as "global parameters" inside a store,
+            // but your Param shapes don’t map to named params yet.
+            // So we do nothing here (yet). Later we’ll use shape.data.fnParamName and add it to storeForFn.
+            bumpDomain();
+          }
+
+          // ✅ EXISTING: statement -> statement flow (scoped to same function)
+          if (fromIsStmt && toIsStmt) {
+            // Build a "fresh" edge list that includes the edge we just created.
+            // React state `connections` is stale inside this same event tick.
+            const pendingEdge = {
+              fromShapeId: connecting.fromShapeId,
+              toShapeId: snapResult.shapeId,
+            };
+
+            // If your `connections` objects have more fields, normalize them:
+            const edgesForResolution = [
+              ...connections.map((c: any) => ({
+                fromShapeId: c.fromShapeId,
+                toShapeId: c.toShapeId,
+              })),
+              pendingEdge,
+            ];
+
+            // 1) Resolve which Function block each node belongs to (using fresh edges)
+            const fromFnId =
+              resolveOwningFunctionId(
+                fromShape.id,
+                shapes,
+                edgesForResolution,
+              ) ?? "fn_local";
+            const toFnId =
+              resolveOwningFunctionId(toShape.id, shapes, edgesForResolution) ??
+              "fn_local";
+
+            // 2) Only allow statement->statement flow inside the same function
+            if (fromFnId !== toFnId) {
+              console.warn(
+                "Blocked connectFlow across different functions",
+                fromFnId,
+                toFnId,
+              );
+              // Optional: remove the just-created visual edge here later
+              return;
+            }
+
+            // 3) Use the correct store (scoped)
+            const store =
+              fromFnId === "fn_local" ? fnStore : getStore(fromFnId);
+
+            const ensureStmt = (shape: any) => {
+              const t = shape?.logicTypeId;
+              if (t === "fn/var" && !store.getStatement(shape.id))
+                store.addStatementWithId("variable", shape.id);
+              if (t === "fn/add" && !store.getStatement(shape.id))
+                store.addStatementWithId("logic", shape.id);
+              if (t === "fn/return" && !store.getStatement(shape.id))
+                store.addStatementWithId("return", shape.id);
+            };
+
+            ensureStmt(fromShape);
+            ensureStmt(toShape);
+
+            store.connectFlow(connecting.fromShapeId, snapResult.shapeId);
+
+            bumpDomain();
+          }
+        } catch (e) {
+          console.warn("LogicBuilder domain connectFlow failed:", e);
+        }
+
+        // try {
+        //   if (
+        //     isLogicBuilderStatementShape(fromShape) &&
+        //     isLogicBuilderStatementShape(toShape)
+        //   ) {
+        //     // fnStore.connectFlow(connecting.fromShapeId, snapResult.shapeId);
+        //     // bumpDomain(); // triggers any debug/inspector UI to refresh
+        //     // 1) Resolve which Function block each node belongs to
+        //     const fromFnId =
+        //       resolveOwningFunctionId(fromShape.id, shapes, connections) ??
+        //       "fn_local";
+        //     const toFnId =
+        //       resolveOwningFunctionId(toShape.id, shapes, connections) ??
+        //       "fn_local";
+
+        //     // 2) Only allow statement->statement flow inside the same function
+        //     if (fromFnId !== toFnId) {
+        //       console.warn(
+        //         "Blocked connectFlow across different functions",
+        //         fromFnId,
+        //         toFnId
+        //       );
+        //       // Optional: remove the just-created visual edge here later (we can add that next)
+        //       return;
+        //     }
+
+        //     // 3) Use the correct store (scoped)
+        //     const store =
+        //       fromFnId === "fn_local" ? fnStore : getStore(fromFnId);
+        //     store.connectFlow(connecting.fromShapeId, snapResult.shapeId);
+
+        //     bumpDomain();
+        //   }
+        // } catch (e) {
+        //   // If this fails, we keep the visual edge, but the domain refuses the connection.
+        //   // Later we can show a toast + auto-remove the visual edge if you want.
+        //   console.warn("LogicBuilder domain connectFlow failed:", e);
+        // }
 
         setConnecting(null);
         setConnectingMousePos(null);
@@ -400,11 +614,11 @@ export default function InfiniteCanvas({
             .filter(
               (shape) =>
                 shape.type.includes("example") ||
-                shape.subtype?.includes("example")
+                shape.subtype?.includes("example"),
             )
             .map((s) => s.id);
           setShowDeleteConfirm(
-            selectedShapeIds.filter((id) => !exampleShapeIds.includes(id))
+            selectedShapeIds.filter((id) => !exampleShapeIds.includes(id)),
           );
           return;
         }
@@ -460,7 +674,9 @@ export default function InfiniteCanvas({
     setSelectedShapeIds,
   });
 
-  const startMarqueeSafe = editable ? startMarquee : () => {};
+  // const startMarqueeSafe = editable ? startMarquee : () => {};
+  const startMarqueeSafe =
+    editable && !panToolEnabled ? startMarquee : () => {};
 
   useShapeDragging({
     selectedShapeIds,
@@ -497,6 +713,7 @@ export default function InfiniteCanvas({
     // startMarquee,
     startMarquee: startMarqueeSafe,
     setMarqueeMousePos,
+    panToolEnabled,
   });
 
   const { handleShapeMouseDown, startResizing } = useShapeInteraction({
@@ -513,7 +730,7 @@ export default function InfiniteCanvas({
   const handleConnectorMouseDown = (
     e: React.MouseEvent,
     shapeId: string,
-    direction: "top" | "right" | "bottom" | "left"
+    direction: "top" | "right" | "bottom" | "left",
   ) => {
     e.preventDefault();
     if (!editable) return;
@@ -611,6 +828,7 @@ export default function InfiniteCanvas({
     e.stopPropagation();
     if (!editable) return;
     const type = e.dataTransfer.getData("shape-type") as ShapeType;
+    const logicTypeId = e.dataTransfer.getData("logicTypeId");
     if (!canvasRef.current) return;
 
     const dt = e.dataTransfer;
@@ -736,8 +954,80 @@ export default function InfiniteCanvas({
     }
 
     if (!type) return;
+    const id = uuidv4();
+    addShape(type, x, y, id);
 
-    addShape(type, x, y, uuidv4());
+    if (type === "logic_node" && logicTypeId) {
+      try {
+        if (logicTypeId === "fn/function") {
+          // create function shape
+          updateShape(id, (s) => ({
+            ...s,
+            logicTypeId,
+            width: 320,
+            height: 130,
+            data: { ...(s as any).data, fnName: "Untitled", fnFunctionId: id },
+            text: "Function",
+          }));
+
+          // ensure workspace has a store for it
+          const store = getStore(id); // <-- from workspace domain hook
+          // optional: set function name in domain too
+          store.getFunction().rename("Untitled");
+        }
+
+        if (logicTypeId === "fn/param") {
+          updateShape(id, (s) => ({
+            ...s,
+            logicTypeId,
+            text: "Params",
+            width: 260,
+            height: 140, // a bit taller to display a list
+          }));
+        }
+
+        if (logicTypeId === "fn/var") {
+          fnStore.addStatementWithId("variable", id);
+          updateShape(id, (s) => ({
+            ...s,
+            logicTypeId,
+            text: "Variable",
+            width: 260,
+            height: 110,
+          }));
+        }
+
+        if (logicTypeId === "fn/add") {
+          fnStore.addStatementWithId("logic", id);
+          updateShape(id, (s) => ({
+            ...s,
+            logicTypeId,
+            text: "Logic",
+            width: 260,
+            height: 110,
+          }));
+        }
+
+        if (logicTypeId === "fn/return") {
+          console.log("id", id);
+          console.log("logicTypeId", logicTypeId);
+          fnStore.addStatementWithId("return", id);
+          updateShape(id, (s) => ({
+            ...s,
+            logicTypeId,
+            text: "Return",
+            width: 260,
+            height: 110,
+          }));
+        }
+
+        bumpDomain();
+      } catch (e) {
+        console.warn("Domain create failed:", e);
+      }
+
+      return;
+    }
   };
 
   // tiny base64 preview (fast to sync via Liveblocks)
@@ -764,11 +1054,11 @@ export default function InfiniteCanvas({
   // plug your real uploader here (S3/Supabase/UploadThing/etc.)
   async function uploadToStorage(
     file: File,
-    onProgress: (p: number) => void
+    onProgress: (p: number) => void,
   ): Promise<{ url: string }> {
     // Example pattern using an API route that returns { uploadUrl, fileUrl }
     const resp = await fetch(
-      `/api/upload-url?filename=${encodeURIComponent(file.name)}`
+      `/api/upload-url?filename=${encodeURIComponent(file.name)}`,
     );
     if (!resp.ok) throw new Error("Failed to get upload URL");
     const { uploadUrl, fileUrl } = await resp.json();
@@ -786,7 +1076,7 @@ export default function InfiniteCanvas({
       xhr.onerror = () => reject(new Error("Network error"));
       xhr.setRequestHeader(
         "Content-Type",
-        file.type || "application/octet-stream"
+        file.type || "application/octet-stream",
       );
       xhr.send(file);
     });
@@ -806,7 +1096,7 @@ export default function InfiniteCanvas({
     e: React.DragEvent | React.MouseEvent,
     canvasEl: HTMLDivElement,
     position: { x: number; y: number },
-    scale: number
+    scale: number,
   ) {
     const rect = canvasEl.getBoundingClientRect();
     const x = (e.clientX - rect.left - position.x) / scale;
@@ -830,8 +1120,8 @@ export default function InfiniteCanvas({
       const shape = shapes.find((s) => s.id === id);
       if (shape && shape.type === "db_table") {
         const tableId = (shape as any).data.dbTableId as string;
-        schema.removeTable(tableId);
-        refresh();
+        //schema.removeTable(tableId);
+        //refresh();
       }
     });
 
@@ -900,6 +1190,23 @@ export default function InfiniteCanvas({
     } finally {
       resume();
     }
+  }
+
+  function isFunctionShape(shape: any) {
+    return shape?.logicTypeId === "fn/function";
+  }
+
+  function isParamShape(shape: any) {
+    return shape?.logicTypeId === "fn/param";
+  }
+
+  function isStatementShape(shape: any) {
+    const t = shape?.logicTypeId;
+    return t === "fn/var" || t === "fn/add" || t === "fn/return";
+  }
+
+  function getBoundFunctionId(shape: any): string | null {
+    return shape?.data?.fnFunctionId ?? null;
   }
 
   async function duplicateSelection() {
@@ -1008,14 +1315,14 @@ export default function InfiniteCanvas({
   }
 
   // Subscribe to schema to re-render when it changes
-  const { schema, refresh } = useDbSchema();
+  // const { schema, refresh } = useDbSchema();
 
   // Domain edges (FK relationships)
-  const erdEdges = schema.getRelationships();
+  // const erdEdges = schema.getRelationships();
 
   const dbTableShapes = useMemo(
     () => shapes.filter((s) => s.type === "db_table"),
-    [shapes]
+    [shapes],
   );
 
   // Map tableId -> shape
@@ -1033,7 +1340,7 @@ export default function InfiniteCanvas({
   // Helper: get anchor point on a table’s side
   function getTableAnchor(
     shape: IShape,
-    side: "left" | "right" | "top" | "bottom"
+    side: "left" | "right" | "top" | "bottom",
   ) {
     const x = shape.x;
     const y = shape.y;
@@ -1053,42 +1360,42 @@ export default function InfiniteCanvas({
     }
   }
 
-  const erdArrows = useMemo(() => {
-    const arrows: JSX.Element[] = [];
+  // const erdArrows = useMemo(() => {
+  //   const arrows: JSX.Element[] = [];
 
-    for (const edge of erdEdges) {
-      const fromShape = dbTableShapeByTableId.get(edge.fromTableId);
-      const toShape = dbTableShapeByTableId.get(edge.toTableId);
-      if (!fromShape || !toShape) continue;
+  //   for (const edge of erdEdges) {
+  //     const fromShape = dbTableShapeByTableId.get(edge.fromTableId);
+  //     const toShape = dbTableShapeByTableId.get(edge.toTableId);
+  //     if (!fromShape || !toShape) continue;
 
-      // 1) Decide which sides to use for a Manhattan-style connection
-      const { fromSide, toSide } = pickOrthogonalSides(fromShape, toShape);
+  //     // 1) Decide which sides to use for a Manhattan-style connection
+  //     const { fromSide, toSide } = pickOrthogonalSides(fromShape, toShape);
 
-      // 2) Compute anchors on those sides
-      const from = getAnchorForSide(fromShape, fromSide);
-      const to = getAnchorForSide(toShape, toSide);
+  //     // 2) Compute anchors on those sides
+  //     const from = getAnchorForSide(fromShape, fromSide);
+  //     const to = getAnchorForSide(toShape, toSide);
 
-      arrows.push(
-        <SelectableConnectionArrow
-          key={edge.id}
-          id={edge.id}
-          from={from}
-          to={to}
-          fromSide="right"
-          toSide="left"
-          // purely visual; ERD arrows not selectable (for now)
-          selected={false}
-          onSelect={() => {}}
-          color="#EF4444" // red-ish to distinguish from manual connectors
-          strokeWidth={1.5}
-          bend={0.2} // slight curve, optional
-          zIndex={0} // behind normal connectors if you want
-        />
-      );
-    }
+  //     arrows.push(
+  //       <SelectableConnectionArrow
+  //         key={edge.id}
+  //         id={edge.id}
+  //         from={from}
+  //         to={to}
+  //         fromSide="right"
+  //         toSide="left"
+  //         // purely visual; ERD arrows not selectable (for now)
+  //         selected={false}
+  //         onSelect={() => {}}
+  //         color="#EF4444" // red-ish to distinguish from manual connectors
+  //         strokeWidth={1.5}
+  //         bend={0.2} // slight curve, optional
+  //         zIndex={0} // behind normal connectors if you want
+  //       />
+  //     );
+  //   }
 
-    return arrows;
-  }, [erdEdges, dbTableShapeByTableId]);
+  //   return arrows;
+  // }, [erdEdges, dbTableShapeByTableId]);
 
   function makeSpawnLinkedNodeHandler(shape: IShape) {
     return ({
@@ -1108,25 +1415,306 @@ export default function InfiniteCanvas({
       addShape("logic_node" as any, newX, newY, newShapeId);
 
       // 3) ensure a domain node for the new shape
-      const newNode = logicService.ensureNode({
-        id: newShapeId as NodeInstanceId,
-        typeId: "logic/if", // later this could be based on port, context, etc.
-        shapeId: newShapeId,
-        config: {},
-      });
+      // const newNode = logicService.ensureNode({
+      //   id: newShapeId as NodeInstanceId,
+      //   typeId: "logic/if", // later this could be based on port, context, etc.
+      //   shapeId: newShapeId,
+      //   config: {},
+      // });
 
       // 4) connect from the clicked port to the new node's "in" port
-      logicService.connectPorts({
-        fromNodeId,
-        fromPortId,
-        toNodeId: newNode.id,
-        toPortId: "in" as PortId,
-      });
+      // logicService.connectPorts({
+      //   fromNodeId,
+      //   fromPortId,
+      //   toNodeId: newNode.id,
+      //   toPortId: "in" as PortId,
+      // });
 
       // 5) force a re-render so LogicConnectionsLayer sees the new connection
-      logicRefresh();
+      //logicRefresh();
     };
   }
+
+  //const selectedId = selectedShapeIds[0];
+
+  // force re-render when domain changes (if you used a bump/version pattern)
+  void domainVersion; // if you have it; otherwise ignore
+
+  // const validation = fnStore.validate();
+
+  // let plan: string[] = [];
+  // try {
+  //   plan = fnStore.getExecutionPlan();
+  // } catch {
+  //   plan = [];
+  // }
+
+  // const symbols = selectedId
+  //   ? fnStore.getVisibleSymbols(selectedId).map((s) => s.name)
+  //   : [];
+  function resolveOwningFunctionIdForDebug(
+    nodeId: string,
+    shapes: any[],
+    connections: { fromShapeId: string; toShapeId: string }[],
+  ): string | null {
+    const byId = new Map(shapes.map((s) => [s.id, s] as const));
+
+    const self = byId.get(nodeId);
+    if (self?.logicTypeId === "fn/function") return nodeId;
+
+    const visited = new Set<string>();
+    const queue: string[] = [nodeId];
+
+    while (queue.length) {
+      const cur = queue.shift()!;
+      if (visited.has(cur)) continue;
+      visited.add(cur);
+
+      const incoming = connections.filter((c) => c.toShapeId === cur);
+      for (const edge of incoming) {
+        const from = edge.fromShapeId;
+        const fromShape = byId.get(from);
+        if (fromShape?.logicTypeId === "fn/function") return fromShape.id;
+        queue.push(from);
+      }
+    }
+    return null;
+  }
+
+  // function resolveOwningFunctionId(
+  //   nodeId: string,
+  //   shapes: any[],
+  //   connections: { fromShapeId: string; toShapeId: string }[]
+  // ): string | null {
+  //   const byId = new Map(shapes.map((s) => [s.id, s] as const));
+  //   const visited = new Set<string>();
+  //   const queue: string[] = [nodeId];
+
+  //   while (queue.length) {
+  //     const cur = queue.shift()!;
+  //     if (visited.has(cur)) continue;
+  //     visited.add(cur);
+
+  //     const incoming = connections.filter((c) => c.toShapeId === cur);
+  //     for (const edge of incoming) {
+  //       const from = edge.fromShapeId;
+  //       const fromShape = byId.get(from);
+  //       if (fromShape?.logicTypeId === "fn/function") return fromShape.id;
+  //       queue.push(from);
+  //     }
+  //   }
+  //   return null;
+  // }
+
+  function resolveOwningFunctionId(
+    nodeId: string,
+    shapes: any[],
+    connections: { fromShapeId: string; toShapeId: string }[],
+  ): string | null {
+    const byId = new Map(shapes.map((s) => [s.id, s] as const));
+    const visited = new Set<string>();
+    const queue: string[] = [nodeId];
+
+    while (queue.length) {
+      const cur = queue.shift()!;
+      if (visited.has(cur)) continue;
+      visited.add(cur);
+
+      const incoming = connections.filter((c) => c.toShapeId === cur);
+      for (const edge of incoming) {
+        const from = edge.fromShapeId;
+        const fromShape = byId.get(from);
+        if (fromShape?.logicTypeId === "fn/function") return fromShape.id;
+        queue.push(from);
+      }
+    }
+    return null;
+  }
+
+  function uniq(list: string[]) {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const x of list) {
+      const t = String(x ?? "").trim();
+      if (!t) continue;
+      if (seen.has(t)) continue;
+      seen.add(t);
+      out.push(t);
+    }
+    return out;
+  }
+
+  const selectedId = selectedShapeIds[0] ?? null;
+
+  // pick store for selected node
+  const owningFnId = selectedId
+    ? resolveOwningFunctionIdForDebug(selectedId, shapes, connections)
+    : null;
+
+  const hasOwningFunction = !!owningFnId;
+  // const debugStore = owningFnId ? getStore(owningFnId) : fnStore;
+
+  const debugFnId = selectedId
+    ? (resolveOwningFunctionId(selectedId, shapes, connections) ?? "fn_local")
+    : "fn_local";
+
+  const debugStore = debugFnId === "fn_local" ? fnStore : getStore(debugFnId);
+
+  // Validation + plan come from the selected store
+  const validation = debugStore.validate();
+
+  let plan: string[] = [];
+  try {
+    plan = debugStore.getExecutionPlan();
+  } catch {
+    plan = [];
+  }
+
+  // Visible symbols from selected store, with param filtering if not connected
+  // const symbols = selectedId
+  //   ? (() => {
+  //       const sym = debugStore
+  //         .getVisibleSymbols(selectedId)
+  //         .map((s: any) => s.name);
+
+  //       if (!hasOwningFunction) {
+  //         const paramNames = new Set(fnStore.getParameters());
+  //         return sym.filter((n: string) => !paramNames.has(n));
+  //       }
+  //       return sym;
+  //     })()
+  //   : [];
+  const selectedShape = selectedId
+    ? shapes.find((s) => s.id === selectedId)
+    : null;
+  const selectedLogicTypeId = (selectedShape as any)?.logicTypeId ?? null;
+
+  const fnId = selectedId
+    ? selectedLogicTypeId === "fn/function"
+      ? selectedId // function owns itself
+      : (resolveOwningFunctionId(selectedId, shapes, connections) ?? "fn_local")
+    : "fn_local";
+
+  const scopedStore = fnId === "fn_local" ? fnStore : getStore(fnId);
+
+  const symbols = useMemo(() => {
+    if (!selectedId) return [];
+
+    // Selecting a Function node: show its full scope (params + all declared vars in that function)
+    if (selectedLogicTypeId === "fn/function") {
+      const params = scopedStore.getParameters();
+
+      // FunctionStore must expose getStatements() for this to work.
+      // If your API differs, tell me the method name and I’ll adapt it.
+      const declaredVars =
+        (scopedStore as any)
+          .getStatements?.()
+          ?.filter((s: any) => s.type === "variable")
+          ?.flatMap((v: any) =>
+            (v.declarations ?? []).map((d: any) => d.name),
+          ) ?? [];
+
+      return uniq([...params, ...declaredVars]);
+    }
+
+    // Normal node: use visibility rules
+    return scopedStore.getVisibleSymbols(selectedId).map((s: any) => s.name);
+  }, [selectedId, selectedLogicTypeId, scopedStore, domainVersion]);
+
+  function coerceRuntimeValue(raw: string): unknown {
+    const s = raw.trim();
+    if (!s) return "";
+
+    // Try JSON array first: [1, 2, 3]
+    if (s.startsWith("[") && s.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => {
+            if (typeof item === "string") {
+              const t = item.trim();
+              if (t !== "" && Number.isFinite(Number(t))) {
+                return Number(t);
+              }
+            }
+            return item;
+          });
+        }
+      } catch {
+        // fall through
+      }
+    }
+
+    // Try number
+    const n = Number(s);
+    if (Number.isFinite(n)) return n;
+
+    // Fallback to string
+    return raw;
+  }
+
+  // Runtime params, scoped per function id (so each Function can have its own test inputs)
+  const [runtimeParamsByFn, setRuntimeParamsByFn] = useState<
+    Record<string, Record<string, string>>
+  >({});
+
+  // Small UX: "Run" can be explicit (button) or auto-run (inputs immediately apply).
+  // We'll do explicit Run.
+  const [runtimeRunNonceByFn, setRuntimeRunNonceByFn] = useState<
+    Record<string, number>
+  >({});
+
+  function getRuntimeParams(fnId: string | null) {
+    if (!fnId) return {};
+    return runtimeParamsByFn[fnId] ?? {};
+  }
+
+  function setRuntimeParam(fnId: string, name: string, value: string) {
+    setRuntimeParamsByFn((prev) => ({
+      ...prev,
+      [fnId]: { ...(prev[fnId] ?? {}), [name]: value },
+    }));
+  }
+
+  function bumpRun(fnId: string) {
+    setRuntimeRunNonceByFn((prev) => ({
+      ...prev,
+      [fnId]: (prev[fnId] ?? 0) + 1,
+    }));
+  }
+
+  const runtimeFnId = debugFnId; // the function whose store we are debugging
+
+  const runtimeParams = useMemo(
+    () => getRuntimeParams(runtimeFnId),
+    [runtimeFnId, runtimeParamsByFn],
+  );
+
+  const runtimeRunNonce = runtimeFnId
+    ? (runtimeRunNonceByFn[runtimeFnId] ?? 0)
+    : 0;
+
+  const runtime = useMemo(() => {
+    try {
+      return debugStore.computeRuntimeValues({ params: runtimeParams });
+    } catch (e: any) {
+      return {
+        values: {},
+        errors: { __runtime__: String(e?.message ?? e) },
+        scope: {},
+      };
+    }
+    // important: include runtimeRunNonce so "Run" forces refresh even if params are identical
+  }, [debugStore, domainVersion, runtimeParams, runtimeRunNonce]);
+
+  // wherever you keep runtimeParams (see note below)
+  const ret = useMemo(() => {
+    try {
+      return debugStore.computeReturnValue();
+    } catch (e: any) {
+      return { value: null, error: String(e?.message ?? e) };
+    }
+  }, [debugStore, domainVersion, runtimeParams, runtimeRunNonce]);
 
   return (
     <div className="w-full h-full overflow-hidden bg-[#EFF0F4] relative flex">
@@ -1176,7 +1764,8 @@ export default function InfiniteCanvas({
               checked={valueArea}
               onCheckedChange={() => setValueArea(!valueArea)}
               className={
-                "data-[state=checked]:bg-white data-[state=checked]:text-black"
+                "data-[state=checked]:bg-
+                white data-[state=checked]:text-black"
               }
             />
             <Label htmlFor="value-areas">Values Area</Label>
@@ -1256,243 +1845,22 @@ export default function InfiniteCanvas({
       {/* Toolbar */}
       {editable && (
         <div className="absolute top-1/2 -translate-y-1/2 left-4 z-20 py-4 px-3 bg-white  rounded-2xl shadow flex flex-col gap-6 items-center">
-          {toolbarOptions.rectangle && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                console.log("e", e);
-
-                e.dataTransfer.setData("shape-type", "rect");
-              }}
-              className="w-10 h-10 gap-1 flex flex-col items-center "
-              title="Rectangle"
-            >
-              {/* <SquarePlus className="text-[#111827] pointer-events-none" /> */}
-              <NextImage
-                src={"/rectangle.svg"}
-                alt="Rectangle"
-                width={20}
-                height={20}
-                className="pointer-events-none"
-              />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Rectangle
-              </span>
-            </button>
-          )}
-
-          {toolbarOptions.ellipse && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "ellipse");
-              }}
-              className="w-10 h-10 gap-1 flex flex-col items-center "
-              title="Ellipse"
-            >
-              {/* <SquarePlus className="text-[#111827] pointer-events-none" /> */}
-              <NextImage
-                src={"/ellipse.svg"}
-                alt="Ellipse"
-                width={20}
-                height={20}
-                className="pointer-events-none"
-              />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Ellipse
-              </span>
-            </button>
-          )}
-
-          {/* <button
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("shape-type", "text");
-          }}
-          className="w-10 h-10 flex items-center justify-center bg-yellow-300 rounded text-black font-bold"
-          title="Text"
-        >
-          Tx
-        </button> */}
-
-          {toolbarOptions.text && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "text");
-              }}
-              className="w-10 h-10 gap-1 flex flex-col items-center "
-              title="Text"
-            >
-              {/* <SquarePlus className="text-[#111827] pointer-events-none" /> */}
-              <NextImage
-                src={"/text.svg"}
-                alt="Text"
-                width={16}
-                height={16}
-                className="pointer-events-none"
-              />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Text
-              </span>
-            </button>
-          )}
-
-          {/* <button
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("shape-type", "interview");
-          }}
-          className="w-10 h-10 flex items-center justify-center bg-purple-300 rounded text-black font-bold"
-          title="Interview"
-        >
-          In
-        </button> */}
-
-          {toolbarOptions.interview && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "interview");
-              }}
-              className="w-10 h-10  flex flex-col items-center "
-              title="Interview"
-            >
-              <SquarePlus className="text-[#111827] pointer-events-none" />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Interview
-              </span>
-            </button>
-          )}
-
-          {/* <button
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("shape-type", "question");
-          }}
-          className="w-10 h-10 flex items-center justify-center bg-red-300 rounded text-black font-bold"
-          title="Question"
-        >
-          Qs
-        </button> */}
-
-          {toolbarOptions.question && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "question");
-              }}
-              className="w-10 h-10  flex flex-col items-center "
-              title="Question"
-            >
-              <SquarePlus className="text-[#111827] pointer-events-none" />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Question
-              </span>
-            </button>
-          )}
-
-          {/* <button
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("shape-type", "question_answer");
-          }}
-          className="w-10 h-10 flex items-center justify-center bg-amber-300 rounded text-black font-bold"
-          title="Answer"
-        >
-          An
-        </button> */}
-
-          {toolbarOptions.answer && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "question_answer");
-              }}
-              className="w-10 h-10  flex flex-col items-center "
-              title="Answer"
-            >
-              <SquarePlus className="text-[#111827] pointer-events-none" />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Answer
-              </span>
-            </button>
-          )}
-
-          {/* <button
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("shape-type", "table");
-          }}
-          className="w-10 h-10 flex items-center justify-center bg-pink-300 rounded text-black font-bold"
-          title="Table"
-        >
-          Tb
-        </button> */}
-          {toolbarOptions.table && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "table");
-              }}
-              className="w-10 h-10  flex flex-col items-center "
-              title="Table"
-            >
-              <SquarePlus className="text-[#111827] pointer-events-none" />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Table
-              </span>
-            </button>
-          )}
-
-          {/* <button
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData("shape-type", "feature_idea");
-          }}
-          className="w-10 h-10 flex items-center justify-center bg-indigo-300 rounded text-black font-bold"
-          title="Feature Idea"
-        >
-          Fi
-        </button> */}
-          {toolbarOptions.feature && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "feature_idea");
-              }}
-              className="w-10 h-10  flex flex-col items-center "
-              title="Feature Idea"
-            >
-              <SquarePlus className="text-[#111827] pointer-events-none" />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Feature
-              </span>
-            </button>
-          )}
-
-          {toolbarOptions.card && (
-            <button
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("shape-type", "card");
-              }}
-              className="w-10 h-10 gap-1 flex flex-col items-center "
-              title="Card"
-            >
-              {/* <SquarePlus className="text-[#111827] pointer-events-none" /> */}
-              <NextImage
-                src={"/card.svg"}
-                alt="Card"
-                width={20}
-                height={20}
-                className="pointer-events-none"
-              />
-              <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-                Card
-              </span>
-            </button>
-          )}
+          <button
+            onClick={() => setPanToolEnabled((v) => !v)}
+            className={`w-10 h-10 flex flex-col items-center justify-center rounded-xl
+    ${
+      panToolEnabled
+        ? "bg-blue-600 text-white"
+        : "bg-transparent text-[#111827]"
+    }
+  `}
+            title="Pan tool"
+          >
+            <Hand className="pointer-events-none" size={18} />
+            <span className="text-[10px] font-bold opacity-60 pointer-events-none">
+              Pan
+            </span>
+          </button>
 
           {/* <button
             draggable
@@ -1514,49 +1882,7 @@ export default function InfiniteCanvas({
             </span>
           </button> */}
 
-          <button
-            draggable
-            onDragStart={(e) => {
-              // 👇 this string is what the canvas will read
-              e.dataTransfer.setData("shape-type", "db_table");
-            }}
-            className="w-10 h-10 gap-1 flex flex-col items-center "
-            title="DB Table"
-          >
-            <NextImage
-              src={"/ellipse.svg"} // reuse for now, you can swap icon later
-              alt="DB Table"
-              width={20}
-              height={20}
-              className="pointer-events-none"
-            />
-            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-              DB Table
-            </span>
-          </button>
-
-          <button
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.setData("shape-type", "db_collection");
-            }}
-            className="w-10 h-10 gap-1 flex flex-col items-center "
-            title="Collection"
-          >
-            {/* You can change icon later */}
-            <NextImage
-              src={"/ellipse.svg"}
-              alt="Collection"
-              width={20}
-              height={20}
-              className="pointer-events-none"
-            />
-            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
-              Collection
-            </span>
-          </button>
-
-          <button
+          {/* <button
             draggable
             onDragStart={(e) => {
               e.dataTransfer.setData("shape-type", "logic_node");
@@ -1574,14 +1900,297 @@ export default function InfiniteCanvas({
             <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
               Logic
             </span>
+          </button> */}
+
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("shape-type", "logic_node");
+              e.dataTransfer.setData("logicTypeId", "fn/function");
+            }}
+            className="w-10 h-10 gap-1 flex flex-col items-center"
+            title="Function"
+          >
+            <SquarePlus className="text-[#111827] pointer-events-none" />
+            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
+              Fn
+            </span>
+          </button>
+
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("shape-type", "logic_node");
+              e.dataTransfer.setData("logicTypeId", "fn/param");
+            }}
+            className="w-10 h-10 gap-1 flex flex-col items-center"
+            title="Param"
+          >
+            <SquarePlus className="text-[#111827] pointer-events-none" />
+            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
+              Param
+            </span>
+          </button>
+
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("shape-type", "logic_node");
+              e.dataTransfer.setData("logicTypeId", "fn/var");
+            }}
+            className="w-10 h-10 gap-1 flex flex-col items-center"
+            title="Var"
+          >
+            <SquarePlus className="text-[#111827] pointer-events-none" />
+            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
+              Var
+            </span>
+          </button>
+
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("shape-type", "logic_node");
+              e.dataTransfer.setData("logicTypeId", "fn/return");
+            }}
+            className="w-10 h-10 gap-1 flex flex-col items-center"
+            title="Return"
+          >
+            <SquarePlus className="text-[#111827] pointer-events-none" />
+            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
+              Return
+            </span>
+          </button>
+
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData("shape-type", "logic_node");
+              e.dataTransfer.setData("logicTypeId", "fn/add");
+            }}
+            className="w-10 h-10 gap-1 flex flex-col items-center"
+            title="Add"
+          >
+            <SquarePlus className="text-[#111827] pointer-events-none" />
+            <span className="text-[10px] font-bold text-[#111827] opacity-60 pointer-events-none">
+              Add
+            </span>
           </button>
         </div>
       )}
 
+      <div className="absolute top-4 left-4 z-40 bg-white/90 backdrop-blur rounded-xl shadow p-3 w-[360px] text-xs">
+        <div className="font-semibold mb-2">LogicBuilder Debug</div>
+
+        <div className="mb-2">
+          <div className="font-medium">Validation</div>
+          <div className={validation.ok ? "text-green-700" : "text-red-700"}>
+            {validation.ok ? "OK" : "INVALID"}
+          </div>
+          {!validation.ok && (
+            <div className="mt-1 text-red-700 break-all">
+              {String(
+                (validation as any).error?.message ?? (validation as any).error,
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="mb-3 border-t pt-2">
+          <div className="font-medium mb-2">Runtime params</div>
+
+          {(() => {
+            // show params from the store we're debugging
+            const params = debugStore.getParameters?.() ?? [];
+            if (!runtimeFnId)
+              return (
+                <div className="text-gray-500 text-[11px]">
+                  (Select a node inside a function)
+                </div>
+              );
+            if (params.length === 0)
+              return (
+                <div className="text-gray-500 text-[11px]">(No params)</div>
+              );
+
+            return (
+              <div className="flex flex-col gap-2">
+                {params.map((p: string) => {
+                  const current = runtimeParams[p];
+                  const display = Number.isFinite(current)
+                    ? String(current)
+                    : "";
+
+                  return (
+                    <div
+                      key={p}
+                      className="grid grid-cols-[1fr_160px] gap-2 items-center"
+                    >
+                      <div className="font-mono">{p}</div>
+                      <input
+                        className="border rounded-md px-2 py-1 text-xs font-mono"
+                        value={runtimeParams[p] ?? ""}
+                        placeholder="e.g. 100 or [1,2,3]"
+                        onChange={(e) => {
+                          if (!runtimeFnId) return;
+                          const raw = e.target.value;
+
+                          // Allow clearing → remove param so FunctionStore can mark it "Missing"
+                          setRuntimeParamsByFn((prev) => {
+                            const currentFn = { ...(prev[runtimeFnId] ?? {}) };
+
+                            if (raw.trim() === "") {
+                              delete currentFn[p];
+                            } else {
+                              currentFn[p] = raw;
+                            }
+
+                            return { ...prev, [runtimeFnId]: currentFn };
+                          });
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+
+                <button
+                  className="rounded-md bg-blue-600 text-white text-xs py-2 mt-1"
+                  onClick={() => runtimeFnId && bumpRun(runtimeFnId)}
+                >
+                  Run
+                </button>
+
+                <div className="text-[11px] text-gray-500">
+                  Tip: missing params will show as “Missing runtime param”.
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        <div className="mb-2">
+          <div className="font-medium">Execution plan</div>
+          <div className="break-all">{plan.join(" → ") || "(empty)"}</div>
+        </div>
+
+        <div>
+          <div className="font-medium">Selected node</div>
+          <div className="break-all">{selectedId ?? "(none)"}</div>
+
+          <div className="mt-2">
+            <div className="font-medium">Visible symbols</div>
+            {/* <div className="break-all">{symbols.join(", ") || "(none)"}</div> */}
+            <div className="break-all">
+              {symbols.length === 0 ? (
+                "(none)"
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {symbols.map((s) => {
+                    const hasNumericVal = s in runtime.values;
+                    const numericVal = runtime.values[s];
+                    const err = runtime.errors[s];
+
+                    // NEW: full raw value (can be number, array, object, etc.)
+                    const rawScopeVal =
+                      (runtime as any).scope && s in (runtime as any).scope
+                        ? (runtime as any).scope[s]
+                        : undefined;
+
+                    let display: string;
+
+                    if (err) {
+                      display = `⚠ ${err}`;
+                    } else if (hasNumericVal) {
+                      // normal case: scalar number
+                      display = String(numericVal);
+                    } else if (Array.isArray(rawScopeVal)) {
+                      // show a compact array badge
+                      const preview = rawScopeVal.slice(0, 4).join(", ");
+                      const more = rawScopeVal.length > 4 ? ", …" : "";
+                      display = `[${preview}${more}] · ${rawScopeVal.length} items`;
+                    } else if (rawScopeVal !== undefined) {
+                      // some other non-numeric value (object, string, etc.)
+                      display =
+                        typeof rawScopeVal === "object" && rawScopeVal !== null
+                          ? "[object]"
+                          : String(rawScopeVal);
+                    } else {
+                      display = "—";
+                    }
+
+                    return (
+                      <div
+                        key={s}
+                        className="flex items-center justify-between gap-2"
+                      >
+                        <span className="font-mono">{s}</span>
+                        <span
+                          className={err ? "text-red-700" : "text-gray-900"}
+                        >
+                          {display}
+                        </span>
+                      </div>
+                    );
+                  })}
+
+                  {runtime.errors.__plan__ && (
+                    <div className="text-red-700 mt-1">
+                      ⚠ Plan: {runtime.errors.__plan__}
+                    </div>
+                  )}
+                  {runtime.errors.__runtime__ && (
+                    <div className="text-red-700 mt-1">
+                      ⚠ Runtime: {runtime.errors.__runtime__}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-2">
+            <div className="font-medium">Return</div>
+            <div className="break-all">
+              {ret.error ? `ERROR: ${ret.error}` : (ret.value ?? "(none)")}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {(() => {
+        const selectedId = selectedShapeIds[0] ?? null;
+        const selectedShape = selectedId
+          ? shapes.find((s) => s.id === selectedId)
+          : null;
+        const selectedLogicTypeId = (selectedShape as any)?.logicTypeId ?? null;
+
+        // Only show inspector for our new blocks
+        const isLogicBuilder =
+          selectedLogicTypeId === "fn/param" ||
+          selectedLogicTypeId === "fn/var" ||
+          selectedLogicTypeId === "fn/add" ||
+          selectedLogicTypeId === "fn/return";
+
+        return isLogicBuilder ? (
+          <LogicBuilderInspector
+            shapes={shapes}
+            connections={connections}
+            selectedShapeId={selectedId}
+            selectedLogicTypeId={selectedLogicTypeId}
+          />
+        ) : null;
+      })()}
+
       {/* Canvas */}
       <div
         ref={canvasRef}
-        className="flex-1 relative"
+        // className="flex-1 relative"
+        // className={`flex-1 relative ${panToolEnabled ? "cursor-grab" : ""}`}
+        className={[
+          "flex-1 relative",
+          panToolEnabled ? "cursor-grab" : "",
+          isPanning ? "cursor-grabbing" : "",
+        ].join(" ")}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragStart={handleDragStart}
@@ -1642,14 +2251,14 @@ export default function InfiniteCanvas({
           /> */}
 
           {/* ERD auto connectors (FK-based) */}
-          {erdArrows}
+          {/* {erdArrows} */}
 
           {connectionEndpoints
             .filter((endpoint) => {
               if (isValuePropCanvas) {
                 if (!problems) {
                   const toShape = shapes.find(
-                    (s) => s.id === endpoint.connection.toShapeId
+                    (s) => s.id === endpoint.connection.toShapeId,
                   );
 
                   if (
@@ -1664,7 +2273,7 @@ export default function InfiniteCanvas({
 
                 if (!solutions) {
                   const toShape = shapes.find(
-                    (s) => s.id === endpoint.connection.toShapeId
+                    (s) => s.id === endpoint.connection.toShapeId,
                   );
 
                   if (
@@ -1680,25 +2289,49 @@ export default function InfiniteCanvas({
 
               return true;
             })
-            .map(({ id, from, to, fromSide, toSide, connection }) => {
-              // const fromSide = sideFromAnchor(connection.fromAnchor);
-              // const toSide = sideFromAnchor(connection.toAnchor);
+            .map(
+              ({
+                id,
+                from,
+                to,
+                fromSide,
+                toSide,
+                connection,
+                fromRect,
+                toRect,
+              }) => {
+                // const fromSide = sideFromAnchor(connection.fromAnchor);
+                // const toSide = sideFromAnchor(connection.toAnchor);
 
-              return (
-                <SelectableConnectionArrow
-                  key={id}
-                  id={id}
-                  from={from}
-                  to={to}
-                  zIndex={400}
-                  fromSide={fromSide} // <- pass through
-                  toSide={toSide} // <- pass through
-                  selected={editable && selectedConnectionId === id}
-                  onSelect={editable ? selectConnection : undefined}
-                  layout="orthogonal"
-                />
-              );
-            })}
+                return (
+                  // <SelectableConnectionArrow
+                  //   key={id}
+                  //   id={id}
+                  //   from={from}
+                  //   to={to}
+                  //   zIndex={400}
+                  //   fromSide={fromSide} // <- pass through
+                  //   toSide={toSide} // <- pass through
+                  //   selected={editable && selectedConnectionId === id}
+                  //   onSelect={editable ? selectConnection : undefined}
+                  //   layout="orthogonal"
+                  // />
+                  <OrthogonalArrow
+                    key={id}
+                    id={id}
+                    from={from}
+                    to={to}
+                    zIndex={1}
+                    fromSide={fromSide}
+                    toSide={toSide}
+                    fromRect={fromRect} // 👈 new
+                    toRect={toRect}
+                    selected={editable && selectedConnectionId === id}
+                    onSelect={editable ? selectConnection : undefined}
+                  />
+                );
+              },
+            )}
 
           {shapes
             .filter((shape) => {
@@ -1815,10 +2448,10 @@ export default function InfiniteCanvas({
                   zIndex: 250,
                 }}
               />
-            )
+            ),
           )}
 
-          <LogicConnectionsLayer shapes={shapes} />
+          {/* <LogicConnectionsLayer shapes={shapes} mousePos={canvasMousePos} /> */}
         </div>
       </div>
     </div>
@@ -1845,7 +2478,7 @@ function computePreviewOrthogonalPoints(
   tx: number,
   ty: number,
   fromSide?: Side,
-  toSide?: Side
+  toSide?: Side,
 ): { x: number; y: number }[] {
   const pts: { x: number; y: number }[] = [];
   pts.push({ x: fx, y: fy });
@@ -1959,7 +2592,7 @@ export const CurvedArrow: React.FC<CurvedArrowProps> = ({
     tx1,
     ty1,
     fromSide,
-    toSide
+    toSide,
   );
 
   const d =
@@ -1974,7 +2607,7 @@ export const CurvedArrow: React.FC<CurvedArrowProps> = ({
   // Unique marker id per instance so previews don't conflict
   const markerId = useMemo(
     () => `arrowhead-preview-${Math.random().toString(36).slice(2)}`,
-    []
+    [],
   );
 
   return (

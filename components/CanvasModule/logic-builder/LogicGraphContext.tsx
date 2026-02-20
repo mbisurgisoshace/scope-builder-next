@@ -16,6 +16,8 @@ import {
 } from "./NodeRegistry";
 import { LogicGraphService } from "./LogicGraphService";
 import { NodeDefinition } from "./NodeDefinition";
+import { createDefaultNodeRegistry } from "./NodeLibrary";
+import { registerFunctionNodes } from "./function-domain/registerFunctionNodes";
 
 interface LogicGraphContextValue {
   graph: LogicGraph;
@@ -45,56 +47,7 @@ export const LogicGraphProvider: React.FC<{
   // 1) Registry – created once
   const registryRef = useRef<NodeDefinitionRegistry | null>(null);
   if (!registryRef.current) {
-    const registry = new InMemoryNodeDefinitionRegistry();
-    registry.register(
-      new NodeDefinition({
-        typeId: "logic/if",
-        label: "If",
-        ports: [
-          {
-            id: "in",
-            name: "in",
-            kind: "input", // 👈 LogicPortKind
-            channel: "control", // 👈 LogicPortChannel
-            side: "top", // 👈 comes from above
-            order: 0,
-          },
-          // condition (data in)
-          {
-            id: "cond",
-            name: "cond",
-            kind: "input",
-            channel: "data",
-            valueType: "boolean", // 👈 LogicValueType
-            side: "left",
-            order: 0,
-          },
-          // control branches
-          {
-            id: "then",
-            name: "then",
-            kind: "branch",
-            channel: "control",
-            side: "right",
-            order: 0,
-          },
-          {
-            id: "else",
-            name: "else",
-            kind: "branch",
-            channel: "control",
-            side: "bottom",
-            order: 0,
-          },
-        ],
-      })
-    );
-
-    // TODO: register your node definitions here
-    // e.g.:
-    // registerDefaultLogicNodes(registry);
-
-    registryRef.current = registry;
+    registryRef.current = createDefaultNodeRegistry();
   }
 
   // 2) LogicGraph – created once with (props, registry)

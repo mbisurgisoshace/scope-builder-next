@@ -1,148 +1,149 @@
 // logic/NodeLibrary.ts
+import {
+  InMemoryNodeDefinitionRegistry,
+  NodeDefinitionRegistry,
+} from "./NodeRegistry";
 import { NodeDefinition } from "./NodeDefinition";
-import { InMemoryNodeDefinitionRegistry } from "./NodeRegistry";
-import { LogicPortDefinition } from "./types";
 
-function port(
-  id: string,
-  name: string,
-  kind: "input" | "output" | "branch" | "body",
-  channel: "control" | "data",
-  valueType?: "any" | "string" | "number" | "boolean" | "object" | "array"
-): LogicPortDefinition {
-  return { id, name, kind, channel, valueType };
+function registerOnce(registry: NodeDefinitionRegistry, def: NodeDefinition) {
+  if (registry.getDefinition(def.typeId)) return;
+  // InMemoryNodeDefinitionRegistry has register(), interface does not
+  (registry as any).register(def);
 }
 
 /**
- * Build the default node library (start, assign, if, log, return…)
+ * Creates the default node registry with all built-in node types.
+ * This is PURE domain config – no React, no canvas knowledge.
  */
-export function createDefaultNodeRegistry() {
+export function createDefaultNodeRegistry(): NodeDefinitionRegistry {
   const registry = new InMemoryNodeDefinitionRegistry();
 
-  // ─────────────────────────────
-  // 1) Start
-  // ─────────────────────────────
-  registry.register(
-    new NodeDefinition({
-      typeId: "start",
-      label: "Start",
-      description: "Entry point: emits a control signal once.",
-      category: "Control",
-      icon: "start",
-      behavior: {
-        sequentialFlow: true,
-        eventDriven: false,
-        allowsChildren: false,
-        typedDataFlow: false,
-      },
-      ports: [
-        // no inputs, only one control output
-        port("out", "out", "output", "control"),
-      ],
-    })
-  );
-
-  // ─────────────────────────────
-  // 2) Assign
-  // ─────────────────────────────
-  registry.register(
-    new NodeDefinition({
-      typeId: "assign",
-      label: "Assign",
-      description:
-        "Assigns an expression/value to a variable in the execution context.",
-      category: "Variables",
-      icon: "assign",
-      behavior: {
-        sequentialFlow: true,
-        typedDataFlow: true,
-        allowsChildren: false,
-      },
-      // Config: variableName is stored in node.config.variableName
-      defaultConfig: {
-        variableName: "myVar",
-      },
-      ports: [
-        // control flow in and out
-        port("in", "in", "input", "control"),
-        port("out", "out", "output", "control"),
-
-        // data: value in, result out
-        port("value", "value", "input", "data", "any"),
-        port("result", "result", "output", "data", "any"),
-      ],
-    })
-  );
-
-  // ─────────────────────────────
-  // 3) If
-  // ─────────────────────────────
-  registry.register(
+  // ─────────────────────────────────────────────
+  // IF NODE
+  // ─────────────────────────────────────────────
+  registerOnce(
+    registry,
     new NodeDefinition({
       typeId: "if",
       label: "If",
-      description: "Conditional branch on a boolean expression.",
-      category: "Control",
-      icon: "if",
-      behavior: {
-        sequentialFlow: true,
-        typedDataFlow: true,
-        allowsChildren: false,
-      },
       ports: [
-        // control input
-        port("in", "in", "input", "control"),
-
-        // control branches
-        port("true", "true", "branch", "control"),
-        port("false", "false", "branch", "control"),
-
-        // condition value
-        port("condition", "condition", "input", "data", "boolean"),
+        {
+          id: "condition",
+          name: "condition",
+          kind: "input",
+          channel: "data",
+          valueType: "boolean",
+        },
+        {
+          id: "true",
+          name: "true",
+          kind: "output",
+          channel: "control",
+        },
+        {
+          id: "false",
+          name: "false",
+          kind: "output",
+          channel: "control",
+        },
       ],
     })
   );
 
-  // ─────────────────────────────
-  // 4) Log
-  // ─────────────────────────────
-  registry.register(
+  // ─────────────────────────────────────────────
+  // FUNCTION PARAMETER
+  // ─────────────────────────────────────────────
+  registerOnce(
+    registry,
     new NodeDefinition({
-      typeId: "log",
-      label: "Log",
-      description: "Logs a value (to console, UI or external logger).",
-      category: "Side effects",
-      icon: "log",
-      behavior: {
-        sequentialFlow: true,
-        typedDataFlow: true,
-      },
+      typeId: "fn/param",
+      label: "Parameter",
       ports: [
-        port("in", "in", "input", "control"),
-        port("out", "out", "output", "control"),
-
-        port("value", "value", "input", "data", "any"),
+        {
+          id: "value",
+          name: "value",
+          kind: "output",
+          channel: "data",
+          valueType: "number", // can be generic later
+        },
       ],
     })
   );
 
-  // ─────────────────────────────
-  // 5) Return
-  // ─────────────────────────────
-  registry.register(
+  // ─────────────────────────────────────────────
+  // VARIABLE DECLARATION
+  // ─────────────────────────────────────────────
+  registerOnce(
+    registry,
     new NodeDefinition({
-      typeId: "return",
+      typeId: "fn/var",
+      label: "Variable",
+      ports: [
+        {
+          id: "in",
+          name: "set",
+          kind: "input",
+          channel: "data",
+        },
+        {
+          id: "out",
+          name: "get",
+          kind: "output",
+          channel: "data",
+        },
+      ],
+    })
+  );
+
+  // ─────────────────────────────────────────────
+  // ADD (a + b)
+  // ─────────────────────────────────────────────
+  registerOnce(
+    registry,
+    new NodeDefinition({
+      typeId: "fn/add",
+      label: "Add",
+      ports: [
+        {
+          id: "a",
+          name: "a",
+          kind: "input",
+          channel: "data",
+          valueType: "number",
+        },
+        {
+          id: "b",
+          name: "b",
+          kind: "input",
+          channel: "data",
+          valueType: "number",
+        },
+        {
+          id: "result",
+          name: "result",
+          kind: "output",
+          channel: "data",
+          valueType: "number",
+        },
+      ],
+    })
+  );
+
+  // ─────────────────────────────────────────────
+  // RETURN
+  // ─────────────────────────────────────────────
+  registerOnce(
+    registry,
+    new NodeDefinition({
+      typeId: "fn/return",
       label: "Return",
-      description: "Ends the flow and returns a value from this graph.",
-      category: "Control",
-      icon: "return",
-      behavior: {
-        sequentialFlow: true,
-        typedDataFlow: true,
-      },
       ports: [
-        port("in", "in", "input", "control"),
-        port("value", "value", "input", "data", "any"),
+        {
+          id: "value",
+          name: "value",
+          kind: "input",
+          channel: "data",
+        },
       ],
     })
   );
