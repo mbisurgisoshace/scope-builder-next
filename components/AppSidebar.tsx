@@ -40,11 +40,11 @@ const data = {
       url: "/",
       //icon: Frame,
     },
-    // {
-    //   name: "Progress",
-    //   url: "/progress",
-    //   //icon: Frame,
-    // },
+    {
+      name: "Logic Builder",
+      url: "/logic-builder",
+      //icon: Frame,
+    },
     // {
     //   name: "Idea Brainstorm",
     //   url: "/idea-brainstorm",

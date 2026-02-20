@@ -20,8 +20,6 @@ export default async function Home({
 
   const project = await getProject(Number(projectId));
 
-  console.log("project", project);
-
   return (
     <div className="flex flex-col h-full">
       <div className="h-full flex flex-col gap-2">
