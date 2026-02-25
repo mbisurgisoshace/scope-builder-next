@@ -206,6 +206,13 @@ export default function Notes() {
                     if (!note.share_with_startup && note.user_id !== userId)
                       canUserSeeNote = false;
 
+                    if (
+                      !note.share_with_startup &&
+                      note.user_id !== userId &&
+                      canPostNote
+                    )
+                      canUserSeeNote = true;
+
                     return canUserSeeNote;
                   })
                   .map((note) => (
