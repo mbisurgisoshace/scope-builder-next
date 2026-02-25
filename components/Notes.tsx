@@ -1,6 +1,9 @@
 import { format } from "date-fns";
+import dynamic from "next/dynamic";
 import { useAuth } from "@clerk/nextjs";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { EditorState, convertFromRaw, convertToRaw } from "draft-js";
+import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 import {
   EllipsisIcon,
   FileIcon,
@@ -46,9 +49,17 @@ type Note = {
   attachments: Attachment[];
 };
 
+const RteEditor = dynamic(
+  () => import("react-draft-wysiwyg").then((m) => m.Editor),
+  { ssr: false },
+);
+
 export default function Notes() {
   const { userId, orgId, orgRole } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [editorState, setEditorState] = useState<EditorState>(
+    EditorState.createEmpty(),
+  );
 
   const [text, setText] = useState("");
   const [notes, setNotes] = useState<Note[]>([]);
@@ -83,17 +94,24 @@ export default function Notes() {
   }, [orgId, orgRole]);
 
   const addNote = async () => {
-    if (text.trim().length === 0) return;
+    const contentState = editorState.getCurrentContent();
+    //if (text.trim().length === 0) return;
+
+    if (!contentState.hasText()) return;
 
     try {
+      const raw = convertToRaw(contentState);
+      const editorText = JSON.stringify(raw);
+
       const newNote = await createNote(
-        text,
+        editorText,
         shareWithStartup,
         pendingAttachments,
       );
 
       setText("");
       setShareWithStartup(false);
+      setEditorState(EditorState.createEmpty());
       setNotes((prevNotes) => [
         ...prevNotes,
         {
@@ -275,33 +293,64 @@ export default function Notes() {
               )}
               <div className="flex flex-col gap-3 p-3">
                 <div className="flex flex-row items-center gap-2">
-                  <Textarea
+                  {/* <Textarea
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                  />
-                  <Button
-                    variant={"ghost"}
-                    size={"icon"}
-                    onClick={() => inputRef.current?.click()}
-                  >
-                    <PaperclipIcon size={14} />
-                  </Button>
-                  <input
-                    type="file"
-                    className="hidden"
-                    ref={inputRef}
-                    onChange={onUploadFile}
-                  />
+                  /> */}
+
+                  <div className="flex w-full">
+                    <RteEditor
+                      editorState={editorState}
+                      onEditorStateChange={setEditorState}
+                      toolbar={{
+                        options: ["inline"],
+                        inline: {
+                          options: [
+                            "bold",
+                            "italic",
+                            "underline",
+                            "strikethrough",
+                          ],
+                        },
+                        //list: { options: ["unordered", "ordered"] },
+                      }}
+                      wrapperClassName="w-full"
+                      toolbarClassName={`border-b px-2 text-[14px]
+                  "bg-white"
+`}
+                      editorClassName={`px-2 py-2 min-h-[150px] text-[14px] 
+                        "bg-[#FFE0E0] rounded" 
+                       placeholder:text-gray-500 `}
+                    />
+                  </div>
                 </div>
-                <div className="flex flex-row gap-2 items-center">
-                  <Checkbox
-                    id="share"
-                    checked={shareWithStartup}
-                    onCheckedChange={() =>
-                      setShareWithStartup(!shareWithStartup)
-                    }
-                  />
-                  <Label htmlFor="share">Share with startup</Label>
+                <div className="flex flex-row gap-2 justify-between items-center">
+                  <div className="flex flex-row gap-2  items-center">
+                    <Checkbox
+                      id="share"
+                      checked={shareWithStartup}
+                      onCheckedChange={() =>
+                        setShareWithStartup(!shareWithStartup)
+                      }
+                    />
+                    <Label htmlFor="share">Share with startup</Label>
+                  </div>
+
+                  <div className="mr-6">
+                    <Button
+                      variant={"ghost"}
+                      size={"icon"}
+                      onClick={() => inputRef.current?.click()}
+                    >
+                      <PaperclipIcon size={14} />
+                    </Button>
+                    <input
+                      type="file"
+                      className="hidden"
+                      ref={inputRef}
+                      onChange={onUploadFile}
+                    />
+                  </div>
                 </div>
                 <Button onClick={addNote}>Add Note</Button>
               </div>
@@ -388,16 +437,35 @@ export function ChatNote({
   onDeleteNote,
   onUpdateNote,
 }: ChatNoteProps) {
+  const initialEditorState = useMemo(() => {
+    try {
+      if (content) {
+        const raw = JSON.parse(content);
+        return EditorState.createWithContent(convertFromRaw(raw));
+      }
+    } catch {}
+    return EditorState.createEmpty();
+  }, []);
+
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(content);
   const [shareWithStartup, setShareWithStartup] = useState(isPublic);
+  const [editorState, setEditorState] =
+    useState<EditorState>(initialEditorState);
 
   const hasAttachments = attachments && attachments.length > 0;
   const files = attachments?.filter((a) => a.type === "file") ?? [];
   const images = attachments?.filter((a) => a.type === "image") ?? [];
 
   const onUpdate = async () => {
-    await onUpdateNote(text, shareWithStartup);
+    const contentState = editorState.getCurrentContent();
+
+    if (!contentState.hasText()) return;
+
+    const raw = convertToRaw(contentState);
+    const editorText = JSON.stringify(raw);
+
+    await onUpdateNote(editorText, shareWithStartup);
     setOpen(false);
   };
 
@@ -432,9 +500,23 @@ export function ChatNote({
                 <SheetTitle>Update/Remove Note</SheetTitle>
               </SheetHeader>
               <div className="flex flex-col gap-3 p-3">
-                <Textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
+                <RteEditor
+                  editorState={editorState}
+                  onEditorStateChange={setEditorState}
+                  toolbar={{
+                    options: ["inline"],
+                    inline: {
+                      options: ["bold", "italic", "underline", "strikethrough"],
+                    },
+                    //list: { options: ["unordered", "ordered"] },
+                  }}
+                  wrapperClassName="w-full"
+                  toolbarClassName={`border-b px-2 text-[14px]
+                  "bg-white"
+`}
+                  editorClassName={`px-2 py-2 min-h-[150px] text-[14px] 
+                        "bg-[#FFE0E0] rounded" 
+                       placeholder:text-gray-500 `}
                 />
                 <div className="flex flex-row gap-2 items-center">
                   <Checkbox
@@ -479,7 +561,7 @@ export function ChatNote({
         </span>
         <div
           className={cn(
-            "rounded-2xl px-4 py-2.5 text-sm leading-relaxed max-w-prose bg-muted",
+            "rounded-2xl px-2 py-2.5 text-sm leading-relaxed max-w-prose bg-muted",
             isAuthor
               ? "bg-muted text-foreground rounded-br-md"
               : "bg-muted text-foreground rounded-bl-md",
@@ -504,12 +586,25 @@ export function ChatNote({
           {content && (
             <div
               className={cn(
-                "px-4",
-                images.length > 0 ? "pt-2" : "pt-2.5",
-                files.length > 0 ? "pb-1.5" : "pb-2.5",
+                // "px-2",
+                images.length > 0 ? "pt-2" : "pt-0",
+                files.length > 0 ? "pb-1.5" : "pb-0",
               )}
             >
-              {content}
+              {/* {content} */}
+              <RteEditor
+                editorState={editorState}
+                onEditorStateChange={setEditorState}
+                toolbar={{
+                  options: [],
+                  //list: { options: ["unordered", "ordered"] },
+                }}
+                wrapperClassName="w-full"
+                toolbarHidden
+                editorClassName={`px-2 py-2  text-[14px] 
+                        "bg-[#FFE0E0] rounded" 
+                       placeholder:text-gray-500 `}
+              />
             </div>
           )}
 
