@@ -2,7 +2,13 @@ import { format } from "date-fns";
 import dynamic from "next/dynamic";
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { EditorState, convertFromRaw, convertToRaw } from "draft-js";
+import {
+  ContentState,
+  EditorState,
+  convertFromHTML,
+  convertFromRaw,
+  convertToRaw,
+} from "draft-js";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 import {
   EllipsisIcon,
@@ -443,7 +449,12 @@ export function ChatNote({
         const raw = JSON.parse(content);
         return EditorState.createWithContent(convertFromRaw(raw));
       }
-    } catch {}
+    } catch {
+      if (content) {
+        const contentState = ContentState.createFromText(content);
+        return EditorState.createWithContent(contentState);
+      }
+    }
     return EditorState.createEmpty();
   }, []);
 
