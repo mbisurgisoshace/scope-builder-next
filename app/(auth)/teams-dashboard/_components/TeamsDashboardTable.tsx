@@ -48,7 +48,7 @@ const columns: ColumnDef<any>[] = [
         <span>
           <span className="text-[#697288]">20</span> /{" "}
           <span className="text-[#58C184]">conducted</span> /{" "}
-          <span className="text-[#7A9CE0]">scheduled</span>
+          <span className="text-[#B87F5A]">scheduled</span>
         </span>
       </div>
     ),
@@ -65,7 +65,7 @@ const columns: ColumnDef<any>[] = [
               {row.original.interviews.conducted}
             </span>{" "}
             /{" "}
-            <span className="text-[#7A9CE0]">
+            <span className="text-[#B87F5A]">
               {row.original.interviews.scheduled}
             </span>
           </span>
@@ -89,7 +89,7 @@ const columns: ColumnDef<any>[] = [
               },
               {
                 value: row.original.interviews.scheduled,
-                colorClass: "bg-[#7A9CE0]",
+                colorClass: "bg-[#B87F5A]",
               },
               {
                 value: 20,
