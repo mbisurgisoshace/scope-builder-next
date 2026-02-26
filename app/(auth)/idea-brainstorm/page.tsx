@@ -22,9 +22,12 @@ export default async function IdeaBrainstormPage() {
         <Tabs defaultValue="canvas" className="h-full">
           <TabsList>
             <TabsTrigger value="canvas">Canvas</TabsTrigger>
-            <TabsTrigger value="examples-problem">Example: Problem & Value Prop Ad-Lib</TabsTrigger>
-            <TabsTrigger value="examples-ecosystem">Example: Ecosystem Map</TabsTrigger>
-
+            <TabsTrigger value="examples-problem">
+              Example: Problem & Value Prop Ad-Lib
+            </TabsTrigger>
+            <TabsTrigger value="examples-ecosystem">
+              Example: Ecosystem Map
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="canvas" className="h-full">
             <Room roomId={`brainstorm-${orgId}`}>
@@ -75,7 +78,7 @@ export default async function IdeaBrainstormPage() {
                   rectangle: false,
                   interview: false,
                 }}
-                editable={false}
+                editable={true}
               />
             </Room>
           </TabsContent>
