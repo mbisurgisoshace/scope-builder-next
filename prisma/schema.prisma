@@ -220,7 +220,7 @@ model OrgTask {
 model ExerciseResponse {
   id               Int      @id @default(autoincrement())
   org_id           String
-  excercise_number Int
+  exercise_number Int
   responses        Json
   created_at       DateTime @default(now())
   updated_at       DateTime @updatedAt
