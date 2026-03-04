@@ -16,7 +16,7 @@ export async function getExerciseResponse(exerciseNumber: number) {
   const exerciseResponse = await prisma.exerciseResponse.findFirst({
     where: {
       org_id: orgId,
-      excercise_number: exerciseNumber,
+      exercise_number: exerciseNumber,
     },
   });
 
@@ -36,7 +36,7 @@ export async function createExerciseResponse(
   const createdResponse = await prisma.exerciseResponse.create({
     data: {
       org_id: orgId,
-      excercise_number: exerciseNumber,
+      exercise_number: exerciseNumber,
       responses: responses,
     },
   });
@@ -52,7 +52,7 @@ function serializeExerciseReponse(prismaRecord: ExerciseResponse | null) {
   return {
     id: prismaRecord.id,
     org_id: prismaRecord.org_id,
-    exercise_number: prismaRecord.excercise_number,
+    exercise_number: prismaRecord.exercise_number,
     responses: prismaRecord.responses,
   };
 }
