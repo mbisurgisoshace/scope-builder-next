@@ -21,6 +21,7 @@ export default async function HypothesesPage() {
   const hypothesesData = hypotheses.map((hypothesis) => ({
     id: hypothesis.id,
     type: hypothesis.type,
+    role: hypothesis.role,
     title: hypothesis.title,
     order: hypothesis.order,
     priority: hypothesis.priority,
