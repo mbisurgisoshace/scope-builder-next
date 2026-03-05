@@ -316,14 +316,14 @@ export default function HypothesesCard({
                 <div className="flex flex-row gap-2 items-center">
                   <label className="text-sm">Hypothesis Type</label>
                   <div className="bg-[#F3F0FD]  text-xs rounded-full text-[#6E6588] font-semibold px-2 py-0.5">
-                    {hypothesis.type || "No type"}
+                    {hypothesis.type || "No type selected"}
                   </div>
                 </div>
 
                 <div className="flex flex-row gap-2 items-center">
                   <label className="text-sm">Stakeholder Role</label>
                   <div className="bg-[#F3F0FD]  text-xs rounded-full text-[#6E6588] font-semibold px-2 py-0.5">
-                    {hypothesis.role ? hypothesis.role : "No roles"}
+                    {hypothesis.role ? hypothesis.role : "No roles selected"}
                   </div>
                 </div>
               </div>
