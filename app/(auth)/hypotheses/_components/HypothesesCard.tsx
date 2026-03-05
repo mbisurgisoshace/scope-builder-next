@@ -73,6 +73,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { MultiSelect } from "@/components/ui/multiselect";
+import Link from "next/link";
 
 /*
   Hypotheses Table
@@ -116,13 +117,13 @@ export type Hypotheses = {
   title: string;
   order: number;
   priority: number;
-  interviews: string[];
   role?: string | null;
   type?: string | null;
   questions: Question[];
   conclusion_status: string;
   description: string | null;
   conclusion_content?: string | null;
+  interviews: { id: string; name: string }[];
 };
 
 interface HypothesesCardProps {
@@ -307,9 +308,26 @@ export default function HypothesesCard({
               </div>
             </div>
           ) : (
-            <span onDoubleClick={() => setShowEditTitle(true)}>
-              {hypothesis.title}
-            </span>
+            <div className="flex flex-col gap-2 items-start">
+              <span onDoubleClick={() => setShowEditTitle(true)}>
+                {hypothesis.title}
+              </span>
+              <div className="flex flex-row gap-2 items-start">
+                <div className="flex flex-row gap-2 items-center">
+                  <label className="text-sm">Hypothesis Type</label>
+                  <div className="bg-[#F3F0FD]  text-xs rounded-full text-[#6E6588] font-semibold px-2 py-0.5">
+                    {hypothesis.type || "No type"}
+                  </div>
+                </div>
+
+                <div className="flex flex-row gap-2 items-center">
+                  <label className="text-sm">Stakeholder Role</label>
+                  <div className="bg-[#F3F0FD]  text-xs rounded-full text-[#6E6588] font-semibold px-2 py-0.5">
+                    {hypothesis.role ? hypothesis.role : "No roles"}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
           {/* <Sheet open={open} onOpenChange={setOpen}> */}
           <DropdownMenu>
@@ -739,9 +757,14 @@ export default function HypothesesCard({
                 {hypothesis.interviews.map((interview, index) => {
                   return (
                     <div key={index}>
-                      <span className="text-xs text-[#697288] font-semibold underline decoration-dotted">
-                        {interview}
-                      </span>
+                      <Link
+                        href={`/participants/${interview.id}/interview`}
+                        target="_blank"
+                      >
+                        <span className="text-xs text-[#697288] font-semibold underline decoration-dotted">
+                          {interview.name}
+                        </span>
+                      </Link>
                       {index < hypothesis.interviews.length - 1 && (
                         <span className="text-xs text-[#697288] font-semibold">
                           ,{" "}
@@ -840,9 +863,9 @@ export default function HypothesesCard({
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-row items-center justify-between">
-          <div className="bg-[#F3F0FD] text-xs rounded-full text-[#6E6588] font-semibold px-2 py-0.5">
+          {/* <div className="bg-[#F3F0FD] text-xs rounded-full text-[#6E6588] font-semibold px-2 py-0.5">
             {hypothesis.type || "No type"}
-          </div>
+          </div> */}
           <div className="flex flex-col items-center gap-2.5">
             {hypothesis.priority > 0 && (
               <div className="flex flex-row items-center">
