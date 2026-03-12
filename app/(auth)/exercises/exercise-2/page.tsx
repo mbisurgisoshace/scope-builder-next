@@ -124,8 +124,6 @@ export default async function Exercise2Page() {
     },
   ];
 
-  console.log(exerciseResponse);
-
   return (
     <div className="p-8 w-full h-full grid grid-cols-4 gap-4">
       <div className="col-start-2 col-end-4">
