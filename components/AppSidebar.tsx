@@ -72,6 +72,12 @@ const data = {
       //icon: PieChart,
       conditionalMenu: true,
     },
+    {
+      name: "Interviews",
+      url: "/participants/interviews",
+      //icon: PieChart,
+      conditionalMenu: true,
+    },
   ],
   navMain: [
     // {

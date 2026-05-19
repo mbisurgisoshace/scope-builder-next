@@ -3,6 +3,7 @@ import ParticipantsTable from "./_components/ParticipantsTable";
 import AddParticipant from "./_components/AddParticipant";
 import { getParticipants, getParticipantTags } from "@/services/participants";
 import { getSegments } from "@/services/segments";
+import ParticipantsKanbanView from "./interviews/_components/ParticipantsKanbanView";
 
 export default async function ParticipantsPage() {
   // const marketSegments = await getSegments();
@@ -25,6 +26,8 @@ export default async function ParticipantsPage() {
         </header>
 
         <ParticipantsTable data={participants} tags={tags} />
+
+        {/* <ParticipantsKanbanView /> */}
       </div>
     </div>
   );
