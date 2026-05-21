@@ -6,23 +6,27 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus } from "lucide-react";
+import AddParticipant from "@/app/(auth)/participants/_components/AddParticipant";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
-type ParticipantStatus = Participant["status"];
-
-const STATUS_COLUMNS: { status: ParticipantStatus; label: string }[] = [
-  { status: "need_to_schedule", label: "Interviewee" },
-  { status: "scheduled", label: "Scheduled" },
-  { status: "complete", label: "Conducted" },
-  { status: "incomplete", label: "Incomplete" },
-  { status: "interviewed", label: "Interviewed" },
+const PROGRESS_COLUMNS = [
+  { key: "need_to_schedule", label: "Interviewee" },
+  { key: "scheduled", label: "Scheduled" },
+  { key: "complete", label: "Conducted" },
+  { key: "documented", label: "Documented" }, // TODO: add 'documented' status to DB schema
 ];
 
-const STATUS_COLORS: Record<string, string> = {
+const PROGRESS_COLORS: Record<string, string> = {
   need_to_schedule: "#F5F5F8",
   scheduled: "#FFF3E6",
   complete: "#F4F0FF",
-  incomplete: "#FEE2E2",
-  interviewed: "#F3E8FF",
+  documented: "#F0FDF4",
 };
 
 // TODO: replace with real relationship field from Participant once added to schema
@@ -33,6 +37,13 @@ const RELATIONSHIP_COLUMNS = [
   { key: "networking_event", label: "Networking Event" },
 ];
 
+const RELATIONSHIP_COLORS: Record<string, string> = {
+  family_friends_colleagues: "#F5F5F8",
+  friend_of_friend: "#FFF3E6",
+  cold_connections: "#F4F0FF",
+  networking_event: "#F0FDF4",
+};
+
 function assignRelationship(participant: Participant): string {
   const buckets = RELATIONSHIP_COLUMNS.map((c) => c.key);
   return buckets[participant.id.charCodeAt(0) % buckets.length];
@@ -41,12 +52,14 @@ function assignRelationship(participant: Participant): string {
 function ParticipantCard({
   participant,
   hideRelationship = false,
+  onCardClick,
 }: {
   participant: Participant;
   hideRelationship?: boolean;
+  onCardClick?: () => void;
 }) {
   return (
-    <div className="bg-white rounded-lg w-[250px] border border-[#C9CAD4] p-3 hover:shadow-md transition-shadow cursor-pointer space-y-2">
+    <div onClick={onCardClick} className="bg-white rounded-lg w-[250px] border border-[#C9CAD4] p-3 hover:shadow-md transition-shadow cursor-pointer space-y-2">
       <p className="font-semibold text-[16px] text-[#111827]">
         {participant.name}
       </p>
@@ -84,16 +97,21 @@ function KanbanBoard({
   getColumnCards,
   getColumnColor,
   hideRelationship = false,
+  onAddClick,
+  onCardClick,
 }: {
   columns: { key: string; label: string }[];
   getColumnCards: (key: string) => Participant[];
   getColumnColor: (key: string) => string;
   hideRelationship?: boolean;
+  onAddClick?: () => void;
+  onCardClick?: (participant: Participant) => void;
 }) {
   return (
     <div className="flex flex-row gap-4 overflow-x-auto h-full">
-      {columns.map(({ key, label }) => {
+      {columns.map(({ key, label }, index) => {
         const cards = getColumnCards(key);
+        const isFirst = index === 0;
         return (
           <div
             key={key}
@@ -101,11 +119,19 @@ function KanbanBoard({
           >
             <div
               style={{ backgroundColor: getColumnColor(key) }}
-              className="flex items-center justify-between px-3 py-3 border-b border-gray-200"
+              className="flex items-center justify-between px-3 h-10 border-b border-gray-200"
             >
               <span className="text-xs font-semibold text-[#111827]">
                 {label}
               </span>
+              {isFirst && onAddClick && (
+                <button
+                  onClick={onAddClick}
+                  className="w-6 h-6 rounded-full bg-[#111827] text-white flex items-center justify-center hover:bg-[#374151] transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
             <div className="flex flex-col gap-2 p-4 overflow-y-auto flex-1 min-h-0">
               {cards.map((participant) => (
@@ -113,6 +139,7 @@ function KanbanBoard({
                   key={participant.id}
                   participant={participant}
                   hideRelationship={hideRelationship}
+                  onCardClick={() => onCardClick?.(participant)}
                 />
               ))}
               {cards.length === 0 && (
@@ -128,25 +155,23 @@ function KanbanBoard({
   );
 }
 
-export default function ParticipantsKanbanView() {
+export default function ParticipantsKanbanView({ tags }: { tags: string[] }) {
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
+
+  const refetch = () => getParticipants().then(setParticipants);
 
   useEffect(() => {
-    getParticipants().then(setParticipants);
+    refetch();
   }, []);
 
-  const groupedByStatus = STATUS_COLUMNS.reduce<Record<string, Participant[]>>(
-    (acc, { status }) => {
-      acc[status!] = participants.filter((p) => p.status === status);
-      return acc;
-    },
-    {},
-  );
-
-  const visibleStatusColumns = STATUS_COLUMNS.filter(
-    ({ status }) =>
-      groupedByStatus[status!]?.length > 0 || status === "need_to_schedule",
-  ).map((c) => ({ key: c.status as string, label: c.label }));
+  const groupedByStatus = PROGRESS_COLUMNS.reduce<
+    Record<string, Participant[]>
+  >((acc, { key }) => {
+    acc[key] = participants.filter((p) => p.status === key);
+    return acc;
+  }, {});
 
   const groupedByRelationship = RELATIONSHIP_COLUMNS.reduce<
     Record<string, Participant[]>
@@ -156,26 +181,56 @@ export default function ParticipantsKanbanView() {
   }, {});
 
   return (
-    <Tabs defaultValue="progress" className="flex flex-col h-full">
-      <TabsList>
-        <TabsTrigger value="progress">Progress</TabsTrigger>
-        <TabsTrigger value="relationship">Relationship</TabsTrigger>
-      </TabsList>
-      <TabsContent value="progress" className="flex-1 min-h-0 overflow-hidden mt-4">
-        <KanbanBoard
-          columns={visibleStatusColumns}
-          getColumnCards={(key) => groupedByStatus[key] ?? []}
-          getColumnColor={(key) => STATUS_COLORS[key] ?? "#F5F5F8"}
-        />
-      </TabsContent>
-      <TabsContent value="relationship" className="flex-1 min-h-0 overflow-hidden mt-4">
-        <KanbanBoard
-          columns={RELATIONSHIP_COLUMNS}
-          getColumnCards={(key) => groupedByRelationship[key] ?? []}
-          getColumnColor={() => "#F5F5F8"}
-          hideRelationship
-        />
-      </TabsContent>
-    </Tabs>
+    <>
+      <AddParticipant
+        tags={tags}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        onSuccess={refetch}
+      />
+      <Sheet
+        open={selectedParticipant !== null}
+        onOpenChange={(open) => { if (!open) setSelectedParticipant(null); }}
+      >
+        <SheetContent>
+          <SheetHeader className="border-b">
+            <SheetTitle className="text-[26px] font-medium text-[#162A4F]">
+              {selectedParticipant?.name}
+            </SheetTitle>
+          </SheetHeader>
+        </SheetContent>
+      </Sheet>
+      <Tabs defaultValue="progress" className="flex flex-col h-full">
+        <TabsList>
+          <TabsTrigger value="progress">Progress</TabsTrigger>
+          <TabsTrigger value="relationship">Relationship</TabsTrigger>
+        </TabsList>
+        <TabsContent
+          value="progress"
+          className="flex-1 min-h-0 overflow-hidden mt-4"
+        >
+          <KanbanBoard
+            columns={PROGRESS_COLUMNS}
+            getColumnCards={(key) => groupedByStatus[key] ?? []}
+            getColumnColor={(key) => PROGRESS_COLORS[key] ?? "#F5F5F8"}
+            onAddClick={() => setSheetOpen(true)}
+            onCardClick={setSelectedParticipant}
+          />
+        </TabsContent>
+        <TabsContent
+          value="relationship"
+          className="flex-1 min-h-0 overflow-hidden mt-4"
+        >
+          <KanbanBoard
+            columns={RELATIONSHIP_COLUMNS}
+            getColumnCards={(key) => groupedByRelationship[key] ?? []}
+            getColumnColor={(key) => RELATIONSHIP_COLORS[key] ?? "#F5F5F8"}
+            hideRelationship
+            onAddClick={() => setSheetOpen(true)}
+            onCardClick={setSelectedParticipant}
+          />
+        </TabsContent>
+      </Tabs>
+    </>
   );
 }
