@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus } from "lucide-react";
 import AddParticipant from "@/app/(auth)/participants/_components/AddParticipant";
+import EditParticipantForm from "@/app/(auth)/participants/_components/EditParticipantForm";
 import {
   Sheet,
   SheetContent,
@@ -74,11 +75,15 @@ function ParticipantCard({
       )}
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold">Stakeholder:</span>
-        <span className="text-xs font-semibold text-[#70747D]">Payer</span>
+        <span className="text-xs font-semibold text-[#70747D]">
+          {participant.role}
+        </span>
       </div>
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold">Title:</span>
-        <span className="text-xs font-semibold text-[#70747D]">CIO</span>
+        <span className="text-xs font-semibold text-[#70747D]">
+          {participant.job_title}
+        </span>
       </div>
       {!participant.scheduled_date && (
         <p className="text-[12px] font-medium text-[#70747D]">Not scheduled</p>
@@ -211,7 +216,18 @@ export default function ParticipantsKanbanView({ tags }: { tags: string[] }) {
                 <TabsTrigger value="profile">Profile</TabsTrigger>
               </TabsList>
               <TabsContent value="questions">Questions</TabsContent>
-              <TabsContent value="profile">Profile</TabsContent>
+              <TabsContent value="profile">
+                {selectedParticipant && (
+                  <EditParticipantForm
+                    participant={selectedParticipant}
+                    tags={tags}
+                    onSuccess={() => {
+                      refetch();
+                      setSelectedParticipant(null);
+                    }}
+                  />
+                )}
+              </TabsContent>
             </Tabs>
           </div>
         </SheetContent>
