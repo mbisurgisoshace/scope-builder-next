@@ -59,7 +59,10 @@ function ParticipantCard({
   onCardClick?: () => void;
 }) {
   return (
-    <div onClick={onCardClick} className="bg-white rounded-lg w-[250px] border border-[#C9CAD4] p-3 hover:shadow-md transition-shadow cursor-pointer space-y-2">
+    <div
+      onClick={onCardClick}
+      className="bg-white rounded-lg w-[250px] border border-[#C9CAD4] p-3 hover:shadow-md transition-shadow cursor-pointer space-y-2"
+    >
       <p className="font-semibold text-[16px] text-[#111827]">
         {participant.name}
       </p>
@@ -158,7 +161,8 @@ function KanbanBoard({
 export default function ParticipantsKanbanView({ tags }: { tags: string[] }) {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
+  const [selectedParticipant, setSelectedParticipant] =
+    useState<Participant | null>(null);
 
   const refetch = () => getParticipants().then(setParticipants);
 
@@ -190,7 +194,9 @@ export default function ParticipantsKanbanView({ tags }: { tags: string[] }) {
       />
       <Sheet
         open={selectedParticipant !== null}
-        onOpenChange={(open) => { if (!open) setSelectedParticipant(null); }}
+        onOpenChange={(open) => {
+          if (!open) setSelectedParticipant(null);
+        }}
       >
         <SheetContent>
           <SheetHeader className="border-b">
@@ -198,6 +204,16 @@ export default function ParticipantsKanbanView({ tags }: { tags: string[] }) {
               {selectedParticipant?.name}
             </SheetTitle>
           </SheetHeader>
+          <div className="p-4">
+            <Tabs defaultValue="questions">
+              <TabsList>
+                <TabsTrigger value="questions">Questions</TabsTrigger>
+                <TabsTrigger value="profile">Profile</TabsTrigger>
+              </TabsList>
+              <TabsContent value="questions">Questions</TabsContent>
+              <TabsContent value="profile">Profile</TabsContent>
+            </Tabs>
+          </div>
         </SheetContent>
       </Sheet>
       <Tabs defaultValue="progress" className="flex flex-col h-full">

@@ -65,12 +65,17 @@ function MilestoneStep({
 interface ParticipantKanbanHeaderProps {
   milestones: InterviewMilestone[];
   documentedCount: number;
+  payerDocumentedCount: number;
 }
 
 export default function ParticipantKanbanHeader({
   milestones,
   documentedCount,
+  payerDocumentedCount,
 }: ParticipantKanbanHeaderProps) {
+  const minPayerInterviews = Number(
+    process.env.NEXT_PUBLIC_MIN_PAYER_INTERVIEWS ?? 8,
+  );
   return (
     <div className="flex border border-gray-200 overflow-hidden bg-white items-center justify-between">
       <div className="flex">
@@ -97,12 +102,12 @@ export default function ParticipantKanbanHeader({
       <div className="px-8 flex gap-2 ">
         <Badge className="bg-[#EFF0F4] text-[#111827] px-4 py-2">
           <span>Minimum number of Payer interviews:</span>
-          <span>8</span>
+          <span>{minPayerInterviews}</span>
         </Badge>
 
         <Badge className="bg-[#EFF0F4] text-[#111827]">
           <span className="opacity-50">Current:</span>
-          <span className="opacity-50">4</span>
+          <span className="opacity-50">{payerDocumentedCount}</span>
         </Badge>
       </div>
     </div>

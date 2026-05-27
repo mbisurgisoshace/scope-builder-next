@@ -158,15 +158,24 @@ export async function getInterviewMilestonesWithProgress() {
   if (!userId) redirect("/sign-in");
   if (!orgId) redirect("/pick-startup");
 
-  const [milestones, documentedCount] = await Promise.all([
-    prisma.interviewMilestone.findMany({
-      where: { org_id: orgId },
-      orderBy: { date: "asc" },
-    }),
-    prisma.participant.count({
-      where: { org_id: orgId, status: "documented" },
-    }),
-  ]);
+  const [milestones, documentedCount, payerDocumentedCount] = await Promise.all(
+    [
+      prisma.interviewMilestone.findMany({
+        where: { org_id: orgId },
+        orderBy: { date: "asc" },
+      }),
+      prisma.participant.count({
+        where: { org_id: orgId, status: "documented" },
+      }),
+      prisma.participant.count({
+        where: {
+          org_id: orgId,
+          status: "documented",
+          role: { contains: "Payer" },
+        },
+      }),
+    ],
+  );
 
-  return { milestones, documentedCount };
+  return { milestones, documentedCount, payerDocumentedCount };
 }
