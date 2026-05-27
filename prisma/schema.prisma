@@ -33,6 +33,7 @@ enum ParticipantStatus {
   interviewed
   not_available
   need_to_schedule
+  documented
 }
 
 model Participant {
@@ -357,4 +358,17 @@ model Note {
   updated_at DateTime @updatedAt
 
   @@map("notes")
+}
+
+model InterviewMilestone {
+  id              Int      @id @default(autoincrement())
+  org_id          String
+  title           String
+  date            DateTime
+  documented_goal Int
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("interview_milestones")
 }

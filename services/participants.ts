@@ -151,3 +151,22 @@ export async function deleteParticipant(participantId: string) {
 
   revalidatePath(`/participants`);
 }
+
+export async function getInterviewMilestonesWithProgress() {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+  if (!orgId) redirect("/pick-startup");
+
+  const [milestones, documentedCount] = await Promise.all([
+    prisma.interviewMilestone.findMany({
+      where: { org_id: orgId },
+      orderBy: { date: "asc" },
+    }),
+    prisma.participant.count({
+      where: { org_id: orgId, status: "documented" },
+    }),
+  ]);
+
+  return { milestones, documentedCount };
+}

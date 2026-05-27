@@ -19,7 +19,7 @@ const PROGRESS_COLUMNS = [
   { key: "need_to_schedule", label: "Interviewee" },
   { key: "scheduled", label: "Scheduled" },
   { key: "complete", label: "Conducted" },
-  { key: "documented", label: "Documented" }, // TODO: add 'documented' status to DB schema
+  { key: "documented", label: "Documented" },
 ];
 
 const PROGRESS_COLORS: Record<string, string> = {

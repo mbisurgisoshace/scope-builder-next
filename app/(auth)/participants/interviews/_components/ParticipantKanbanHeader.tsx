@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2 } from "lucide-react";
+import { InterviewMilestone } from "@/lib/generated/prisma";
 
 interface MilestoneStepProps {
   number: number;
@@ -19,7 +20,6 @@ function MilestoneStep({
   isLast = false,
 }: MilestoneStepProps) {
   const isComplete = completed === total;
-  const hasProgress = completed > 0;
 
   return (
     <div className="relative flex flex-1 items-center px-4 py-3 bg-white">
@@ -62,24 +62,36 @@ function MilestoneStep({
   );
 }
 
-const MILESTONES = [
-  { number: 1, date: "Aug 8", completed: 5, total: 5 },
-  { number: 2, date: "Aug 15", completed: 1, total: 5 },
-  { number: 3, date: "Aug 22", completed: 0, total: 5 },
-];
+interface ParticipantKanbanHeaderProps {
+  milestones: InterviewMilestone[];
+  documentedCount: number;
+}
 
-export default function ParticipantKanbanHeader() {
+export default function ParticipantKanbanHeader({
+  milestones,
+  documentedCount,
+}: ParticipantKanbanHeaderProps) {
   return (
     <div className="flex border border-gray-200 overflow-hidden bg-white items-center justify-between">
       <div className="flex">
-        {MILESTONES.map((m, i) => (
-          <div key={m.number} className="w-[200px] px-2">
-            <MilestoneStep
-              {...m}
-              //isLast={i === MILESTONES.length - 1}
-            />
-          </div>
-        ))}
+        {milestones.map((m, i) => {
+          const completed = Math.min(documentedCount, m.documented_goal);
+          const date = new Date(m.date).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          });
+          return (
+            <div key={m.id} className="w-[200px] px-2">
+              <MilestoneStep
+                number={i + 1}
+                date={date}
+                completed={completed}
+                total={m.documented_goal}
+                isLast={i === milestones.length - 1}
+              />
+            </div>
+          );
+        })}
       </div>
 
       <div className="px-8 flex gap-2 ">
