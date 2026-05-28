@@ -166,31 +166,29 @@ export default function BookingView({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between mb-6">
+      <div className="relative flex items-center justify-center mb-6">
+        <button
+          onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+          disabled={pageIndex === 0}
+          className="absolute left-0 w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 disabled:opacity-30 hover:bg-gray-50 transition-colors"
+          aria-label="Previous weeks"
+        >
+          <ChevronLeft size={16} />
+        </button>
         <h1
           className="text-2xl font-bold text-gray-900"
           style={{ fontFamily: "Manrope" }}
         >
           Office Hours
         </h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
-            disabled={pageIndex === 0}
-            className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 disabled:opacity-30 hover:bg-gray-50 transition-colors"
-            aria-label="Previous weeks"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <button
-            onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={pageIndex >= totalPages - 1}
-            className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 disabled:opacity-30 hover:bg-gray-50 transition-colors"
-            aria-label="Next weeks"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
+        <button
+          onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))}
+          disabled={pageIndex >= totalPages - 1}
+          className="absolute right-0 w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 disabled:opacity-30 hover:bg-gray-50 transition-colors"
+          aria-label="Next weeks"
+        >
+          <ChevronRight size={16} />
+        </button>
       </div>
 
       <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden">

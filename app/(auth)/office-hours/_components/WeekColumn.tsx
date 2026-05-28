@@ -23,14 +23,16 @@ export default function WeekColumn({
   onDeleteSlot,
 }: WeekColumnProps) {
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden">
+    <div className="bg-white border-2 border-white rounded-2xl overflow-hidden">
       <div className="bg-[#F4F0FF] px-4 py-3">
         <p className="text-sm font-bold text-gray-800">{week.label}</p>
       </div>
 
       <div className="px-4 py-2">
         {week.days.map((day) => {
-          const daySlots = slots.filter((s) => isSameDay(new Date(s.date), day.date));
+          const daySlots = slots.filter((s) =>
+            isSameDay(new Date(s.date), day.date),
+          );
           return (
             <DayRow
               key={day.date.toISOString()}
