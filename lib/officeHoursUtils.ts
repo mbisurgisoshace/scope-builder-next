@@ -40,7 +40,7 @@ function fromMinutes(minutes: number): string {
 }
 
 /** Format "HH:mm" to "9:30 AM" / "2:00 PM" */
-function toDisplayLabel(time: string): string {
+export function formatTimeDisplay(time: string): string {
   const [h, m] = time.split(":").map(Number);
   const period = h < 12 ? "AM" : "PM";
   const displayH = h % 12 === 0 ? 12 : h % 12;
@@ -61,7 +61,7 @@ export function generateTimeOptions(
   const options: TimeOption[] = [];
   for (let m = start; m <= end; m += 30) {
     const value = fromMinutes(m);
-    options.push({ label: toDisplayLabel(value), value });
+    options.push({ label: formatTimeDisplay(value), value });
   }
   return options;
 }

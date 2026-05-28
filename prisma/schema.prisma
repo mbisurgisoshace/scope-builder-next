@@ -374,14 +374,27 @@ model InterviewMilestone {
 }
 
 model OfficeHourSlot {
-  id         String   @id @default(uuid())
-  org_id     String
-  date       DateTime
-  start_time String
-  end_time   String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  id          String             @id @default(uuid())
+  user_id     String
+  mentor_name String
+  date        DateTime
+  start_time  String
+  end_time    String
+  created_at  DateTime           @default(now())
+  updated_at  DateTime           @updatedAt
+  booking     OfficeHourBooking?
 
-  @@index([org_id, date])
+  @@index([user_id, date])
   @@map("office_hour_slots")
+}
+
+model OfficeHourBooking {
+  id         String         @id @default(uuid())
+  slot_id    String         @unique
+  user_id    String
+  created_at DateTime       @default(now())
+  updated_at DateTime       @updatedAt
+  slot       OfficeHourSlot @relation(fields: [slot_id], references: [id], onDelete: Cascade)
+
+  @@map("office_hour_bookings")
 }

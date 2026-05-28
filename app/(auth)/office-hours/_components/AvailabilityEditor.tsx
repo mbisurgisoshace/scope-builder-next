@@ -55,7 +55,8 @@ export default function AvailabilityEditor({
     const tempId = `temp-${Date.now()}`;
     const optimistic: OfficeHourSlot = {
       id: tempId,
-      org_id: "",
+      user_id: "",
+      mentor_name: "",
       date,
       start_time: defaultStart,
       end_time: defaultEnd,
