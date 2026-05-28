@@ -142,7 +142,7 @@ export default function AvailabilityEditor({
         </div>
       </div>
 
-      <div className="flex gap-4 flex-1 overflow-hidden">
+      <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden">
         {visibleWeeks.map((week) => (
           <WeekColumn
             key={week.weekStart.toISOString()}

@@ -3,24 +3,31 @@
 import { useState, useTransition } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { parseISO, isSameDay } from "date-fns";
-import { OfficeHourSlot, OfficeHourBooking } from "@/lib/generated/prisma";
+import {
+  OfficeHourSlot,
+  OfficeHourSubSlot,
+  OfficeHourBooking,
+} from "@/lib/generated/prisma";
 import { generateWeeks, formatTimeDisplay } from "@/lib/officeHoursUtils";
 import { bookSlot, cancelBooking } from "@/services/officeHours";
 
-type SlotWithBooking = OfficeHourSlot & { booking: OfficeHourBooking | null };
+type SubSlotWithBooking = OfficeHourSubSlot & {
+  booking: OfficeHourBooking | null;
+};
+type SlotWithSubSlots = OfficeHourSlot & { subSlots: SubSlotWithBooking[] };
 
 type TimeBlock = {
   start_time: string;
   end_time: string;
   entries: {
-    slotId: string;
+    subSlotId: string;
     mentorName: string;
     booking: Pick<OfficeHourBooking, "id" | "user_id"> | null;
   }[];
 };
 
 interface BookingViewProps {
-  initialSlots: SlotWithBooking[];
+  initialSlots: SlotWithSubSlots[];
   currentUserId: string;
 }
 
@@ -36,7 +43,7 @@ export default function BookingView({
   initialSlots,
   currentUserId,
 }: BookingViewProps) {
-  const [slots, setSlots] = useState<SlotWithBooking[]>(initialSlots);
+  const [slots, setSlots] = useState<SlotWithSubSlots[]>(initialSlots);
   const [pageIndex, setPageIndex] = useState(0);
   const [, startTransition] = useTransition();
 
@@ -58,66 +65,101 @@ export default function BookingView({
     const daySlots = slots.filter((s) => isSameDay(new Date(s.date), date));
     const blockMap = new Map<string, TimeBlock>();
     for (const slot of daySlots) {
-      const key = `${slot.start_time}-${slot.end_time}`;
-      if (!blockMap.has(key)) {
-        blockMap.set(key, { start_time: slot.start_time, end_time: slot.end_time, entries: [] });
+      for (const sub of slot.subSlots) {
+        const key = `${sub.start_time}-${sub.end_time}`;
+        if (!blockMap.has(key)) {
+          blockMap.set(key, {
+            start_time: sub.start_time,
+            end_time: sub.end_time,
+            entries: [],
+          });
+        }
+        blockMap.get(key)!.entries.push({
+          subSlotId: sub.id,
+          mentorName: slot.mentor_name,
+          booking: sub.booking
+            ? { id: sub.booking.id, user_id: sub.booking.user_id }
+            : null,
+        });
       }
-      blockMap.get(key)!.entries.push({
-        slotId: slot.id,
-        mentorName: slot.mentor_name,
-        booking: slot.booking ? { id: slot.booking.id, user_id: slot.booking.user_id } : null,
-      });
     }
     return Array.from(blockMap.values()).sort((a, b) =>
       a.start_time.localeCompare(b.start_time)
     );
   }
 
-  function handleBook(slotId: string) {
+  function handleBook(subSlotId: string) {
     setSlots((prev) =>
-      prev.map((s) =>
-        s.id === slotId
-          ? {
-              ...s,
-              booking: {
-                id: "temp",
-                slot_id: slotId,
-                user_id: currentUserId,
-                created_at: new Date(),
-                updated_at: new Date(),
-              },
-            }
-          : s
-      )
+      prev.map((slot) => ({
+        ...slot,
+        subSlots: slot.subSlots.map((sub) =>
+          sub.id === subSlotId
+            ? {
+                ...sub,
+                booking: {
+                  id: "temp",
+                  slot_id: sub.slot_id,
+                  sub_slot_id: subSlotId,
+                  user_id: currentUserId,
+                  created_at: new Date(),
+                  updated_at: new Date(),
+                },
+              }
+            : sub
+        ),
+      }))
     );
 
     startTransition(async () => {
       try {
-        const booking = await bookSlot(slotId);
+        const booking = await bookSlot(subSlotId);
         setSlots((prev) =>
-          prev.map((s) => (s.id === slotId ? { ...s, booking } : s))
+          prev.map((slot) => ({
+            ...slot,
+            subSlots: slot.subSlots.map((sub) =>
+              sub.id === subSlotId ? { ...sub, booking } : sub
+            ),
+          }))
         );
       } catch {
         setSlots((prev) =>
-          prev.map((s) => (s.id === slotId ? { ...s, booking: null } : s))
+          prev.map((slot) => ({
+            ...slot,
+            subSlots: slot.subSlots.map((sub) =>
+              sub.id === subSlotId ? { ...sub, booking: null } : sub
+            ),
+          }))
         );
       }
     });
   }
 
-  function handleCancel(slotId: string) {
-    const original = slots.find((s) => s.id === slotId);
+  function handleCancel(subSlotId: string) {
+    const originalBooking = slots
+      .flatMap((s) => s.subSlots)
+      .find((sub) => sub.id === subSlotId)?.booking ?? null;
+
     setSlots((prev) =>
-      prev.map((s) => (s.id === slotId ? { ...s, booking: null } : s))
+      prev.map((slot) => ({
+        ...slot,
+        subSlots: slot.subSlots.map((sub) =>
+          sub.id === subSlotId ? { ...sub, booking: null } : sub
+        ),
+      }))
     );
 
     startTransition(async () => {
       try {
-        await cancelBooking(slotId);
+        await cancelBooking(subSlotId);
       } catch {
-        if (original) {
-          setSlots((prev) => prev.map((s) => (s.id === slotId ? original : s)));
-        }
+        setSlots((prev) =>
+          prev.map((slot) => ({
+            ...slot,
+            subSlots: slot.subSlots.map((sub) =>
+              sub.id === subSlotId ? { ...sub, booking: originalBooking } : sub
+            ),
+          }))
+        );
       }
     });
   }
@@ -151,11 +193,11 @@ export default function BookingView({
         </div>
       </div>
 
-      <div className="flex gap-4 flex-1 overflow-hidden">
+      <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden">
         {visibleWeeks.map((week) => (
           <div
             key={week.weekStart.toISOString()}
-            className="flex-1 min-w-0 bg-white border border-gray-100 rounded-2xl overflow-hidden"
+            className="bg-white border border-gray-100 rounded-2xl overflow-hidden"
           >
             <div className="bg-[#F4F0FF] px-4 py-3">
               <p className="text-sm font-bold text-gray-800">{week.label}</p>
@@ -198,13 +240,13 @@ export default function BookingView({
                                     !!entry.booking && !isBookedByMe;
                                   return (
                                     <button
-                                      key={entry.slotId}
+                                      key={entry.subSlotId}
                                       disabled={isBookedByOther}
                                       title={entry.mentorName}
                                       onClick={() =>
                                         isBookedByMe
-                                          ? handleCancel(entry.slotId)
-                                          : handleBook(entry.slotId)
+                                          ? handleCancel(entry.subSlotId)
+                                          : handleBook(entry.subSlotId)
                                       }
                                       className={`w-9 h-9 rounded-full border-2 text-xs font-bold flex items-center justify-center transition-colors ${
                                         isBookedByOther
