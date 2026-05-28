@@ -372,3 +372,16 @@ model InterviewMilestone {
 
   @@map("interview_milestones")
 }
+
+model OfficeHourSlot {
+  id         String   @id @default(uuid())
+  org_id     String
+  date       DateTime
+  start_time String
+  end_time   String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([org_id, date])
+  @@map("office_hour_slots")
+}
