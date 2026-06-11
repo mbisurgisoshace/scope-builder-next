@@ -43,6 +43,7 @@ function CanvasInner({ editable = true, toolbarOptions }: InfiniteCanvasProps) {
     useCanvasDataBridge();
   const { screenToFlowPosition } = useReactFlow();
   const { pause, resume } = useHistory();
+  console.log("nodes", nodes);
 
   // Undo/redo — Liveblocks history + RF Pro keyboard pattern
   useUndoRedo();
@@ -79,7 +80,7 @@ function CanvasInner({ editable = true, toolbarOptions }: InfiniteCanvasProps) {
         nodesDraggable={editable}
         nodesConnectable={editable}
         elementsSelectable={editable}
-        deleteKeyCode={editable ? ['Backspace', 'Delete'] : null}
+        deleteKeyCode={editable ? ["Backspace", "Delete"] : null}
         onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
         onSelectionDragStart={onSelectionDragStart}
@@ -100,7 +101,11 @@ function CanvasInner({ editable = true, toolbarOptions }: InfiniteCanvasProps) {
         {editable && (
           <Panel
             position="top-left"
-            style={{ top: "50%", transform: "translateY(-50%)", margin: "0 0 0 16px" }}
+            style={{
+              top: "50%",
+              transform: "translateY(-50%)",
+              margin: "0 0 0 16px",
+            }}
           >
             <CanvasToolbar
               toolbarOptions={toolbarOptions}
