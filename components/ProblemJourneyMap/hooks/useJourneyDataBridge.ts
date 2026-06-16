@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNodesState, useEdgesState, type Node, type Edge } from '@xyflow/react';
 
 import type { JourneyNodeType, JourneyNodeData } from '../JourneyContext';
-import type { Problem, Solution } from '../components/ActionNodeSheet';
+import type { Problem, Solution, ProblemQuestionAnswer } from '../components/ActionNodeSheet';
 import { useRealtimeJourney, type JourneyNodeStorage, type JourneyEdgeStorage } from './useRealtimeJourney';
 
 const INITIAL_TRIGGER_ID = 'initial-trigger';
@@ -65,13 +65,13 @@ export function useJourneyDataBridge() {
     addJourneyEdge,
     updateJourneyNode,
     addProblem: lbAddProblem,
+    updateProblem: lbUpdateProblem,
     addSolution: lbAddSolution,
   } = useRealtimeJourney();
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  // Guards against re-seeding Liveblocks on each effect run
   const initializedRef = useRef(false);
 
   // Diff-based Liveblocks → React Flow sync (blink-free)
@@ -82,19 +82,15 @@ export function useJourneyDataBridge() {
       initializedRef.current = true;
 
       if (lbNodes.length > 0) {
-        // Existing room: initialize RF state from Liveblocks
         setNodes(lbNodes.map(lbNodeToRFNode));
         setEdges(lbEdges.map(lbEdgeToRFEdge));
       } else {
-        // Fresh room: seed local state + Liveblocks with the initial trigger
         setNodes([INITIAL_TRIGGER_NODE]);
         addJourneyNode(buildNodeStorage(INITIAL_TRIGGER_ID, 'trigger'));
       }
       return;
     }
 
-    // Subsequent sync: only apply structural diffs from remote collaborators.
-    // Local mutations already update RF state immediately so their diff is always zero.
     setNodes((currentNodes) => {
       const currentIds = new Set(currentNodes.map((n) => n.id));
       const lbIds = new Set(lbNodes.map((lb) => lb.id));
@@ -107,9 +103,6 @@ export function useJourneyDataBridge() {
         currentNodes.filter((n) => !lbIds.has(n.id)).map((n) => n.id)
       );
 
-      // Data-only update (no structural change): patch content/stakeholder without touching positions.
-      // Return the SAME array reference when nothing changed so RF's prop sync doesn't fire
-      // and overwrite positions the layout hook has already written to the internal store.
       if (remoteAdditions.length === 0 && removedIds.size === 0) {
         const hasDataChange = lbNodes.some((lb) => {
           const rf = currentNodes.find((n) => n.id === lb.id);
@@ -159,7 +152,6 @@ export function useJourneyDataBridge() {
       const newId = crypto.randomUUID();
       const connId = crypto.randomUUID();
 
-      // 1. Update RF state immediately for smooth, blink-free UX
       setNodes((current) => {
         const parent = current.find((n) => n.id === parentId);
         const pos = parent
@@ -194,7 +186,6 @@ export function useJourneyDataBridge() {
         },
       ]);
 
-      // 2. Persist to Liveblocks (optimistic mutation — produces zero diff when useEffect fires)
       addJourneyNode(buildNodeStorage(newId, type));
       addJourneyEdge({ id: connId, source: parentId, target: newId, sourceHandle: 'right', targetHandle: 'left' });
     },
@@ -216,11 +207,23 @@ export function useJourneyDataBridge() {
   );
 
   const addProblem = useCallback(
-    (nodeId: string, description: string) => {
-      const problem = { id: crypto.randomUUID(), description };
+    (nodeId: string, description: string, questions: ProblemQuestionAnswer[]) => {
+      const problem = { id: crypto.randomUUID(), description, questions };
       lbAddProblem(nodeId, problem);
     },
     [lbAddProblem]
+  );
+
+  const updateProblem = useCallback(
+    (
+      nodeId: string,
+      problemId: string,
+      description: string,
+      questions: ProblemQuestionAnswer[]
+    ) => {
+      lbUpdateProblem(nodeId, problemId, { description, questions });
+    },
+    [lbUpdateProblem]
   );
 
   const addSolution = useCallback(
@@ -231,11 +234,16 @@ export function useJourneyDataBridge() {
     [lbAddSolution]
   );
 
-  // Derive problems/solutions Maps from Liveblocks data
   const nodeProblems = useMemo(() => {
     const map = new Map<string, Problem[]>();
     for (const lb of lbNodes ?? []) {
-      map.set(lb.id, lb.problems ?? []);
+      map.set(
+        lb.id,
+        (lb.problems ?? []).map((p) => ({
+          ...p,
+          questions: p.questions ?? [],
+        }))
+      );
     }
     return map;
   }, [lbNodes]);
@@ -257,6 +265,7 @@ export function useJourneyDataBridge() {
     addChildNode,
     updateNodeData,
     addProblem,
+    updateProblem,
     addSolution,
     nodeProblems,
     nodeSolutions,

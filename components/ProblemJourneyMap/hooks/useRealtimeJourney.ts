@@ -3,11 +3,11 @@
 import { useStorage, useMutation } from '@liveblocks/react/suspense';
 import { LiveObject } from '@liveblocks/client';
 import type { JourneyNodeStorage, JourneyEdgeStorage } from '@/liveblocks.config';
+import type { ProblemQuestionAnswer } from '../components/ActionNodeSheet';
 
 export type { JourneyNodeStorage, JourneyEdgeStorage };
 
 export function useRealtimeJourney() {
-  // Storage is typed as LiveList<LiveObject<any>> — cast to our typed interfaces on read
   const lbNodes = useStorage(
     (root) => root.journeyNodes as unknown as readonly JourneyNodeStorage[]
   );
@@ -37,12 +37,38 @@ export function useRealtimeJourney() {
   );
 
   const addProblem = useMutation(
-    ({ storage }, nodeId: string, problem: { id: string; description: string }) => {
+    (
+      { storage },
+      nodeId: string,
+      problem: { id: string; description: string; questions: ProblemQuestionAnswer[] }
+    ) => {
       const nodes = (storage.get('journeyNodes') as any).toArray() as Array<any>;
       const node = nodes.find((n: any) => n.get('id') === nodeId);
       if (node) {
-        const current: Array<{ id: string; description: string }> = node.get('problems') ?? [];
+        const current: Array<{ id: string; description: string; questions: ProblemQuestionAnswer[] }> =
+          node.get('problems') ?? [];
         node.update({ problems: [...current, problem] });
+      }
+    },
+    []
+  );
+
+  const updateProblem = useMutation(
+    (
+      { storage },
+      nodeId: string,
+      problemId: string,
+      patch: { description: string; questions: ProblemQuestionAnswer[] }
+    ) => {
+      const nodes = (storage.get('journeyNodes') as any).toArray() as Array<any>;
+      const node = nodes.find((n: any) => n.get('id') === nodeId);
+      if (node) {
+        const current: Array<{ id: string; description: string; questions: ProblemQuestionAnswer[] }> =
+          node.get('problems') ?? [];
+        const updated = current.map((p) =>
+          p.id === problemId ? { ...p, ...patch } : p
+        );
+        node.update({ problems: updated });
       }
     },
     []
@@ -67,6 +93,7 @@ export function useRealtimeJourney() {
     addJourneyEdge,
     updateJourneyNode,
     addProblem,
+    updateProblem,
     addSolution,
   };
 }

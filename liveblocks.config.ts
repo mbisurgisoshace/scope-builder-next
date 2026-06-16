@@ -7,7 +7,11 @@ export interface JourneyNodeStorage {
   type: 'trigger' | 'action' | 'split_route';
   content: string;
   stakeholderId: string | null;
-  problems: Array<{ id: string; description: string }>;
+  problems: Array<{
+    id: string;
+    description: string;
+    questions: Array<{ bankQuestionId: string; answer: string | string[] }>;
+  }>;
   solutions: Array<{ id: string; description: string }>;
 }
 

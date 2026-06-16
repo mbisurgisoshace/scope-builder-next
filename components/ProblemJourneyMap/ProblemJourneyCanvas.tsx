@@ -35,6 +35,7 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
     addChildNode,
     updateNodeData,
     addProblem,
+    updateProblem,
     addSolution,
     nodeProblems,
     nodeSolutions,
@@ -88,7 +89,8 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
           open={selectedActionNodeId !== null}
           onOpenChange={(open) => { if (!open) setSelectedActionNodeId(null); }}
           problems={selectedActionNodeId ? (nodeProblems.get(selectedActionNodeId) ?? []) : []}
-          onAddProblem={(desc) => { if (selectedActionNodeId) addProblem(selectedActionNodeId, desc); }}
+          onAddProblem={(desc, questions) => { if (selectedActionNodeId) addProblem(selectedActionNodeId, desc, questions); }}
+          onUpdateProblem={(problemId, desc, questions) => { if (selectedActionNodeId) updateProblem(selectedActionNodeId, problemId, desc, questions); }}
           solutions={selectedActionNodeId ? (nodeSolutions.get(selectedActionNodeId) ?? []) : []}
           onAddSolution={(desc) => { if (selectedActionNodeId) addSolution(selectedActionNodeId, desc); }}
         />
