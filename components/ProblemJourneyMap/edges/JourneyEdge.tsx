@@ -27,7 +27,7 @@ export function JourneyEdge({
   const showLabel = siblingsFromSource.length > 1;
   const optionIndex = siblingsFromSource.findIndex((e) => e.id === id) + 1;
 
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
+  const [edgePath] = getSmoothStepPath({
     sourceX,
     sourceY,
     sourcePosition,
@@ -36,6 +36,10 @@ export function JourneyEdge({
     targetPosition,
     borderRadius: 8,
   });
+
+  const centerX = (sourceX + targetX) / 2;
+  const labelX = (centerX + targetX) / 2;
+  const labelY = targetY;
 
   return (
     <>
@@ -50,10 +54,10 @@ export function JourneyEdge({
           <div
             className="nodrag nopan absolute pointer-events-none"
             style={{
-              transform: `translate(${labelX}px, ${labelY}px) translate(-50%, -50%)`,
+              transform: `translate(${labelX}px, ${labelY}px) translate(-50%, -55%)`,
             }}
           >
-            <span className="text-[10px] font-medium text-gray-400 bg-white px-1.5 py-0.5 rounded-full border border-gray-200 shadow-sm">
+            <span className="text-[12px] leading-none font-medium text-[#111827] bg-white px-1.5 py-0.5 rounded-full border border-gray-200 ">
               Option {optionIndex}
             </span>
           </div>
