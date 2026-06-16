@@ -41,6 +41,8 @@ function TriggerNodeInner({ id, data }: NodeProps) {
     [id, addChildNode],
   );
 
+  const handleClose = useCallback(() => setAnchorRect(null), []);
+
   return (
     <div className="nopan nodrag pointer-events-auto bg-white border border-white rounded-xl p-4 relative shadow-sm">
       <Handle
@@ -105,7 +107,7 @@ function TriggerNodeInner({ id, data }: NodeProps) {
           <NodeTypeMenu
             anchorRect={anchorRect}
             onSelect={handleSelect}
-            onClose={() => setAnchorRect(null)}
+            onClose={handleClose}
           />
         )}
       </div>

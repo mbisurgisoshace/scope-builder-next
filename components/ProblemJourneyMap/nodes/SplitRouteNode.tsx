@@ -28,6 +28,8 @@ function SplitRouteNodeInner({ id }: NodeProps) {
     [id, addChildNode]
   );
 
+  const handleClose = useCallback(() => setAnchorRect(null), []);
+
   return (
     <div className="nopan nodrag pointer-events-auto w-[180px] bg-[#FFF7ED] border border-orange-200 rounded-xl p-4 relative shadow-sm flex items-center gap-3">
       <Handle
@@ -66,7 +68,7 @@ function SplitRouteNodeInner({ id }: NodeProps) {
           <NodeTypeMenu
             anchorRect={anchorRect}
             onSelect={handleSelect}
-            onClose={() => setAnchorRect(null)}
+            onClose={handleClose}
           />
         )}
       </div>

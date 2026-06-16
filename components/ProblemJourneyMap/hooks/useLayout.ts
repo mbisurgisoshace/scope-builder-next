@@ -1,27 +1,32 @@
-'use client';
+"use client";
 
 // Adapted from .claude/examples/react-flow/dynamic-layouting-pro-example/src/hooks/useLayout.ts
 // Change from the original: x ↔ y are swapped so the tree grows left-to-right instead of top-to-bottom.
-// Extended: vertical spacing is computed from each node's actual measured height so nodes with
-// dynamic content (problems / solutions) never overlap their siblings.
+// Extended: both vertical and horizontal spacing are computed from each node's actual measured
+// dimensions so nodes with dynamic content (problems / solutions) never overlap, and wider nodes
+// at any level naturally push their children further right.
 
-import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import {
   useReactFlow,
   useStore,
   type Node,
   type Edge,
   type ReactFlowState,
-} from '@xyflow/react';
-import { stratify, tree, type HierarchyPointNode } from 'd3-hierarchy';
-import { timer } from 'd3-timer';
+} from "@xyflow/react";
+import { stratify, tree, type HierarchyPointNode } from "d3-hierarchy";
+import { timer } from "d3-timer";
 
-const HORIZONTAL_DEPTH_SPACING = 420; // px between tree levels (left → right)
-const VERTICAL_GAP = 40;              // px gap between siblings (top ↔ bottom)
+const HORIZONTAL_GAP = 200; // px between the right edge of a node and its children's left edge
+const VERTICAL_GAP = 40; // px gap between siblings (top ↔ bottom)
 const ANIMATION_DURATION = 300;
 
 function nodeHeight(n: Node): number {
   return n.measured?.height ?? 120;
+}
+
+function nodeWidth(n: Node): number {
+  return n.measured?.width ?? 370;
 }
 
 // Total vertical space a subtree needs (including the root node of that subtree).
@@ -55,6 +60,18 @@ function assignVertical(d: HierarchyPointNode<Node>, topY: number): void {
   }
 }
 
+// Assign d.y (depth → RF position.x) based on each parent's actual measured width.
+// This replaces d3's fixed nodeSize depth spacing so wider nodes push children further right.
+function assignHorizontal(d: HierarchyPointNode<Node>, leftX: number): void {
+  d.y = leftX;
+  if (d.children) {
+    const nextLeft = leftX + nodeWidth(d.data) + HORIZONTAL_GAP;
+    for (const child of d.children) {
+      assignHorizontal(child, nextLeft);
+    }
+  }
+}
+
 function layoutNodes(nodes: Node[], edges: Edge[]): Node[] {
   if (nodes.length === 0) return [];
 
@@ -62,32 +79,42 @@ function layoutNodes(nodes: Node[], edges: Edge[]): Node[] {
     .id((d) => d.id)
     .parentId((d) => edges.find((e) => e.target === d.id)?.source)(nodes);
 
-  // Use d3 tree only for horizontal depth positions (d.y).
-  // Vertical positions (d.x) are recomputed from actual measured heights below.
+  // Use d3 tree only to build parent/child relationships and compute depth level.
+  // Both horizontal (d.y) and vertical (d.x) positions are overridden below using
+  // actual measured dimensions, so the nodeSize values here don't affect output.
   const treeLayout = tree<Node>()
-    .nodeSize([1, HORIZONTAL_DEPTH_SPACING])
+    .nodeSize([1, 1])
     .separation(() => 1);
   const root = treeLayout(hierarchy);
 
+  // Override horizontal positions: each node starts just right of its parent's edge.
+  assignHorizontal(root, 0);
+
+  // Override vertical positions: stack siblings using their real measured heights.
   const rootH = subtreeHeight(root);
   assignVertical(root, -rootH / 2);
 
-  // d.y = horizontal depth  → RF position.x (how far right)
-  // d.x = center y          → RF position.y = top-left y (subtract half-height to convert)
+  // d.y = left edge x  → RF position.x
+  // d.x = center y     → RF position.y = top-left (subtract half-height)
   return root.descendants().map((d) => ({
     ...d.data,
     position: { x: d.y, y: d.x - nodeHeight(d.data) / 2 },
   }));
 }
 
-// Re-run when node/edge count changes OR when total measured height changes
-// (i.e. a node grew because problems/solutions were added).
+// Re-run when node/edge count changes OR when total measured dimensions change
+// (i.e. a node grew because problems/solutions were added, or its width changed).
 const nodeCountSelector = (state: ReactFlowState) => state.nodeLookup.size;
 const edgeCountSelector = (state: ReactFlowState) => state.edges.length;
 const totalHeightSelector = (state: ReactFlowState) =>
   [...state.nodeLookup.values()].reduce(
     (sum, n) => sum + (n.measured?.height ?? 0),
-    0
+    0,
+  );
+const totalWidthSelector = (state: ReactFlowState) =>
+  [...state.nodeLookup.values()].reduce(
+    (sum, n) => sum + (n.measured?.width ?? 0),
+    0,
   );
 
 // setNodesState: when ReactFlow is in controlled mode, pass the useNodesState setter here
@@ -98,8 +125,16 @@ export function useLayout(setNodesState?: Dispatch<SetStateAction<Node[]>>) {
   const nodeCount = useStore(nodeCountSelector);
   const edgeCount = useStore(edgeCountSelector);
   const totalHeight = useStore(totalHeightSelector);
-  const { getNodes, getNode, setNodes: setNodesInternal, getEdges, fitView } = useReactFlow();
-  const setNodes = (setNodesState ?? setNodesInternal) as typeof setNodesInternal;
+  const totalWidth = useStore(totalWidthSelector);
+  const {
+    getNodes,
+    getNode,
+    setNodes: setNodesInternal,
+    getEdges,
+    fitView,
+  } = useReactFlow();
+  const setNodes = (setNodesState ??
+    setNodesInternal) as typeof setNodesInternal;
 
   useEffect(() => {
     const nodes = getNodes();
@@ -137,7 +172,9 @@ export function useLayout(setNodesState?: Dispatch<SetStateAction<Node[]>>) {
       setNodes(currNodes);
 
       if (elapsed >= ANIMATION_DURATION) {
-        setNodes(transitions.map(({ node, to }) => ({ ...node, position: to })));
+        setNodes(
+          transitions.map(({ node, to }) => ({ ...node, position: to })),
+        );
         t.stop();
 
         if (!initial.current) {
@@ -149,5 +186,5 @@ export function useLayout(setNodesState?: Dispatch<SetStateAction<Node[]>>) {
 
     return () => t.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodeCount, edgeCount, totalHeight]);
+  }, [nodeCount, edgeCount, totalHeight, totalWidth]);
 }

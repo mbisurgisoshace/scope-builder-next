@@ -42,8 +42,8 @@ export function NodeTypeMenu({ anchorRect, onSelect, onClose }: NodeTypeMenuProp
         onClose();
       }
     }
-    document.addEventListener('mousedown', handleMouseDown);
-    return () => document.removeEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousedown', handleMouseDown, true);
+    return () => document.removeEventListener('mousedown', handleMouseDown, true);
   }, [onClose]);
 
   return createPortal(
@@ -57,6 +57,7 @@ export function NodeTypeMenu({ anchorRect, onSelect, onClose }: NodeTypeMenuProp
         zIndex: 9999,
       }}
       className="w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-1 overflow-hidden"
+      onClick={(e) => e.stopPropagation()}
     >
       {OPTIONS.map(({ type, label, description, icon }) => (
         <button

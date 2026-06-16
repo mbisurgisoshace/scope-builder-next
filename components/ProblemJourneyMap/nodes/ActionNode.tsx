@@ -47,6 +47,8 @@ function ActionNodeInner({ id, data }: NodeProps) {
     [id, addChildNode],
   );
 
+  const handleClose = useCallback(() => setAnchorRect(null), []);
+
   return (
     <div
       className={`nopan nodrag pointer-events-auto w-[370px] bg-white border rounded-xl p-4 relative shadow-sm ${isSelected ? "border-purple-500 " : "border-gray-200"}`}
@@ -72,6 +74,7 @@ function ActionNodeInner({ id, data }: NodeProps) {
         placeholder="Type your action..."
         value={nodeData.content ?? ""}
         onChange={(e) => updateNodeData(id, { content: e.target.value })}
+        onClick={(e) => e.stopPropagation()}
       />
 
       {problems.length > 0 && (
@@ -113,7 +116,7 @@ function ActionNodeInner({ id, data }: NodeProps) {
         className="!opacity-0 !pointer-events-none"
       />
 
-      <div className="nopan nodrag absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-1">
+      <div className="nopan nodrag absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-3">
         <button
           ref={buttonRef}
           className="nodrag nopan w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center shadow hover:bg-blue-600 transition-colors"
@@ -125,7 +128,7 @@ function ActionNodeInner({ id, data }: NodeProps) {
           <NodeTypeMenu
             anchorRect={anchorRect}
             onSelect={handleSelect}
-            onClose={() => setAnchorRect(null)}
+            onClose={handleClose}
           />
         )}
       </div>
