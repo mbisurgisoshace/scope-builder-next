@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useRef } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { GitForkIcon, PlusIcon } from 'lucide-react';
 
@@ -9,12 +9,21 @@ import { useJourneyContext, type JourneyNodeType } from '../JourneyContext';
 
 function SplitRouteNodeInner({ id }: NodeProps) {
   const { addChildNode } = useJourneyContext();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const handleToggleMenu = useCallback(() => {
+    if (anchorRect) {
+      setAnchorRect(null);
+    } else if (buttonRef.current) {
+      setAnchorRect(buttonRef.current.getBoundingClientRect());
+    }
+  }, [anchorRect]);
 
   const handleSelect = useCallback(
     (type: JourneyNodeType) => {
       addChildNode(id, type);
-      setMenuOpen(false);
+      setAnchorRect(null);
     },
     [id, addChildNode]
   );
@@ -47,13 +56,18 @@ function SplitRouteNodeInner({ id }: NodeProps) {
 
       <div className="nopan nodrag absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-1">
         <button
+          ref={buttonRef}
           className="nodrag nopan w-6 h-6 rounded-full bg-orange-400 text-white flex items-center justify-center shadow hover:bg-orange-500 transition-colors"
-          onClick={() => setMenuOpen((o) => !o)}
+          onClick={handleToggleMenu}
         >
           <PlusIcon className="w-3.5 h-3.5" />
         </button>
-        {menuOpen && (
-          <NodeTypeMenu onSelect={handleSelect} onClose={() => setMenuOpen(false)} />
+        {anchorRect && (
+          <NodeTypeMenu
+            anchorRect={anchorRect}
+            onSelect={handleSelect}
+            onClose={() => setAnchorRect(null)}
+          />
         )}
       </div>
     </div>

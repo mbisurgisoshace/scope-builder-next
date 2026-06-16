@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useCallback } from "react";
+import { memo, useState, useCallback, useRef } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { PlayIcon, PlusIcon } from "lucide-react";
 
@@ -13,6 +13,7 @@ import {
 import { useSelectedNode } from "../SelectedNodeContext";
 import { useNodeProblems } from "../NodeProblemsContext";
 import { useNodeSolutions } from "../NodeSolutionsContext";
+import { Input } from "@/components/ui/input";
 
 function ActionNodeInner({ id, data }: NodeProps) {
   const nodeData = data as unknown as JourneyNodeData;
@@ -23,19 +24,32 @@ function ActionNodeInner({ id, data }: NodeProps) {
   const problems = nodeProblemsMap.get(id) ?? [];
   const nodeSolutionsMap = useNodeSolutions();
   const solutions = nodeSolutionsMap.get(id) ?? [];
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const handleToggleMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (anchorRect) {
+        setAnchorRect(null);
+      } else if (buttonRef.current) {
+        setAnchorRect(buttonRef.current.getBoundingClientRect());
+      }
+    },
+    [anchorRect],
+  );
 
   const handleSelect = useCallback(
     (type: JourneyNodeType) => {
       addChildNode(id, type);
-      setMenuOpen(false);
+      setAnchorRect(null);
     },
     [id, addChildNode],
   );
 
   return (
     <div
-      className={`nopan nodrag pointer-events-auto w-[370px] bg-white border rounded-xl p-4 relative shadow-sm ring-offset-1 ${isSelected ? "border-purple-500 " : "border-gray-200"}`}
+      className={`nopan nodrag pointer-events-auto w-[370px] bg-white border rounded-xl p-4 relative shadow-sm ${isSelected ? "border-purple-500 " : "border-gray-200"}`}
     >
       <Handle
         id="left"
@@ -53,26 +67,8 @@ function ActionNodeInner({ id, data }: NodeProps) {
         </span>
       </div>
 
-      {participants.length > 0 && (
-        <select
-          className="nodrag nopan w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600 mb-3 focus:outline-none focus:ring-1 focus:ring-blue-200"
-          value={nodeData.stakeholderId ?? ""}
-          onChange={(e) =>
-            updateNodeData(id, { stakeholderId: e.target.value || null })
-          }
-        >
-          <option value="">Stakeholder...</option>
-          {participants.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      )}
-
-      <textarea
+      <Input
         className="nodrag nopan w-full text-sm text-gray-700 bg-transparent resize-none placeholder-gray-400 focus:outline-none leading-snug"
-        rows={3}
         placeholder="Type your action..."
         value={nodeData.content ?? ""}
         onChange={(e) => updateNodeData(id, { content: e.target.value })}
@@ -119,18 +115,17 @@ function ActionNodeInner({ id, data }: NodeProps) {
 
       <div className="nopan nodrag absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-1">
         <button
+          ref={buttonRef}
           className="nodrag nopan w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center shadow hover:bg-blue-600 transition-colors"
-          onClick={(e) => {
-            e.stopPropagation();
-            setMenuOpen((o) => !o);
-          }}
+          onClick={handleToggleMenu}
         >
           <PlusIcon className="w-3.5 h-3.5" />
         </button>
-        {menuOpen && (
+        {anchorRect && (
           <NodeTypeMenu
+            anchorRect={anchorRect}
             onSelect={handleSelect}
-            onClose={() => setMenuOpen(false)}
+            onClose={() => setAnchorRect(null)}
           />
         )}
       </div>

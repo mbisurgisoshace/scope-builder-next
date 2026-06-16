@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useCallback } from "react";
+import { memo, useState, useCallback, useRef } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { ZapIcon, PlusIcon } from "lucide-react";
 
@@ -10,7 +10,6 @@ import {
   type JourneyNodeType,
   type JourneyNodeData,
 } from "../JourneyContext";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -23,12 +22,21 @@ import {
 function TriggerNodeInner({ id, data }: NodeProps) {
   const nodeData = data as unknown as JourneyNodeData;
   const { addChildNode, updateNodeData, participants } = useJourneyContext();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const handleToggleMenu = useCallback(() => {
+    if (anchorRect) {
+      setAnchorRect(null);
+    } else if (buttonRef.current) {
+      setAnchorRect(buttonRef.current.getBoundingClientRect());
+    }
+  }, [anchorRect]);
 
   const handleSelect = useCallback(
     (type: JourneyNodeType) => {
       addChildNode(id, type);
-      setMenuOpen(false);
+      setAnchorRect(null);
     },
     [id, addChildNode],
   );
@@ -51,33 +59,24 @@ function TriggerNodeInner({ id, data }: NodeProps) {
             Trigger
           </span>
         </div>
-        <Select>
-          <SelectTrigger className="w-full max-w-48">
+        <Select
+          value={nodeData.stakeholderId ?? ""}
+          onValueChange={(val) =>
+            updateNodeData(id, { stakeholderId: val || null })
+          }
+        >
+          <SelectTrigger className="nodrag nopan w-full max-w-48">
             <SelectValue placeholder="Stakeholder..." />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="John Doe">John Doe</SelectItem>
-            <SelectItem value="Alice Doe">Alice Doe</SelectItem>
+            {participants.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
-
-      {participants.length > 0 && (
-        <select
-          className="nodrag nopan w-full text-xs border border-indigo-200 rounded-lg px-2 py-1.5 bg-white text-gray-600 mb-3 focus:outline-none focus:ring-1 focus:ring-indigo-300"
-          value={nodeData.stakeholderId ?? ""}
-          onChange={(e) =>
-            updateNodeData(id, { stakeholderId: e.target.value || null })
-          }
-        >
-          <option value="">Stakeholder...</option>
-          {participants.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      )}
 
       <Input
         value={nodeData.content ?? ""}
@@ -96,15 +95,17 @@ function TriggerNodeInner({ id, data }: NodeProps) {
       {/* "+" button — positioned on the right edge, outside the card boundary */}
       <div className="nopan nodrag absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-3">
         <button
+          ref={buttonRef}
           className="nodrag nopan w-6 h-6 rounded-full bg-indigo-500 text-white flex items-center justify-center shadow hover:bg-indigo-600 transition-colors"
-          onClick={() => setMenuOpen((o) => !o)}
+          onClick={handleToggleMenu}
         >
           <PlusIcon className="w-3.5 h-3.5" />
         </button>
-        {menuOpen && (
+        {anchorRect && (
           <NodeTypeMenu
+            anchorRect={anchorRect}
             onSelect={handleSelect}
-            onClose={() => setMenuOpen(false)}
+            onClose={() => setAnchorRect(null)}
           />
         )}
       </div>

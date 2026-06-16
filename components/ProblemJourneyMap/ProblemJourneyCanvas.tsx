@@ -8,7 +8,6 @@ import {
   BackgroundVariant,
   Controls,
   type Node,
-  type Edge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -20,37 +19,30 @@ import { JourneyContext, type JourneyParticipant } from './JourneyContext';
 import { SelectedNodeContext } from './SelectedNodeContext';
 import { NodeProblemsContext } from './NodeProblemsContext';
 import { NodeSolutionsContext } from './NodeSolutionsContext';
-import { ActionNodeSheet, type Problem, type Solution } from './components/ActionNodeSheet';
-
-const INITIAL_TRIGGER_ID = 'initial-trigger';
-
-const initialNodes: Node[] = [
-  {
-    id: INITIAL_TRIGGER_ID,
-    type: 'trigger',
-    position: { x: 0, y: 0 },
-    data: {
-      id: INITIAL_TRIGGER_ID,
-      type: 'trigger',
-      content: '',
-      stakeholderId: null,
-    },
-  },
-];
-
-const initialEdges: Edge[] = [];
+import { ActionNodeSheet } from './components/ActionNodeSheet';
 
 interface ProblemJourneyCanvasProps {
   participants: JourneyParticipant[];
 }
 
 function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
-  const { addChildNode, updateNodeData } = useJourneyDataBridge();
-  useLayout();
+  const {
+    nodes,
+    edges,
+    setNodes,
+    onNodesChange,
+    onEdgesChange,
+    addChildNode,
+    updateNodeData,
+    addProblem,
+    addSolution,
+    nodeProblems,
+    nodeSolutions,
+  } = useJourneyDataBridge();
+
+  useLayout(setNodes);
 
   const [selectedActionNodeId, setSelectedActionNodeId] = useState<string | null>(null);
-  const [nodeProblems, setNodeProblems] = useState<Map<string, Problem[]>>(new Map());
-  const [nodeSolutions, setNodeSolutions] = useState<Map<string, Solution[]>>(new Map());
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     if (node.type === 'action') {
@@ -62,22 +54,6 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
     setSelectedActionNodeId(null);
   }, []);
 
-  const addProblem = useCallback((nodeId: string, description: string) => {
-    setNodeProblems((prev) => {
-      const next = new Map(prev);
-      next.set(nodeId, [...(next.get(nodeId) ?? []), { id: crypto.randomUUID(), description }]);
-      return next;
-    });
-  }, []);
-
-  const addSolution = useCallback((nodeId: string, description: string) => {
-    setNodeSolutions((prev) => {
-      const next = new Map(prev);
-      next.set(nodeId, [...(next.get(nodeId) ?? []), { id: crypto.randomUUID(), description }]);
-      return next;
-    });
-  }, []);
-
   return (
     <NodeSolutionsContext.Provider value={nodeSolutions}>
     <NodeProblemsContext.Provider value={nodeProblems}>
@@ -85,8 +61,10 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
       <JourneyContext.Provider value={{ addChildNode, updateNodeData, participants }}>
         <div style={{ width: '100%', height: '100%' }}>
           <ReactFlow
-            defaultNodes={initialNodes}
-            defaultEdges={initialEdges}
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
             nodeTypes={journeyNodeTypes}
             edgeTypes={journeyEdgeTypes}
             nodesDraggable={false}

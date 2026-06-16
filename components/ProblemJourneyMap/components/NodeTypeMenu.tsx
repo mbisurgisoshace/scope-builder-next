@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { ZapIcon, PlayIcon, GitForkIcon } from 'lucide-react';
 import type { JourneyNodeType } from '../JourneyContext';
 
 interface NodeTypeMenuProps {
+  /** Viewport rect of the "+" button — used to position the menu via fixed coordinates. */
+  anchorRect: DOMRect;
   onSelect: (type: JourneyNodeType) => void;
   onClose: () => void;
 }
@@ -30,7 +33,7 @@ const OPTIONS: { type: JourneyNodeType; label: string; description: string; icon
   },
 ];
 
-export function NodeTypeMenu({ onSelect, onClose }: NodeTypeMenuProps) {
+export function NodeTypeMenu({ anchorRect, onSelect, onClose }: NodeTypeMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,10 +46,17 @@ export function NodeTypeMenu({ onSelect, onClose }: NodeTypeMenuProps) {
     return () => document.removeEventListener('mousedown', handleMouseDown);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div
       ref={ref}
-      className="nodrag nopan absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-1 overflow-hidden"
+      style={{
+        position: 'fixed',
+        top: anchorRect.top + anchorRect.height / 2,
+        left: anchorRect.right + 12,
+        transform: 'translateY(-50%)',
+        zIndex: 9999,
+      }}
+      className="w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-1 overflow-hidden"
     >
       {OPTIONS.map(({ type, label, description, icon }) => (
         <button
@@ -61,6 +71,7 @@ export function NodeTypeMenu({ onSelect, onClose }: NodeTypeMenuProps) {
           </div>
         </button>
       ))}
-    </div>
+    </div>,
+    document.body
   );
 }

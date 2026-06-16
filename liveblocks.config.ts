@@ -2,6 +2,23 @@
 
 import { LiveList, LiveObject } from "@liveblocks/client";
 
+export interface JourneyNodeStorage {
+  id: string;
+  type: 'trigger' | 'action' | 'split_route';
+  content: string;
+  stakeholderId: string | null;
+  problems: Array<{ id: string; description: string }>;
+  solutions: Array<{ id: string; description: string }>;
+}
+
+export interface JourneyEdgeStorage {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle: string;
+  targetHandle: string;
+}
+
 // https://liveblocks.io/docs/api-reference/liveblocks-react#Typing-your-data
 declare global {
   interface Liveblocks {
@@ -18,6 +35,8 @@ declare global {
       shapes: LiveList<LiveObject<any>>;
       comments: LiveList<LiveObject<any>>;
       connections: LiveList<LiveObject<any>>;
+      journeyNodes: LiveList<LiveObject<any>>;
+      journeyEdges: LiveList<LiveObject<any>>;
     };
 
     // Custom user info set when authenticating with a secret key
