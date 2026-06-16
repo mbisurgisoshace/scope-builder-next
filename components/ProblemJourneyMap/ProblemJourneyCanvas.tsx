@@ -20,7 +20,9 @@ import { useLayout } from './hooks/useLayout';
 import { ProgressBar } from './components/ProgressBar';
 import { JourneyContext, type JourneyParticipant } from './JourneyContext';
 import { SelectedNodeContext } from './SelectedNodeContext';
-import { ActionNodeSheet, type Problem } from './components/ActionNodeSheet';
+import { NodeProblemsContext } from './NodeProblemsContext';
+import { NodeSolutionsContext } from './NodeSolutionsContext';
+import { ActionNodeSheet, type Problem, type Solution } from './components/ActionNodeSheet';
 
 const INITIAL_TRIGGER_ID = 'initial-trigger';
 
@@ -50,6 +52,7 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
 
   const [selectedActionNodeId, setSelectedActionNodeId] = useState<string | null>(null);
   const [nodeProblems, setNodeProblems] = useState<Map<string, Problem[]>>(new Map());
+  const [nodeSolutions, setNodeSolutions] = useState<Map<string, Solution[]>>(new Map());
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     if (node.type === 'action') {
@@ -69,7 +72,17 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
     });
   }, []);
 
+  const addSolution = useCallback((nodeId: string, description: string) => {
+    setNodeSolutions((prev) => {
+      const next = new Map(prev);
+      next.set(nodeId, [...(next.get(nodeId) ?? []), { id: crypto.randomUUID(), description }]);
+      return next;
+    });
+  }, []);
+
   return (
+    <NodeSolutionsContext.Provider value={nodeSolutions}>
+    <NodeProblemsContext.Provider value={nodeProblems}>
     <SelectedNodeContext.Provider value={selectedActionNodeId}>
       <JourneyContext.Provider value={{ addChildNode, updateNodeData, participants }}>
         <div style={{ width: '100%', height: '100%' }}>
@@ -103,9 +116,13 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
           onOpenChange={(open) => { if (!open) setSelectedActionNodeId(null); }}
           problems={selectedActionNodeId ? (nodeProblems.get(selectedActionNodeId) ?? []) : []}
           onAddProblem={(desc) => { if (selectedActionNodeId) addProblem(selectedActionNodeId, desc); }}
+          solutions={selectedActionNodeId ? (nodeSolutions.get(selectedActionNodeId) ?? []) : []}
+          onAddSolution={(desc) => { if (selectedActionNodeId) addSolution(selectedActionNodeId, desc); }}
         />
       </JourneyContext.Provider>
     </SelectedNodeContext.Provider>
+    </NodeProblemsContext.Provider>
+    </NodeSolutionsContext.Provider>
   );
 }
 
