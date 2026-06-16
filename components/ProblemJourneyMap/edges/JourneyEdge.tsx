@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   BaseEdge,
@@ -6,7 +6,7 @@ import {
   getSmoothStepPath,
   useReactFlow,
   type EdgeProps,
-} from '@xyflow/react';
+} from "@xyflow/react";
 
 export function JourneyEdge({
   id,
@@ -43,7 +43,7 @@ export function JourneyEdge({
         id={id}
         path={edgePath}
         markerEnd={markerEnd}
-        style={{ stroke: '#94a3b8', strokeWidth: 1.5, ...style }}
+        style={{ stroke: "#A198BA", strokeWidth: 1.5, ...style }}
       />
       {showLabel && (
         <EdgeLabelRenderer>
