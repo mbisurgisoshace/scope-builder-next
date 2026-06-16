@@ -20,7 +20,7 @@ import { useLayout } from './hooks/useLayout';
 import { ProgressBar } from './components/ProgressBar';
 import { JourneyContext, type JourneyParticipant } from './JourneyContext';
 import { SelectedNodeContext } from './SelectedNodeContext';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { ActionNodeSheet, type Problem } from './components/ActionNodeSheet';
 
 const INITIAL_TRIGGER_ID = 'initial-trigger';
 
@@ -49,6 +49,7 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
   useLayout();
 
   const [selectedActionNodeId, setSelectedActionNodeId] = useState<string | null>(null);
+  const [nodeProblems, setNodeProblems] = useState<Map<string, Problem[]>>(new Map());
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     if (node.type === 'action') {
@@ -58,6 +59,14 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
 
   const onPaneClick = useCallback(() => {
     setSelectedActionNodeId(null);
+  }, []);
+
+  const addProblem = useCallback((nodeId: string, description: string) => {
+    setNodeProblems((prev) => {
+      const next = new Map(prev);
+      next.set(nodeId, [...(next.get(nodeId) ?? []), { id: crypto.randomUUID(), description }]);
+      return next;
+    });
   }, []);
 
   return (
@@ -89,17 +98,12 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
           </ReactFlow>
         </div>
 
-        <Sheet
+        <ActionNodeSheet
           open={selectedActionNodeId !== null}
           onOpenChange={(open) => { if (!open) setSelectedActionNodeId(null); }}
-        >
-          <SheetContent side="right" className="w-[480px] sm:max-w-[480px]">
-            <SheetHeader>
-              <SheetTitle>Action</SheetTitle>
-            </SheetHeader>
-            <p className="text-sm text-gray-400 mt-4">Content coming soon.</p>
-          </SheetContent>
-        </Sheet>
+          problems={selectedActionNodeId ? (nodeProblems.get(selectedActionNodeId) ?? []) : []}
+          onAddProblem={(desc) => { if (selectedActionNodeId) addProblem(selectedActionNodeId, desc); }}
+        />
       </JourneyContext.Provider>
     </SelectedNodeContext.Provider>
   );
