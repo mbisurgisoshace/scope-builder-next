@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -18,6 +19,8 @@ import { useJourneyDataBridge } from './hooks/useJourneyDataBridge';
 import { useLayout } from './hooks/useLayout';
 import { ProgressBar } from './components/ProgressBar';
 import { JourneyContext, type JourneyParticipant } from './JourneyContext';
+import { SelectedNodeContext } from './SelectedNodeContext';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 const INITIAL_TRIGGER_ID = 'initial-trigger';
 
@@ -45,32 +48,60 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
   const { addChildNode, updateNodeData } = useJourneyDataBridge();
   useLayout();
 
+  const [selectedActionNodeId, setSelectedActionNodeId] = useState<string | null>(null);
+
+  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+    if (node.type === 'action') {
+      setSelectedActionNodeId(node.id);
+    }
+  }, []);
+
+  const onPaneClick = useCallback(() => {
+    setSelectedActionNodeId(null);
+  }, []);
+
   return (
-    <JourneyContext.Provider value={{ addChildNode, updateNodeData, participants }}>
-      <div style={{ width: '100%', height: '100%' }}>
-        <ReactFlow
-          defaultNodes={initialNodes}
-          defaultEdges={initialEdges}
-          nodeTypes={journeyNodeTypes}
-          edgeTypes={journeyEdgeTypes}
-          nodesDraggable={false}
-          nodesConnectable={false}
-          elementsSelectable={false}
-          deleteKeyCode={null}
-          zoomOnDoubleClick={false}
-          fitView
-          minZoom={0.2}
-          maxZoom={2}
-          proOptions={{ hideAttribution: true }}
+    <SelectedNodeContext.Provider value={selectedActionNodeId}>
+      <JourneyContext.Provider value={{ addChildNode, updateNodeData, participants }}>
+        <div style={{ width: '100%', height: '100%' }}>
+          <ReactFlow
+            defaultNodes={initialNodes}
+            defaultEdges={initialEdges}
+            nodeTypes={journeyNodeTypes}
+            edgeTypes={journeyEdgeTypes}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={false}
+            deleteKeyCode={null}
+            zoomOnDoubleClick={false}
+            fitView
+            minZoom={0.2}
+            maxZoom={2}
+            proOptions={{ hideAttribution: true }}
+            onNodeClick={onNodeClick}
+            onPaneClick={onPaneClick}
+          >
+            <Background variant={BackgroundVariant.Dots} gap={24} color="#e5e7eb" />
+            <Controls showInteractive={false} />
+            <Panel position="top-center" style={{ marginTop: '16px' }}>
+              <ProgressBar />
+            </Panel>
+          </ReactFlow>
+        </div>
+
+        <Sheet
+          open={selectedActionNodeId !== null}
+          onOpenChange={(open) => { if (!open) setSelectedActionNodeId(null); }}
         >
-          <Background variant={BackgroundVariant.Dots} gap={24} color="#e5e7eb" />
-          <Controls showInteractive={false} />
-          <Panel position="top-center" style={{ marginTop: '16px' }}>
-            <ProgressBar />
-          </Panel>
-        </ReactFlow>
-      </div>
-    </JourneyContext.Provider>
+          <SheetContent side="right" className="w-[480px] sm:max-w-[480px]">
+            <SheetHeader>
+              <SheetTitle>Action</SheetTitle>
+            </SheetHeader>
+            <p className="text-sm text-gray-400 mt-4">Content coming soon.</p>
+          </SheetContent>
+        </Sheet>
+      </JourneyContext.Provider>
+    </SelectedNodeContext.Provider>
   );
 }
 

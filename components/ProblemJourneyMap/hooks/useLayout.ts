@@ -16,7 +16,7 @@ import { timer } from 'd3-timer';
 
 // nodeSize([verticalSpread, horizontalDepth])
 // 200px between sibling centers (vertical), 340px between level centers (horizontal)
-const layout = tree<Node>().nodeSize([200, 340]).separation(() => 1);
+const layout = tree<Node>().nodeSize([200, 420]).separation(() => 1);
 
 const ANIMATION_DURATION = 300;
 
