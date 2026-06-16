@@ -7,7 +7,6 @@ import {
   Background,
   BackgroundVariant,
   Controls,
-  Panel,
   type Node,
   type Edge,
 } from '@xyflow/react';
@@ -17,7 +16,6 @@ import { journeyNodeTypes } from './nodes/nodeTypes';
 import { journeyEdgeTypes } from './edges/edgeTypes';
 import { useJourneyDataBridge } from './hooks/useJourneyDataBridge';
 import { useLayout } from './hooks/useLayout';
-import { ProgressBar } from './components/ProgressBar';
 import { JourneyContext, type JourneyParticipant } from './JourneyContext';
 import { SelectedNodeContext } from './SelectedNodeContext';
 import { NodeProblemsContext } from './NodeProblemsContext';
@@ -105,9 +103,6 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
           >
             <Background variant={BackgroundVariant.Dots} gap={24} color="#e5e7eb" />
             <Controls showInteractive={false} />
-            <Panel position="top-center" style={{ marginTop: '16px' }}>
-              <ProgressBar />
-            </Panel>
           </ReactFlow>
         </div>
 
