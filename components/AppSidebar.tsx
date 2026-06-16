@@ -61,6 +61,11 @@ const data = {
       conditionalMenu: false,
     },
     {
+      name: "Problem Journey",
+      url: "/problem-journey-map",
+      conditionalMenu: false,
+    },
+    {
       name: "Hypothesis",
       url: "/hypotheses",
       //icon: PieChart,
@@ -69,6 +74,12 @@ const data = {
     {
       name: "Participants & Interviews",
       url: "/participants",
+      //icon: PieChart,
+      conditionalMenu: true,
+    },
+    {
+      name: "Interviews",
+      url: "/participants/interviews",
       //icon: PieChart,
       conditionalMenu: true,
     },

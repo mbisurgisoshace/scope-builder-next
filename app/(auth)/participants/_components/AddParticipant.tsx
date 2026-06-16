@@ -50,6 +50,9 @@ import { useState } from "react";
 interface AddParticipantProps {
   //marketSegments: any[];
   tags: string[];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
 const ROLE_OPTIONS = [
@@ -68,8 +71,14 @@ const ROLE_OPTIONS = [
 export default function AddParticipant({
   //marketSegments,
   tags,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  onSuccess,
 }: AddParticipantProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled ? controlledOnOpenChange! : setInternalOpen;
   // const marketSegmentOptions = marketSegments
   //   ?.filter((s: any) => s.draftRaw)
   //   .map((segment: any) => {
@@ -104,6 +113,7 @@ export default function AddParticipant({
     await createParticipant(values);
     form.reset();
     setOpen(false);
+    onSuccess?.();
   }
 
   async function onCreateTagOption(opt: string) {
@@ -112,11 +122,13 @@ export default function AddParticipant({
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button className="rounded-full text-sm font-bold">
-          + Add Participant
-        </Button>
-      </SheetTrigger>
+      {!isControlled && (
+        <SheetTrigger asChild>
+          <Button className="rounded-full text-sm font-bold">
+            + Add Participant
+          </Button>
+        </SheetTrigger>
+      )}
       <SheetContent>
         <SheetHeader className="border-b">
           <SheetTitle className="text-[26px] font-medium text-[#162A4F]">
