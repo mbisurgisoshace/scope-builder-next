@@ -19,6 +19,7 @@ import { JourneyContext, type JourneyParticipant } from './JourneyContext';
 import { SelectedNodeContext } from './SelectedNodeContext';
 import { NodeProblemsContext } from './NodeProblemsContext';
 import { NodeSolutionsContext } from './NodeSolutionsContext';
+import { NodeConclusionsContext } from './NodeConclusionsContext';
 import { ActionNodeSheet } from './components/ActionNodeSheet';
 
 interface ProblemJourneyCanvasProps {
@@ -40,6 +41,8 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
     updateSolution,
     nodeProblems,
     nodeSolutions,
+    nodeConclusions,
+    upsertConclusion,
   } = useJourneyDataBridge();
 
   useLayout(setNodes);
@@ -57,6 +60,7 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
   }, []);
 
   return (
+    <NodeConclusionsContext.Provider value={nodeConclusions}>
     <NodeSolutionsContext.Provider value={nodeSolutions}>
     <NodeProblemsContext.Provider value={nodeProblems}>
     <SelectedNodeContext.Provider value={selectedActionNodeId}>
@@ -95,11 +99,14 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
           solutions={selectedActionNodeId ? (nodeSolutions.get(selectedActionNodeId) ?? []) : []}
           onAddSolution={(desc, questions) => { if (selectedActionNodeId) addSolution(selectedActionNodeId, desc, questions); }}
           onUpdateSolution={(solutionId, desc, questions) => { if (selectedActionNodeId) updateSolution(selectedActionNodeId, solutionId, desc, questions); }}
+          conclusions={selectedActionNodeId ? (nodeConclusions.get(selectedActionNodeId) ?? []) : []}
+          onUpsertConclusion={(id, status, content) => { if (selectedActionNodeId) upsertConclusion(selectedActionNodeId, id, status, content); }}
         />
       </JourneyContext.Provider>
     </SelectedNodeContext.Provider>
     </NodeProblemsContext.Provider>
     </NodeSolutionsContext.Provider>
+    </NodeConclusionsContext.Provider>
   );
 }
 

@@ -3,7 +3,7 @@
 import { useStorage, useMutation } from '@liveblocks/react/suspense';
 import { LiveObject } from '@liveblocks/client';
 import type { JourneyNodeStorage, JourneyEdgeStorage } from '@/liveblocks.config';
-import type { ProblemQuestionAnswer, SolutionQuestionAnswer } from '../components/ActionNodeSheet';
+import type { ProblemQuestionAnswer, SolutionQuestionAnswer, NodeConclusion } from '../components/ActionNodeSheet';
 
 export type { JourneyNodeStorage, JourneyEdgeStorage };
 
@@ -112,6 +112,27 @@ export function useRealtimeJourney() {
     []
   );
 
+  const upsertConclusion = useMutation(
+    (
+      { storage },
+      nodeId: string,
+      entry: NodeConclusion
+    ) => {
+      const nodes = (storage.get('journeyNodes') as any).toArray() as Array<any>;
+      const node = nodes.find((n: any) => n.get('id') === nodeId);
+      if (node) {
+        const current: NodeConclusion[] = node.get('conclusions') ?? [];
+        const exists = current.some((c) => c.id === entry.id);
+        node.update({
+          conclusions: exists
+            ? current.map((c) => (c.id === entry.id ? { ...c, ...entry } : c))
+            : [...current, entry],
+        });
+      }
+    },
+    []
+  );
+
   return {
     lbNodes,
     lbEdges,
@@ -122,5 +143,6 @@ export function useRealtimeJourney() {
     updateProblem,
     addSolution,
     updateSolution,
+    upsertConclusion,
   };
 }

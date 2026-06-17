@@ -40,4 +40,6 @@ Before implementing anything, ask clarifying questions until 90% confident about
 3. What node types and edge types need to be created
 4. What interactions exist (drag, connect, delete, resize, keyboard shortcuts)
 
+Before starting any implementation, ask clarifying questions until you are at least 90% confident you understand the requirement. Do not begin coding while ambiguity remains.
+
 Do not start migrating until the scope is clear. Flag any decisions made during implementation explicitly.

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNodesState, useEdgesState, type Node, type Edge } from '@xyflow/react';
 
 import type { JourneyNodeType, JourneyNodeData } from '../JourneyContext';
-import type { Problem, Solution, ProblemQuestionAnswer, SolutionQuestionAnswer } from '../components/ActionNodeSheet';
+import type { Problem, Solution, ProblemQuestionAnswer, SolutionQuestionAnswer, NodeConclusion, ConclusionStatus } from '../components/ActionNodeSheet';
 import { useRealtimeJourney, type JourneyNodeStorage, type JourneyEdgeStorage } from './useRealtimeJourney';
 
 const INITIAL_TRIGGER_ID = 'initial-trigger';
@@ -28,7 +28,7 @@ function colorForType(type: JourneyNodeType) {
 }
 
 function buildNodeStorage(id: string, type: JourneyNodeType): JourneyNodeStorage {
-  return { id, type, content: '', stakeholderId: null, problems: [], solutions: [] };
+  return { id, type, content: '', stakeholderId: null, problems: [], solutions: [], conclusions: [] };
 }
 
 function lbNodeToRFNode(lb: JourneyNodeStorage): Node {
@@ -68,6 +68,7 @@ export function useJourneyDataBridge() {
     updateProblem: lbUpdateProblem,
     addSolution: lbAddSolution,
     updateSolution: lbUpdateSolution,
+    upsertConclusion: lbUpsertConclusion,
   } = useRealtimeJourney();
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -275,6 +276,21 @@ export function useJourneyDataBridge() {
     return map;
   }, [lbNodes]);
 
+  const nodeConclusions = useMemo(() => {
+    const map = new Map<string, NodeConclusion[]>();
+    for (const lb of lbNodes ?? []) {
+      map.set(lb.id, lb.conclusions ?? []);
+    }
+    return map;
+  }, [lbNodes]);
+
+  const upsertConclusion = useCallback(
+    (nodeId: string, id: string, status: ConclusionStatus, content: string) => {
+      lbUpsertConclusion(nodeId, { id, status, content });
+    },
+    [lbUpsertConclusion]
+  );
+
   return {
     nodes,
     edges,
@@ -289,5 +305,7 @@ export function useJourneyDataBridge() {
     updateSolution,
     nodeProblems,
     nodeSolutions,
+    nodeConclusions,
+    upsertConclusion,
   };
 }

@@ -45,6 +45,14 @@ export interface Solution {
   questions: SolutionQuestionAnswer[];
 }
 
+export type ConclusionStatus = "testing" | "validated" | "invalidated";
+
+export interface NodeConclusion {
+  id: string;
+  status: ConclusionStatus;
+  content: string;
+}
+
 // ─── Hardcoded bank ──────────────────────────────────────────────────────────
 
 const BANK_QUESTIONS: BankQuestion[] = [
@@ -151,6 +159,41 @@ const SOLUTION_BANK_CATEGORIES = Array.from(
   new Set(SOLUTION_BANK_QUESTIONS.map((q) => q.category)),
 );
 
+// ─── Hardcoded responses data ─────────────────────────────────────────────────
+
+const MOCK_QUESTION_RESPONSES = [
+  {
+    id: "rq-1",
+    text: "When you read an article before taking a quiz, how do you usually read it?",
+    responses: [
+      {
+        id: "rr-1",
+        name: "Alice Doe",
+        text: "From beginning to end carefully",
+      },
+      { id: "rr-2", name: "Linda Moore", text: "Lorem ipsum" },
+      { id: "rr-3", name: "Kristian Brown", text: "Lorem ipsum" },
+    ],
+  },
+  {
+    id: "rq-2",
+    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et?",
+    responses: [
+      {
+        id: "rr-4",
+        name: "Alice Doe",
+        text: "From beginning to end carefully",
+      },
+      { id: "rr-5", name: "Linda Moore", text: "Lorem ipsum" },
+      {
+        id: "rr-6",
+        name: "Kristian Brown",
+        text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et",
+      },
+    ],
+  },
+];
+
 // ─── Props ───────────────────────────────────────────────────────────────────
 
 interface ActionNodeSheetProps {
@@ -167,12 +210,245 @@ interface ActionNodeSheetProps {
     questions: ProblemQuestionAnswer[],
   ) => void;
   solutions: Solution[];
-  onAddSolution: (description: string, questions: SolutionQuestionAnswer[]) => void;
+  onAddSolution: (
+    description: string,
+    questions: SolutionQuestionAnswer[],
+  ) => void;
   onUpdateSolution: (
     solutionId: string,
     description: string,
     questions: SolutionQuestionAnswer[],
   ) => void;
+  conclusions: NodeConclusion[];
+  onUpsertConclusion: (
+    id: string,
+    status: ConclusionStatus,
+    content: string,
+  ) => void;
+}
+
+// ─── Conclusions ─────────────────────────────────────────────────────────────
+
+const HARDCODED_HYPOTHESES = [
+  {
+    id: "h-1",
+    title: "Hypothesis #1",
+    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+  },
+  {
+    id: "h-2",
+    title: "Hypothesis #2",
+    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+  },
+  {
+    id: "h-3",
+    title: "Hypothesis #3",
+    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+  },
+];
+
+interface HypothesisCardProps {
+  hypothesis: { id: string; title: string; text: string };
+  saved: NodeConclusion | undefined;
+  onSave: (status: ConclusionStatus, content: string) => void;
+}
+
+function HypothesisCard({ hypothesis, saved, onSave }: HypothesisCardProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [localStatus, setLocalStatus] = useState<ConclusionStatus>(
+    saved?.status ?? "testing",
+  );
+  const [localContent, setLocalContent] = useState(saved?.content ?? "");
+
+  const viewStatus = isEditing ? null : (saved?.status ?? "testing");
+
+  const cardBg =
+    viewStatus === "validated"
+      ? "bg-green-50"
+      : viewStatus === "invalidated"
+        ? "bg-red-50"
+        : "bg-gray-50";
+
+  function handleSave() {
+    if (localStatus === "testing") return;
+    onSave(localStatus, localContent);
+    setIsEditing(false);
+  }
+
+  return (
+    <div className={`rounded-lg border p-4 flex flex-col gap-3 ${cardBg}`}>
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-gray-400 font-medium">
+          {hypothesis.title}
+        </span>
+        {isEditing ? (
+          <button
+            onClick={handleSave}
+            disabled={localStatus === "testing"}
+            className="flex items-center gap-1 text-xs text-[#6A35FF] font-medium disabled:opacity-40"
+          >
+            <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none">
+              <path
+                d="M2 6l3 3 5-5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Save
+          </button>
+        ) : (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <PencilIcon className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+
+      <p className="text-sm font-semibold text-gray-900">{hypothesis.text}</p>
+
+      {isEditing ? (
+        <>
+          <Separator />
+          <div className="flex rounded-md border border-gray-200 overflow-hidden p-1">
+            <button
+              onClick={() => setLocalStatus("validated")}
+              className={`flex flex-1 items-center justify-center rounded-[5px] gap-1.5 py-2 text-xs font-medium transition-colors ${
+                localStatus === "validated"
+                  ? "bg-[#E8FAE9] text-[#247C30]"
+                  : "text-[#111827] hover:bg-gray-100"
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+                <circle
+                  cx="7"
+                  cy="7"
+                  r="6"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M4.5 7l2 2 3-3"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Validated
+            </button>
+
+            <button
+              onClick={() => setLocalStatus("invalidated")}
+              className={`flex flex-1 items-center justify-center rounded-[5px] gap-1.5 py-2 text-xs font-medium transition-colors ${
+                localStatus === "invalidated"
+                  ? "bg-[#FFE9F2] text-[#D02D50]"
+                  : "text-[#111827] hover:bg-gray-100"
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="none">
+                <circle
+                  cx="7"
+                  cy="7"
+                  r="6"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M5 5l4 4M9 5l-4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+              Not validated
+            </button>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-gray-500 font-medium">
+              What do you think about results?
+            </span>
+            <textarea
+              value={localContent}
+              onChange={(e) => setLocalContent(e.target.value)}
+              placeholder="My conclusion..."
+              rows={3}
+              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-1 focus:ring-[#6A35FF] resize-none"
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          {viewStatus === "validated" ? (
+            <div className="flex items-center gap-1.5 text-green-600 text-sm font-medium">
+              <svg className="w-4 h-4" viewBox="0 0 14 14" fill="none">
+                <circle
+                  cx="7"
+                  cy="7"
+                  r="6"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M4.5 7l2 2 3-3"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Validated
+            </div>
+          ) : viewStatus === "invalidated" ? (
+            <div className="flex items-center gap-1.5 text-red-500 text-sm font-medium">
+              <svg className="w-4 h-4" viewBox="0 0 14 14" fill="none">
+                <circle
+                  cx="7"
+                  cy="7"
+                  r="6"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M5 5l4 4M9 5l-4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+              Not validated
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-gray-400 text-sm font-medium">
+              <svg className="w-4 h-4" viewBox="0 0 14 14" fill="none">
+                <circle
+                  cx="7"
+                  cy="7"
+                  r="6"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M7 4v3.5l2 2"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Testing
+            </div>
+          )}
+          {saved?.content && (
+            <p className="text-sm text-gray-600">{saved.content}</p>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
 
 const TABS = [
@@ -302,6 +578,50 @@ function ActiveQuestionItem({
   );
 }
 
+// ─── Responses tab ───────────────────────────────────────────────────────────
+
+function ResponsesTabContent() {
+  return (
+    <div className="overflow-y-auto space-y-8 h-full">
+      {MOCK_QUESTION_RESPONSES.map((question) => (
+        <div key={question.id} className="space-y-3">
+          <p className="text-sm font-bold text-gray-900">{question.text}</p>
+          <div className="space-y-2">
+            {question.responses.map((response) => (
+              <div
+                key={response.id}
+                className="flex items-center justify-between gap-4 rounded-xl bg-gray-100 px-4 py-3"
+              >
+                <span className="text-sm text-gray-700 line-clamp-2 flex-1">
+                  {response.text}
+                </span>
+                <div className="flex items-center gap-2 shrink-0 text-sm text-gray-500">
+                  <span>{response.name}</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="text-gray-400"
+                  >
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                  </svg>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Bank of Questions ────────────────────────────────────────────────────────
 
 interface BankOfQuestionsProps {
@@ -371,7 +691,9 @@ function BankOfSolutions({ activeQuestionIds, onAdd }: BankOfSolutionsProps) {
   const activeSet = new Set(activeQuestionIds);
 
   const visibleCategories = SOLUTION_BANK_CATEGORIES.filter((cat) =>
-    SOLUTION_BANK_QUESTIONS.some((q) => q.category === cat && !activeSet.has(q.id)),
+    SOLUTION_BANK_QUESTIONS.some(
+      (q) => q.category === cat && !activeSet.has(q.id),
+    ),
   );
 
   if (visibleCategories.length === 0) return null;
@@ -497,21 +819,31 @@ export function ActionNodeSheet({
   solutions,
   onAddSolution,
   onUpdateSolution,
+  conclusions,
+  onUpsertConclusion,
 }: ActionNodeSheetProps) {
   // ── Problem editor state ──
   const [isAddingProblem, setIsAddingProblem] = useState(false);
   const [editingProblemId, setEditingProblemId] = useState<string | null>(null);
   const [problemDraft, setProblemDraft] = useState("");
   const [activeQuestionIds, setActiveQuestionIds] = useState<string[]>([]);
-  const [questionAnswers, setQuestionAnswers] = useState<Record<string, string | string[]>>({});
+  const [questionAnswers, setQuestionAnswers] = useState<
+    Record<string, string | string[]>
+  >({});
   const problemTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // ── Solution editor state ──
   const [isAddingSolution, setIsAddingSolution] = useState(false);
-  const [editingSolutionId, setEditingSolutionId] = useState<string | null>(null);
+  const [editingSolutionId, setEditingSolutionId] = useState<string | null>(
+    null,
+  );
   const [solutionDraft, setSolutionDraft] = useState("");
-  const [activeSolutionQuestionIds, setActiveSolutionQuestionIds] = useState<string[]>([]);
-  const [solutionQuestionAnswers, setSolutionQuestionAnswers] = useState<Record<string, string | string[]>>({});
+  const [activeSolutionQuestionIds, setActiveSolutionQuestionIds] = useState<
+    string[]
+  >([]);
+  const [solutionQuestionAnswers, setSolutionQuestionAnswers] = useState<
+    Record<string, string | string[]>
+  >({});
   const solutionTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isEditingProblem = isAddingProblem || editingProblemId !== null;
@@ -573,7 +905,8 @@ export function ActionNodeSheet({
   function handleAddBankQuestion(questionId: string) {
     if (activeQuestionIds.includes(questionId)) return;
     const bq = BANK_QUESTIONS.find((q) => q.id === questionId);
-    const defaultAnswer: string | string[] = bq?.answerType === "multiple_choice" ? [] : "";
+    const defaultAnswer: string | string[] =
+      bq?.answerType === "multiple_choice" ? [] : "";
     setActiveQuestionIds((prev) => [...prev, questionId]);
     setQuestionAnswers((prev) => ({ ...prev, [questionId]: defaultAnswer }));
   }
@@ -581,9 +914,13 @@ export function ActionNodeSheet({
   function handleAddSolutionBankQuestion(questionId: string) {
     if (activeSolutionQuestionIds.includes(questionId)) return;
     const bq = SOLUTION_BANK_QUESTIONS.find((q) => q.id === questionId);
-    const defaultAnswer: string | string[] = bq?.answerType === "multiple_choice" ? [] : "";
+    const defaultAnswer: string | string[] =
+      bq?.answerType === "multiple_choice" ? [] : "";
     setActiveSolutionQuestionIds((prev) => [...prev, questionId]);
-    setSolutionQuestionAnswers((prev) => ({ ...prev, [questionId]: defaultAnswer }));
+    setSolutionQuestionAnswers((prev) => ({
+      ...prev,
+      [questionId]: defaultAnswer,
+    }));
   }
 
   function collectAnswers(): ProblemQuestionAnswer[] {
@@ -800,7 +1137,10 @@ export function ActionNodeSheet({
                         (bq.answerType === "multiple_choice" ? [] : "")
                       }
                       onChange={(val) =>
-                        setSolutionQuestionAnswers((prev) => ({ ...prev, [qId]: val }))
+                        setSolutionQuestionAnswers((prev) => ({
+                          ...prev,
+                          [qId]: val,
+                        }))
                       }
                     />
                   );
@@ -821,15 +1161,31 @@ export function ActionNodeSheet({
             )}
           </TabsContent>
 
-          {(["assumptions", "responses", "conclusions"] as const).map(
-            (value) => (
-              <TabsContent
-                key={value}
-                value={value}
-                className="mt-0 p-5 flex-1"
+          <TabsContent value="assumptions" className="mt-0 p-5 flex-1" />
+          <TabsContent
+            value="responses"
+            className="mt-0 p-5 flex-1 overflow-hidden flex flex-col"
+          >
+            <ResponsesTabContent />
+          </TabsContent>
+          <TabsContent
+            value="conclusions"
+            className="mt-0 p-5 flex-1 overflow-y-auto flex flex-col gap-4"
+          >
+            <p className="text-sm font-semibold text-gray-700">
+              My conclusions
+            </p>
+            {HARDCODED_HYPOTHESES.map((h) => (
+              <HypothesisCard
+                key={h.id}
+                hypothesis={h}
+                saved={conclusions.find((c) => c.id === h.id)}
+                onSave={(status, content) =>
+                  onUpsertConclusion(h.id, status, content)
+                }
               />
-            ),
-          )}
+            ))}
+          </TabsContent>
         </Tabs>
       </SheetContent>
     </Sheet>

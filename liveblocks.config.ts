@@ -17,6 +17,11 @@ export interface JourneyNodeStorage {
     description: string;
     questions: Array<{ bankQuestionId: string; answer: string | string[] }>;
   }>;
+  conclusions: Array<{
+    id: string;
+    status: "testing" | "validated" | "invalidated";
+    content: string;
+  }>;
 }
 
 export interface JourneyEdgeStorage {
