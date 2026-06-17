@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNodesState, useEdgesState, type Node, type Edge } from '@xyflow/react';
 
 import type { JourneyNodeType, JourneyNodeData } from '../JourneyContext';
-import type { Problem, Solution, ProblemQuestionAnswer } from '../components/ActionNodeSheet';
+import type { Problem, Solution, ProblemQuestionAnswer, SolutionQuestionAnswer } from '../components/ActionNodeSheet';
 import { useRealtimeJourney, type JourneyNodeStorage, type JourneyEdgeStorage } from './useRealtimeJourney';
 
 const INITIAL_TRIGGER_ID = 'initial-trigger';
@@ -67,6 +67,7 @@ export function useJourneyDataBridge() {
     addProblem: lbAddProblem,
     updateProblem: lbUpdateProblem,
     addSolution: lbAddSolution,
+    updateSolution: lbUpdateSolution,
   } = useRealtimeJourney();
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -227,11 +228,23 @@ export function useJourneyDataBridge() {
   );
 
   const addSolution = useCallback(
-    (nodeId: string, description: string) => {
-      const solution = { id: crypto.randomUUID(), description };
+    (nodeId: string, description: string, questions: SolutionQuestionAnswer[]) => {
+      const solution = { id: crypto.randomUUID(), description, questions };
       lbAddSolution(nodeId, solution);
     },
     [lbAddSolution]
+  );
+
+  const updateSolution = useCallback(
+    (
+      nodeId: string,
+      solutionId: string,
+      description: string,
+      questions: SolutionQuestionAnswer[]
+    ) => {
+      lbUpdateSolution(nodeId, solutionId, { description, questions });
+    },
+    [lbUpdateSolution]
   );
 
   const nodeProblems = useMemo(() => {
@@ -251,7 +264,13 @@ export function useJourneyDataBridge() {
   const nodeSolutions = useMemo(() => {
     const map = new Map<string, Solution[]>();
     for (const lb of lbNodes ?? []) {
-      map.set(lb.id, lb.solutions ?? []);
+      map.set(
+        lb.id,
+        (lb.solutions ?? []).map((s) => ({
+          ...s,
+          questions: s.questions ?? [],
+        }))
+      );
     }
     return map;
   }, [lbNodes]);
@@ -267,6 +286,7 @@ export function useJourneyDataBridge() {
     addProblem,
     updateProblem,
     addSolution,
+    updateSolution,
     nodeProblems,
     nodeSolutions,
   };

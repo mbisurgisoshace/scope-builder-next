@@ -34,9 +34,15 @@ export interface Problem {
   questions: ProblemQuestionAnswer[];
 }
 
+export interface SolutionQuestionAnswer {
+  bankQuestionId: string;
+  answer: string | string[];
+}
+
 export interface Solution {
   id: string;
   description: string;
+  questions: SolutionQuestionAnswer[];
 }
 
 // ─── Hardcoded bank ──────────────────────────────────────────────────────────
@@ -93,6 +99,58 @@ const BANK_CATEGORIES = Array.from(
   new Set(BANK_QUESTIONS.map((q) => q.category)),
 );
 
+const SOLUTION_BANK_QUESTIONS: BankQuestion[] = [
+  {
+    id: "sbq-1",
+    category: "Market Size",
+    text: "How many people on average are experiencing this problem?",
+    answerType: "plain_text",
+  },
+  {
+    id: "sbq-2",
+    category: "Market Size",
+    text: "How are they solving it today?",
+    answerType: "single_choice",
+    options: [
+      "Because customers dislike hearing about new ideas",
+      "Because the goal is to listen and learn from customers, not to sell",
+    ],
+  },
+  {
+    id: "sbq-3",
+    category: "Market Size",
+    text: "How significant is the problem for these people?",
+    answerType: "plain_text",
+  },
+  {
+    id: "sbq-4",
+    category: "Significance",
+    text: "Would customers pay to solve this problem?",
+    answerType: "single_choice",
+    options: ["Yes", "No", "50/50"],
+  },
+  {
+    id: "sbq-5",
+    category: "Significance",
+    text: "What factors make this problem significant?",
+    answerType: "multiple_choice",
+    options: [
+      "Because customers dislike hearing about new ideas",
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+    ],
+  },
+  {
+    id: "sbq-6",
+    category: "Significance",
+    text: "What is the frequency of this problem?",
+    answerType: "plain_text",
+  },
+];
+
+const SOLUTION_BANK_CATEGORIES = Array.from(
+  new Set(SOLUTION_BANK_QUESTIONS.map((q) => q.category)),
+);
+
 // ─── Props ───────────────────────────────────────────────────────────────────
 
 interface ActionNodeSheetProps {
@@ -109,7 +167,12 @@ interface ActionNodeSheetProps {
     questions: ProblemQuestionAnswer[],
   ) => void;
   solutions: Solution[];
-  onAddSolution: (description: string) => void;
+  onAddSolution: (description: string, questions: SolutionQuestionAnswer[]) => void;
+  onUpdateSolution: (
+    solutionId: string,
+    description: string,
+    questions: SolutionQuestionAnswer[],
+  ) => void;
 }
 
 const TABS = [
@@ -297,6 +360,64 @@ function BankOfQuestions({ activeQuestionIds, onAdd }: BankOfQuestionsProps) {
   );
 }
 
+// ─── Bank of Solutions ────────────────────────────────────────────────────────
+
+interface BankOfSolutionsProps {
+  activeQuestionIds: string[];
+  onAdd: (questionId: string) => void;
+}
+
+function BankOfSolutions({ activeQuestionIds, onAdd }: BankOfSolutionsProps) {
+  const activeSet = new Set(activeQuestionIds);
+
+  const visibleCategories = SOLUTION_BANK_CATEGORIES.filter((cat) =>
+    SOLUTION_BANK_QUESTIONS.some((q) => q.category === cat && !activeSet.has(q.id)),
+  );
+
+  if (visibleCategories.length === 0) return null;
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-center gap-1.5 mb-3">
+        <CircleHelpIcon className="w-4 h-4 text-gray-400" />
+        <span className="text-sm font-semibold text-gray-700">
+          Bank of questions
+        </span>
+      </div>
+
+      {visibleCategories.map((cat) => {
+        const questions = SOLUTION_BANK_QUESTIONS.filter(
+          (q) => q.category === cat && !activeSet.has(q.id),
+        );
+        return (
+          <div
+            key={cat}
+            className="border border-gray-100 rounded-xl p-3 mb-3 bg-white"
+          >
+            <p className="text-xs font-semibold text-gray-500 mb-2">{cat}</p>
+            <div className="flex flex-col gap-2">
+              {questions.map((q) => (
+                <div
+                  key={q.id}
+                  className="flex items-center justify-between bg-[#F3F3F6] border border-gray-100 rounded-lg px-3 py-2"
+                >
+                  <span className="text-sm text-gray-700 pr-2">{q.text}</span>
+                  <button
+                    onClick={() => onAdd(q.id)}
+                    className="flex-shrink-0 w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 hover:border-[#6A35FF] hover:text-[#6A35FF] transition-colors"
+                  >
+                    <PlusIcon className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Problem card ─────────────────────────────────────────────────────────────
 
 interface ProblemCardProps {
@@ -333,20 +454,34 @@ function ProblemCard({ problem, onEdit }: ProblemCardProps) {
 
 // ─── Solution card ────────────────────────────────────────────────────────────
 
-function SolutionCard({ solution }: { solution: Solution }) {
+interface SolutionCardProps {
+  solution: Solution;
+  onEdit: () => void;
+}
+
+function SolutionCard({ solution, onEdit }: SolutionCardProps) {
   return (
     <div className="bg-[#E8FAE9] border border-gray-100 rounded-xl p-4 mb-3">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold bg-[#70E38F] text-[#111827] rounded-full px-2 py-0.5">
           Solution
         </span>
-        <button className="text-gray-300 hover:text-gray-500 transition-colors">
+        <button
+          onClick={onEdit}
+          className="text-gray-300 hover:text-gray-500 transition-colors"
+        >
           <PencilIcon className="w-3.5 h-3.5" />
         </button>
       </div>
       <p className="text-sm font-semibold text-gray-800 mt-2">
         {solution.description}
       </p>
+      {solution.questions.length > 0 && (
+        <p className="text-xs text-gray-400 mt-1">
+          {solution.questions.length} question
+          {solution.questions.length !== 1 ? "s" : ""} answered
+        </p>
+      )}
     </div>
   );
 }
@@ -361,21 +496,26 @@ export function ActionNodeSheet({
   onUpdateProblem,
   solutions,
   onAddSolution,
+  onUpdateSolution,
 }: ActionNodeSheetProps) {
+  // ── Problem editor state ──
   const [isAddingProblem, setIsAddingProblem] = useState(false);
   const [editingProblemId, setEditingProblemId] = useState<string | null>(null);
   const [problemDraft, setProblemDraft] = useState("");
   const [activeQuestionIds, setActiveQuestionIds] = useState<string[]>([]);
-  const [questionAnswers, setQuestionAnswers] = useState<
-    Record<string, string | string[]>
-  >({});
+  const [questionAnswers, setQuestionAnswers] = useState<Record<string, string | string[]>>({});
   const problemTextareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // ── Solution editor state ──
   const [isAddingSolution, setIsAddingSolution] = useState(false);
+  const [editingSolutionId, setEditingSolutionId] = useState<string | null>(null);
   const [solutionDraft, setSolutionDraft] = useState("");
+  const [activeSolutionQuestionIds, setActiveSolutionQuestionIds] = useState<string[]>([]);
+  const [solutionQuestionAnswers, setSolutionQuestionAnswers] = useState<Record<string, string | string[]>>({});
   const solutionTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isEditingProblem = isAddingProblem || editingProblemId !== null;
+  const isEditingSolution = isAddingSolution || editingSolutionId !== null;
 
   function resetProblemEditor() {
     setIsAddingProblem(false);
@@ -385,11 +525,18 @@ export function ActionNodeSheet({
     setQuestionAnswers({});
   }
 
+  function resetSolutionEditor() {
+    setIsAddingSolution(false);
+    setEditingSolutionId(null);
+    setSolutionDraft("");
+    setActiveSolutionQuestionIds([]);
+    setSolutionQuestionAnswers({});
+  }
+
   useEffect(() => {
     if (!open) {
       resetProblemEditor();
-      setIsAddingSolution(false);
-      setSolutionDraft("");
+      resetSolutionEditor();
     }
   }, [open]);
 
@@ -398,8 +545,8 @@ export function ActionNodeSheet({
   }, [isEditingProblem]);
 
   useEffect(() => {
-    if (isAddingSolution) solutionTextareaRef.current?.focus();
-  }, [isAddingSolution]);
+    if (isEditingSolution) solutionTextareaRef.current?.focus();
+  }, [isEditingSolution]);
 
   function handleEditProblem(problem: Problem) {
     setProblemDraft(problem.description);
@@ -408,25 +555,48 @@ export function ActionNodeSheet({
     const ids = problem.questions.map((q) => q.bankQuestionId);
     setActiveQuestionIds(ids);
     const answers: Record<string, string | string[]> = {};
-    for (const q of problem.questions) {
-      answers[q.bankQuestionId] = q.answer;
-    }
+    for (const q of problem.questions) answers[q.bankQuestionId] = q.answer;
     setQuestionAnswers(answers);
+  }
+
+  function handleEditSolution(solution: Solution) {
+    setSolutionDraft(solution.description);
+    setEditingSolutionId(solution.id);
+    setIsAddingSolution(false);
+    const ids = solution.questions.map((q) => q.bankQuestionId);
+    setActiveSolutionQuestionIds(ids);
+    const answers: Record<string, string | string[]> = {};
+    for (const q of solution.questions) answers[q.bankQuestionId] = q.answer;
+    setSolutionQuestionAnswers(answers);
   }
 
   function handleAddBankQuestion(questionId: string) {
     if (activeQuestionIds.includes(questionId)) return;
     const bq = BANK_QUESTIONS.find((q) => q.id === questionId);
-    const defaultAnswer: string | string[] =
-      bq?.answerType === "multiple_choice" ? [] : "";
+    const defaultAnswer: string | string[] = bq?.answerType === "multiple_choice" ? [] : "";
     setActiveQuestionIds((prev) => [...prev, questionId]);
     setQuestionAnswers((prev) => ({ ...prev, [questionId]: defaultAnswer }));
+  }
+
+  function handleAddSolutionBankQuestion(questionId: string) {
+    if (activeSolutionQuestionIds.includes(questionId)) return;
+    const bq = SOLUTION_BANK_QUESTIONS.find((q) => q.id === questionId);
+    const defaultAnswer: string | string[] = bq?.answerType === "multiple_choice" ? [] : "";
+    setActiveSolutionQuestionIds((prev) => [...prev, questionId]);
+    setSolutionQuestionAnswers((prev) => ({ ...prev, [questionId]: defaultAnswer }));
   }
 
   function collectAnswers(): ProblemQuestionAnswer[] {
     return activeQuestionIds.map((id) => ({
       bankQuestionId: id,
       answer: questionAnswers[id] ?? "",
+    }));
+  }
+
+  function collectSolutionAnswers(): SolutionQuestionAnswer[] {
+    return activeSolutionQuestionIds.map((id) => ({
+      bankQuestionId: id,
+      answer: solutionQuestionAnswers[id] ?? "",
     }));
   }
 
@@ -445,9 +615,13 @@ export function ActionNodeSheet({
   function handleSaveSolution() {
     const trimmed = solutionDraft.trim();
     if (!trimmed) return;
-    onAddSolution(trimmed);
-    setSolutionDraft("");
-    setIsAddingSolution(false);
+    const collectedAnswers = collectSolutionAnswers();
+    if (editingSolutionId) {
+      onUpdateSolution(editingSolutionId, trimmed, collectedAnswers);
+    } else {
+      onAddSolution(trimmed, collectedAnswers);
+    }
+    resetSolutionEditor();
   }
 
   return (
@@ -558,47 +732,91 @@ export function ActionNodeSheet({
           </TabsContent>
 
           <TabsContent value="solution" className="p-2">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-semibold text-gray-700">
-                Solutions
-              </span>
-              <Button
-                onClick={() => setIsAddingSolution(true)}
-                className="text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors px-3 py-1.5 rounded-full"
-              >
-                + Add new solution
-              </Button>
-            </div>
-
-            {solutions.map((solution) => (
-              <SolutionCard key={solution.id} solution={solution} />
-            ))}
-
-            {isAddingSolution && (
-              <div className="bg-white border border-gray-200 rounded-xl p-4 mt-2">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-gray-800">
-                    What is the solution?
+            {!isEditingSolution && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-semibold text-gray-700">
+                    Solutions
                   </span>
-                  <button
-                    onClick={handleSaveSolution}
-                    className="text-sm font-medium text-[#6A35FF] hover:text-purple-800 transition-colors"
+                  <Button
+                    onClick={() => setIsAddingSolution(true)}
+                    className="text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors px-3 py-1.5 rounded-full"
                   >
-                    ✓ Save
-                  </button>
+                    + Add new solution
+                  </Button>
                 </div>
-                <textarea
-                  ref={solutionTextareaRef}
-                  className="w-full text-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none leading-snug bg-transparent"
-                  rows={3}
-                  placeholder="Describe your solution..."
-                  value={solutionDraft}
-                  onChange={(e) => setSolutionDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
-                      handleSaveSolution();
-                  }}
+
+                {solutions.map((solution) => (
+                  <SolutionCard
+                    key={solution.id}
+                    solution={solution}
+                    onEdit={() => handleEditSolution(solution)}
+                  />
+                ))}
+              </>
+            )}
+
+            {isEditingSolution && (
+              <div className="bg-[#E8FAE9] rounded-xl p-4">
+                {/* What the solution? */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-semibold text-gray-800">
+                      What the solution?
+                    </span>
+                    <button
+                      onClick={handleSaveSolution}
+                      className="text-sm font-medium text-[#6A35FF] hover:text-purple-800 transition-colors"
+                    >
+                      ✓ Save
+                    </button>
+                  </div>
+                  <div className="bg-white rounded-xl border border-gray-200 p-3">
+                    <textarea
+                      ref={solutionTextareaRef}
+                      className="w-full text-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none leading-snug bg-transparent"
+                      rows={3}
+                      placeholder="Describe your solution..."
+                      value={solutionDraft}
+                      onChange={(e) => setSolutionDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
+                          handleSaveSolution();
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Active questions */}
+                {activeSolutionQuestionIds.map((qId) => {
+                  const bq = SOLUTION_BANK_QUESTIONS.find((q) => q.id === qId);
+                  if (!bq) return null;
+                  return (
+                    <ActiveQuestionItem
+                      key={qId}
+                      question={bq}
+                      value={
+                        solutionQuestionAnswers[qId] ??
+                        (bq.answerType === "multiple_choice" ? [] : "")
+                      }
+                      onChange={(val) =>
+                        setSolutionQuestionAnswers((prev) => ({ ...prev, [qId]: val }))
+                      }
+                    />
+                  );
+                })}
+
+                <BankOfSolutions
+                  activeQuestionIds={activeSolutionQuestionIds}
+                  onAdd={handleAddSolutionBankQuestion}
                 />
+
+                <button
+                  onClick={resetSolutionEditor}
+                  className="mt-3 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             )}
           </TabsContent>

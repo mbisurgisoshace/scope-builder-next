@@ -37,6 +37,7 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
     addProblem,
     updateProblem,
     addSolution,
+    updateSolution,
     nodeProblems,
     nodeSolutions,
   } = useJourneyDataBridge();
@@ -92,7 +93,8 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
           onAddProblem={(desc, questions) => { if (selectedActionNodeId) addProblem(selectedActionNodeId, desc, questions); }}
           onUpdateProblem={(problemId, desc, questions) => { if (selectedActionNodeId) updateProblem(selectedActionNodeId, problemId, desc, questions); }}
           solutions={selectedActionNodeId ? (nodeSolutions.get(selectedActionNodeId) ?? []) : []}
-          onAddSolution={(desc) => { if (selectedActionNodeId) addSolution(selectedActionNodeId, desc); }}
+          onAddSolution={(desc, questions) => { if (selectedActionNodeId) addSolution(selectedActionNodeId, desc, questions); }}
+          onUpdateSolution={(solutionId, desc, questions) => { if (selectedActionNodeId) updateSolution(selectedActionNodeId, solutionId, desc, questions); }}
         />
       </JourneyContext.Provider>
     </SelectedNodeContext.Provider>

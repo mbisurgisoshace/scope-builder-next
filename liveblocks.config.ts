@@ -12,7 +12,11 @@ export interface JourneyNodeStorage {
     description: string;
     questions: Array<{ bankQuestionId: string; answer: string | string[] }>;
   }>;
-  solutions: Array<{ id: string; description: string }>;
+  solutions: Array<{
+    id: string;
+    description: string;
+    questions: Array<{ bankQuestionId: string; answer: string | string[] }>;
+  }>;
 }
 
 export interface JourneyEdgeStorage {

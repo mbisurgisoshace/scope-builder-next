@@ -3,7 +3,7 @@
 import { useStorage, useMutation } from '@liveblocks/react/suspense';
 import { LiveObject } from '@liveblocks/client';
 import type { JourneyNodeStorage, JourneyEdgeStorage } from '@/liveblocks.config';
-import type { ProblemQuestionAnswer } from '../components/ActionNodeSheet';
+import type { ProblemQuestionAnswer, SolutionQuestionAnswer } from '../components/ActionNodeSheet';
 
 export type { JourneyNodeStorage, JourneyEdgeStorage };
 
@@ -75,12 +75,38 @@ export function useRealtimeJourney() {
   );
 
   const addSolution = useMutation(
-    ({ storage }, nodeId: string, solution: { id: string; description: string }) => {
+    (
+      { storage },
+      nodeId: string,
+      solution: { id: string; description: string; questions: SolutionQuestionAnswer[] }
+    ) => {
       const nodes = (storage.get('journeyNodes') as any).toArray() as Array<any>;
       const node = nodes.find((n: any) => n.get('id') === nodeId);
       if (node) {
-        const current: Array<{ id: string; description: string }> = node.get('solutions') ?? [];
+        const current: Array<{ id: string; description: string; questions: SolutionQuestionAnswer[] }> =
+          node.get('solutions') ?? [];
         node.update({ solutions: [...current, solution] });
+      }
+    },
+    []
+  );
+
+  const updateSolution = useMutation(
+    (
+      { storage },
+      nodeId: string,
+      solutionId: string,
+      patch: { description: string; questions: SolutionQuestionAnswer[] }
+    ) => {
+      const nodes = (storage.get('journeyNodes') as any).toArray() as Array<any>;
+      const node = nodes.find((n: any) => n.get('id') === nodeId);
+      if (node) {
+        const current: Array<{ id: string; description: string; questions: SolutionQuestionAnswer[] }> =
+          node.get('solutions') ?? [];
+        const updated = current.map((s) =>
+          s.id === solutionId ? { ...s, ...patch } : s
+        );
+        node.update({ solutions: updated });
       }
     },
     []
@@ -95,5 +121,6 @@ export function useRealtimeJourney() {
     addProblem,
     updateProblem,
     addSolution,
+    updateSolution,
   };
 }
