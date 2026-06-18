@@ -149,6 +149,25 @@ export function useJourneyDataBridge() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lbNodes, lbEdges]);
 
+  const addTriggerNode = useCallback(() => {
+    const newId = crypto.randomUUID();
+    setNodes((current) => [
+      ...current,
+      {
+        id: newId,
+        type: 'trigger',
+        position: { x: 0, y: 0 },
+        data: {
+          id: newId,
+          type: 'trigger',
+          content: '',
+          stakeholderId: null,
+        } as unknown as Record<string, unknown>,
+      },
+    ]);
+    addJourneyNode(buildNodeStorage(newId, 'trigger'));
+  }, [setNodes, addJourneyNode]);
+
   const addChildNode = useCallback(
     (parentId: string, type: JourneyNodeType) => {
       const newId = crypto.randomUUID();
@@ -297,6 +316,7 @@ export function useJourneyDataBridge() {
     setNodes,
     onNodesChange,
     onEdgesChange,
+    addTriggerNode,
     addChildNode,
     updateNodeData,
     addProblem,

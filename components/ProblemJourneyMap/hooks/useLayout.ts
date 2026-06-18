@@ -19,6 +19,7 @@ import { timer } from "d3-timer";
 
 const HORIZONTAL_GAP = 200; // px between the right edge of a node and its children's left edge
 const VERTICAL_GAP = 40; // px gap between siblings (top ↔ bottom)
+const TREE_GAP = 80; // px gap between separate trigger chains
 const ANIMATION_DURATION = 300;
 
 function nodeHeight(n: Node): number {
@@ -102,6 +103,68 @@ function layoutNodes(nodes: Node[], edges: Edge[]): Node[] {
   }));
 }
 
+function getSubtree(
+  allNodes: Node[],
+  allEdges: Edge[],
+  rootId: string,
+): { nodes: Node[]; edges: Edge[] } {
+  const visited = new Set<string>([rootId]);
+  const queue = [rootId];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    for (const edge of allEdges) {
+      if (edge.source === id && !visited.has(edge.target)) {
+        visited.add(edge.target);
+        queue.push(edge.target);
+      }
+    }
+  }
+  return {
+    nodes: allNodes.filter((n) => visited.has(n.id)),
+    edges: allEdges.filter((e) => visited.has(e.source) && visited.has(e.target)),
+  };
+}
+
+function layoutForest(nodes: Node[], edges: Edge[]): Node[] {
+  if (nodes.length === 0) return [];
+
+  const targetIds = new Set(edges.map((e) => e.target));
+  const roots = nodes.filter((n) => !targetIds.has(n.id));
+
+  // Single root: delegate to existing logic (preserves current behaviour exactly).
+  if (roots.length <= 1) return layoutNodes(nodes, edges);
+
+  // Multiple roots: layout each subtree independently and stack vertically.
+  let verticalOffset = 0;
+  const result: Node[] = [];
+
+  for (const root of roots) {
+    const { nodes: subtreeNodes, edges: subtreeEdges } = getSubtree(nodes, edges, root.id);
+
+    const hierarchy = stratify<Node>()
+      .id((d) => d.id)
+      .parentId((d) => subtreeEdges.find((e) => e.target === d.id)?.source)(subtreeNodes);
+
+    const treeLayout = tree<Node>().nodeSize([1, 1]).separation(() => 1);
+    const rootNode = treeLayout(hierarchy);
+
+    assignHorizontal(rootNode, 0);
+    const treeH = subtreeHeight(rootNode);
+    assignVertical(rootNode, verticalOffset);
+
+    result.push(
+      ...rootNode.descendants().map((d) => ({
+        ...d.data,
+        position: { x: d.y, y: d.x - nodeHeight(d.data) / 2 },
+      })),
+    );
+
+    verticalOffset += treeH + TREE_GAP;
+  }
+
+  return result;
+}
+
 // Re-run when node/edge count changes OR when total measured dimensions change
 // (i.e. a node grew because problems/solutions were added, or its width changed).
 const nodeCountSelector = (state: ReactFlowState) => state.nodeLookup.size;
@@ -144,7 +207,7 @@ export function useLayout(setNodesState?: Dispatch<SetStateAction<Node[]>>) {
 
     let targetNodes: Node[];
     try {
-      targetNodes = layoutNodes(nodes, edges);
+      targetNodes = layoutForest(nodes, edges);
     } catch {
       // stratify throws if the graph isn't a valid tree (e.g. multiple roots
       // during a transient state while Liveblocks is syncing). Skip this tick.

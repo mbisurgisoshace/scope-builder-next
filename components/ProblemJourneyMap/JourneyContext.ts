@@ -18,6 +18,7 @@ export interface JourneyNodeData extends Record<string, unknown> {
 }
 
 interface JourneyContextValue {
+  addTriggerNode: () => void;
   addChildNode: (parentId: string, type: JourneyNodeType) => void;
   updateNodeData: (id: string, patch: Partial<Omit<JourneyNodeData, 'id' | 'type'>>) => void;
   participants: JourneyParticipant[];
