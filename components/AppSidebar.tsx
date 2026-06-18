@@ -83,6 +83,11 @@ const data = {
       //icon: PieChart,
       conditionalMenu: true,
     },
+    {
+      name: "Office Hours",
+      url: "/office-hours",
+      conditionalMenu: false,
+    },
   ],
   navMain: [
     // {

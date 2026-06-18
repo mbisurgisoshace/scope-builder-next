@@ -1,0 +1,144 @@
+"use server";
+
+import { v4 as uuidv4 } from "uuid";
+import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { split30MinIntervals } from "@/lib/officeHoursUtils";
+
+export async function getOfficeHourSlots() {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const slots = await prisma.officeHourSlot.findMany({
+    where: { user_id: userId },
+    orderBy: [{ date: "asc" }, { start_time: "asc" }],
+  });
+
+  return slots;
+}
+
+export async function createOfficeHourSlot(
+  date: Date,
+  startTime: string,
+  endTime: string
+) {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const user = await currentUser();
+  const mentorName =
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+    user?.emailAddresses?.[0]?.emailAddress ||
+    "Mentor";
+
+  const slot = await prisma.officeHourSlot.create({
+    data: {
+      id: uuidv4(),
+      user_id: userId,
+      mentor_name: mentorName,
+      date,
+      start_time: startTime,
+      end_time: endTime,
+    },
+  });
+
+  const intervals = split30MinIntervals(startTime, endTime);
+  await prisma.officeHourSubSlot.createMany({
+    data: intervals.map(({ start, end }) => ({
+      id: uuidv4(),
+      slot_id: slot.id,
+      start_time: start,
+      end_time: end,
+    })),
+  });
+
+  revalidatePath("/office-hours");
+  return slot;
+}
+
+export async function updateOfficeHourSlot(
+  id: string,
+  startTime: string,
+  endTime: string
+) {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  // Delete old sub-slots (bookings cascade), recreate with new times
+  await prisma.officeHourSubSlot.deleteMany({ where: { slot_id: id } });
+
+  const slot = await prisma.officeHourSlot.update({
+    where: { id, user_id: userId },
+    data: { start_time: startTime, end_time: endTime },
+  });
+
+  const intervals = split30MinIntervals(startTime, endTime);
+  await prisma.officeHourSubSlot.createMany({
+    data: intervals.map(({ start, end }) => ({
+      id: uuidv4(),
+      slot_id: slot.id,
+      start_time: start,
+      end_time: end,
+    })),
+  });
+
+  revalidatePath("/office-hours");
+  return slot;
+}
+
+export async function deleteOfficeHourSlot(id: string) {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  await prisma.officeHourSlot.delete({
+    where: { id, user_id: userId },
+  });
+
+  revalidatePath("/office-hours");
+}
+
+export async function getAllSlotsWithBookings() {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const slots = await prisma.officeHourSlot.findMany({
+    include: {
+      subSlots: {
+        include: { booking: true },
+        orderBy: { start_time: "asc" },
+      },
+    },
+    orderBy: [{ date: "asc" }, { start_time: "asc" }],
+  });
+
+  return slots;
+}
+
+export async function bookSlot(subSlotId: string) {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const booking = await prisma.officeHourBooking.create({
+    data: {
+      id: uuidv4(),
+      sub_slot_id: subSlotId,
+      user_id: userId,
+    },
+  });
+
+  revalidatePath("/office-hours");
+  return booking;
+}
+
+export async function cancelBooking(subSlotId: string) {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  await prisma.officeHourBooking.delete({
+    where: { sub_slot_id: subSlotId, user_id: userId },
+  });
+
+  revalidatePath("/office-hours");
+}
