@@ -5,10 +5,12 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { ZapIcon, PlusIcon } from "lucide-react";
 
 import { NodeTypeMenu } from "../components/NodeTypeMenu";
+import { AddStakeholderModal } from "../components/AddStakeholderModal";
 import {
   useJourneyContext,
   type JourneyNodeType,
   type JourneyNodeData,
+  type JourneyParticipant,
 } from "../JourneyContext";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,8 +23,9 @@ import {
 
 function TriggerNodeInner({ id, data }: NodeProps) {
   const nodeData = data as unknown as JourneyNodeData;
-  const { addChildNode, updateNodeData, participants } = useJourneyContext();
+  const { addChildNode, updateNodeData, participants, addParticipant } = useJourneyContext();
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const handleToggleMenu = useCallback(() => {
@@ -63,14 +66,18 @@ function TriggerNodeInner({ id, data }: NodeProps) {
         </div>
         <Select
           value={nodeData.stakeholderId ?? ""}
-          onValueChange={(val) =>
-            updateNodeData(id, { stakeholderId: val || null })
-          }
+          onValueChange={(val) => {
+            if (val === "__add__") { setShowAddModal(true); return; }
+            updateNodeData(id, { stakeholderId: val || null });
+          }}
         >
           <SelectTrigger className="nodrag nopan w-full max-w-48">
             <SelectValue placeholder="Stakeholder..." />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="__add__" className="font-medium text-[#6A35FF]">
+              + Add stakeholder
+            </SelectItem>
             {participants.map((p) => (
               <SelectItem key={p.id} value={p.id}>
                 {p.name}
@@ -78,6 +85,14 @@ function TriggerNodeInner({ id, data }: NodeProps) {
             ))}
           </SelectContent>
         </Select>
+        <AddStakeholderModal
+          open={showAddModal}
+          onOpenChange={setShowAddModal}
+          onCreated={(p: JourneyParticipant) => {
+            addParticipant(p);
+            updateNodeData(id, { stakeholderId: p.id });
+          }}
+        />
       </div>
 
       <Input

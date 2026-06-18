@@ -21,6 +21,7 @@ interface JourneyContextValue {
   addChildNode: (parentId: string, type: JourneyNodeType) => void;
   updateNodeData: (id: string, patch: Partial<Omit<JourneyNodeData, 'id' | 'type'>>) => void;
   participants: JourneyParticipant[];
+  addParticipant: (participant: JourneyParticipant) => void;
 }
 
 export const JourneyContext = createContext<JourneyContextValue>(null!);

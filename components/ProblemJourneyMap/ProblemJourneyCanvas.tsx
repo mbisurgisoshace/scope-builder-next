@@ -26,7 +26,7 @@ interface ProblemJourneyCanvasProps {
   participants: JourneyParticipant[];
 }
 
-function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
+function CanvasInner({ participants: initialParticipants }: ProblemJourneyCanvasProps) {
   const {
     nodes,
     edges,
@@ -47,6 +47,11 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
 
   useLayout(setNodes);
 
+  const [participants, setParticipants] = useState<JourneyParticipant[]>(initialParticipants);
+  const addParticipant = useCallback((p: JourneyParticipant) => {
+    setParticipants((prev) => [...prev, p]);
+  }, []);
+
   const [selectedActionNodeId, setSelectedActionNodeId] = useState<string | null>(null);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
@@ -64,7 +69,7 @@ function CanvasInner({ participants }: ProblemJourneyCanvasProps) {
     <NodeSolutionsContext.Provider value={nodeSolutions}>
     <NodeProblemsContext.Provider value={nodeProblems}>
     <SelectedNodeContext.Provider value={selectedActionNodeId}>
-      <JourneyContext.Provider value={{ addChildNode, updateNodeData, participants }}>
+      <JourneyContext.Provider value={{ addChildNode, updateNodeData, participants, addParticipant }}>
         <div style={{ width: '100%', height: '100%' }}>
           <ReactFlow
             nodes={nodes}
