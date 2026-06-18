@@ -372,3 +372,43 @@ model InterviewMilestone {
 
   @@map("interview_milestones")
 }
+
+model OfficeHourSlot {
+  id          String              @id @default(uuid())
+  user_id     String
+  mentor_name String
+  date        DateTime
+  start_time  String
+  end_time    String
+  created_at  DateTime            @default(now())
+  updated_at  DateTime            @updatedAt
+  subSlots    OfficeHourSubSlot[]
+
+  @@index([user_id, date])
+  @@map("office_hour_slots")
+}
+
+model OfficeHourSubSlot {
+  id         String             @id @default(uuid())
+  slot_id    String
+  start_time String
+  end_time   String
+  created_at DateTime           @default(now())
+  updated_at DateTime           @updatedAt
+  slot       OfficeHourSlot     @relation(fields: [slot_id], references: [id], onDelete: Cascade)
+  booking    OfficeHourBooking?
+
+  @@index([slot_id])
+  @@map("office_hour_sub_slots")
+}
+
+model OfficeHourBooking {
+  id          String            @id @default(uuid())
+  sub_slot_id String            @unique
+  user_id     String
+  created_at  DateTime          @default(now())
+  updated_at  DateTime          @updatedAt
+  subSlot     OfficeHourSubSlot @relation(fields: [sub_slot_id], references: [id], onDelete: Cascade)
+
+  @@map("office_hour_bookings")
+}
