@@ -216,14 +216,14 @@ export default function ParticipantsKanbanView({
               {selectedParticipant?.name}
             </SheetTitle>
           </SheetHeader>
-          <div className="p-4">
-            <Tabs defaultValue="questions">
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-4">
+            <Tabs defaultValue="questions" className="flex-1 min-h-0">
               <TabsList>
                 <TabsTrigger value="questions">Questions</TabsTrigger>
                 <TabsTrigger value="profile">Profile</TabsTrigger>
               </TabsList>
               <TabsContent value="questions">Questions</TabsContent>
-              <TabsContent value="profile">
+              <TabsContent value="profile" className="min-h-0 overflow-hidden">
                 {selectedParticipant && (
                   <EditParticipantForm
                     participant={selectedParticipant}

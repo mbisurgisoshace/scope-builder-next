@@ -18,7 +18,10 @@ export async function getJobTitles(): Promise<string[]> {
   return jobTitles.map((jobTitle) => jobTitle.name);
 }
 
-export async function createJobTitle(name: string): Promise<void> {
+export async function createJobTitle(
+  name: string,
+  role?: string,
+): Promise<void> {
   const { orgId, userId } = await auth();
 
   if (!userId) redirect("/sign-in");
@@ -28,6 +31,7 @@ export async function createJobTitle(name: string): Promise<void> {
   await prisma.stakeholderJobTitles.create({
     data: {
       name,
+      role,
       org_id: orgId,
     },
   });

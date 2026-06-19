@@ -11,6 +11,22 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const ROLE_OPTIONS = [
+  { value: "End-User", label: "End-User" },
+  { value: "Buyer-Decision-Maker", label: "Buyer/Decision Maker" },
+  { value: "Payer", label: "Payer" },
+  { value: "Influencer", label: "Influencer" },
+  { value: "Recommender", label: "Recommender" },
+  { value: "Saboteur", label: "Saboteur" },
+];
 
 interface ManageJobTitlesModalProps {
   open: boolean;
@@ -24,6 +40,7 @@ export function ManageJobTitlesModal({
   onCreated,
 }: ManageJobTitlesModalProps) {
   const [name, setName] = useState("");
+  const [role, setRole] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,9 +49,10 @@ export function ManageJobTitlesModal({
     setLoading(true);
     try {
       const jobTitle = name.trim();
-      await createJobTitle(jobTitle);
+      await createJobTitle(jobTitle, role || undefined);
       onCreated(jobTitle);
       setName("");
+      setRole("");
       onOpenChange(false);
     } finally {
       setLoading(false);
@@ -56,6 +74,21 @@ export function ManageJobTitlesModal({
               onChange={(e) => setName(e.target.value)}
               autoFocus
             />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">Role</label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a role..." />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter>
             <Button type="submit" disabled={!name.trim() || loading}>
