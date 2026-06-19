@@ -48,17 +48,17 @@ export default function BookingView({
   const [, startTransition] = useTransition();
 
   const programStart = parseISO(
-    process.env.NEXT_PUBLIC_PROGRAM_START_DATE ?? "2026-01-01"
+    process.env.NEXT_PUBLIC_PROGRAM_START_DATE ?? "2026-01-01",
   );
   const programEnd = parseISO(
-    process.env.NEXT_PUBLIC_PROGRAM_END_DATE ?? "2026-12-31"
+    process.env.NEXT_PUBLIC_PROGRAM_END_DATE ?? "2026-12-31",
   );
 
   const weeks = generateWeeks(programStart, programEnd);
   const totalPages = Math.ceil(weeks.length / WEEKS_PER_PAGE);
   const visibleWeeks = weeks.slice(
     pageIndex * WEEKS_PER_PAGE,
-    pageIndex * WEEKS_PER_PAGE + WEEKS_PER_PAGE
+    pageIndex * WEEKS_PER_PAGE + WEEKS_PER_PAGE,
   );
 
   function getDayTimeBlocks(date: Date): TimeBlock[] {
@@ -84,7 +84,7 @@ export default function BookingView({
       }
     }
     return Array.from(blockMap.values()).sort((a, b) =>
-      a.start_time.localeCompare(b.start_time)
+      a.start_time.localeCompare(b.start_time),
     );
   }
 
@@ -105,9 +105,9 @@ export default function BookingView({
                   updated_at: new Date(),
                 },
               }
-            : sub
+            : sub,
         ),
-      }))
+      })),
     );
 
     startTransition(async () => {
@@ -117,35 +117,35 @@ export default function BookingView({
           prev.map((slot) => ({
             ...slot,
             subSlots: slot.subSlots.map((sub) =>
-              sub.id === subSlotId ? { ...sub, booking } : sub
+              sub.id === subSlotId ? { ...sub, booking } : sub,
             ),
-          }))
+          })),
         );
       } catch {
         setSlots((prev) =>
           prev.map((slot) => ({
             ...slot,
             subSlots: slot.subSlots.map((sub) =>
-              sub.id === subSlotId ? { ...sub, booking: null } : sub
+              sub.id === subSlotId ? { ...sub, booking: null } : sub,
             ),
-          }))
+          })),
         );
       }
     });
   }
 
   function handleCancel(subSlotId: string) {
-    const originalBooking = slots
-      .flatMap((s) => s.subSlots)
-      .find((sub) => sub.id === subSlotId)?.booking ?? null;
+    const originalBooking =
+      slots.flatMap((s) => s.subSlots).find((sub) => sub.id === subSlotId)
+        ?.booking ?? null;
 
     setSlots((prev) =>
       prev.map((slot) => ({
         ...slot,
         subSlots: slot.subSlots.map((sub) =>
-          sub.id === subSlotId ? { ...sub, booking: null } : sub
+          sub.id === subSlotId ? { ...sub, booking: null } : sub,
         ),
-      }))
+      })),
     );
 
     startTransition(async () => {
@@ -156,9 +156,9 @@ export default function BookingView({
           prev.map((slot) => ({
             ...slot,
             subSlots: slot.subSlots.map((sub) =>
-              sub.id === subSlotId ? { ...sub, booking: originalBooking } : sub
+              sub.id === subSlotId ? { ...sub, booking: originalBooking } : sub,
             ),
-          }))
+          })),
         );
       }
     });
@@ -209,8 +209,8 @@ export default function BookingView({
                     key={day.date.toISOString()}
                     className="py-3 border-b border-gray-100 last:border-b-0"
                   >
-                    <div className="flex items-start gap-4">
-                      <div className="w-28 shrink-0">
+                    <div className="flex items-start gap-4 flex-col">
+                      <div className="shrink-0 flex flex-row items-center gap-2">
                         <p className="text-sm font-semibold text-gray-800">
                           {day.dayName}
                         </p>
@@ -250,8 +250,8 @@ export default function BookingView({
                                         isBookedByOther
                                           ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60"
                                           : isBookedByMe
-                                          ? "bg-[#6A35FF] text-white border-[#6A35FF] hover:bg-[#5520e0]"
-                                          : "bg-white text-gray-600 border-gray-300 hover:border-[#6A35FF] hover:text-[#6A35FF]"
+                                            ? "bg-[#6A35FF] text-white border-[#6A35FF] hover:bg-[#5520e0]"
+                                            : "bg-white text-gray-600 border-gray-300 hover:border-[#6A35FF] hover:text-[#6A35FF]"
                                       }`}
                                     >
                                       {getInitials(entry.mentorName)}
