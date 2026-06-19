@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 
 function ActionNodeInner({ id, data }: NodeProps) {
   const nodeData = data as unknown as JourneyNodeData;
-  const { addChildNode, updateNodeData, participants } = useJourneyContext();
+  const { addChildNode, updateNodeData } = useJourneyContext();
   const selectedNodeId = useSelectedNode();
   const isSelected = selectedNodeId === id;
   const nodeProblemsMap = useNodeProblems();

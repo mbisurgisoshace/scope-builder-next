@@ -36,11 +36,13 @@ import EditParticipantForm from "./EditParticipantForm";
 
 interface ParticipantTableActionsProps {
   tags: string[];
+  jobTitles: string[];
   participant: Participant;
 }
 
 export default function ParticipantTableActions({
   tags,
+  jobTitles,
   participant,
 }: ParticipantTableActionsProps) {
   const [open, setOpen] = useState(false);
@@ -110,6 +112,7 @@ export default function ParticipantTableActions({
           <EditParticipantForm
             participant={participant}
             tags={tags}
+            jobTitles={jobTitles}
             onSuccess={() => setOpen(false)}
           />
         </SheetContent>

@@ -4,11 +4,13 @@ import {
   getParticipantTags,
   getInterviewMilestonesWithProgress,
 } from "@/services/participants";
+import { getJobTitles } from "@/services/jobTitles";
 
 export default async function ParticipantsInterviewPage() {
-  const [tags, { milestones, documentedCount, payerDocumentedCount }] =
+  const [tags, jobTitles, { milestones, documentedCount, payerDocumentedCount }] =
     await Promise.all([
       getParticipantTags(),
+      getJobTitles(),
       getInterviewMilestonesWithProgress(),
     ]);
 
@@ -20,7 +22,7 @@ export default async function ParticipantsInterviewPage() {
         payerDocumentedCount={payerDocumentedCount}
       />
       <div className="flex-1 min-h-0 px-8 py-4">
-        <ParticipantsKanbanView tags={tags} />
+        <ParticipantsKanbanView tags={tags} jobTitles={jobTitles} />
       </div>
     </div>
   );

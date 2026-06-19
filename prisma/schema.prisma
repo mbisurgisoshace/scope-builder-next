@@ -70,6 +70,17 @@ model ParticipantTag {
   @@map("participant_tags")
 }
 
+model StakeholderJobTitles {
+  id     Int    @id @default(autoincrement())
+  name   String
+  org_id String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("stakeholder_job_titles")
+}
+
 model ParticipantRoom {
   id            String   @id @default(cuid())
   participantId String   @unique

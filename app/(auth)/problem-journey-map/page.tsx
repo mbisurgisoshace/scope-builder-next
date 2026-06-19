@@ -2,14 +2,15 @@ import { auth } from "@clerk/nextjs/server";
 import { ProblemJourneyCanvas } from "@/components/ProblemJourneyMap/ProblemJourneyCanvas";
 import { StepperBar } from "@/components/ProblemJourneyMap/components/StepperBar";
 import { Room } from "@/components/Room";
-import { generateProblemJourneyRoom, getProblemJourneyParticipants } from "@/services/problemJourney";
+import { generateProblemJourneyRoom } from "@/services/problemJourney";
+import { getJobTitles } from "@/services/jobTitles";
 
 export default async function ProblemJourneyMapPage() {
   const { orgId } = await auth();
   const roomId = `problem-journey-${orgId}`;
-  const [, participants] = await Promise.all([
+  const [, jobTitles] = await Promise.all([
     generateProblemJourneyRoom(roomId),
-    getProblemJourneyParticipants(orgId!),
+    getJobTitles(),
   ]);
 
   return (
@@ -17,7 +18,7 @@ export default async function ProblemJourneyMapPage() {
       <StepperBar />
       <div className="flex-1 min-h-0">
         <Room roomId={roomId}>
-          <ProblemJourneyCanvas participants={participants} />
+          <ProblemJourneyCanvas jobTitles={jobTitles} />
         </Room>
       </div>
     </div>

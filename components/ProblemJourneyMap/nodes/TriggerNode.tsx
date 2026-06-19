@@ -5,12 +5,11 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { ZapIcon, PlusIcon } from "lucide-react";
 
 import { NodeTypeMenu } from "../components/NodeTypeMenu";
-import { AddStakeholderModal } from "../components/AddStakeholderModal";
+import { ManageJobTitlesModal } from "../components/ManageJobTitlesModal";
 import {
   useJourneyContext,
   type JourneyNodeType,
   type JourneyNodeData,
-  type JourneyParticipant,
 } from "../JourneyContext";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,7 +22,7 @@ import {
 
 function TriggerNodeInner({ id, data }: NodeProps) {
   const nodeData = data as unknown as JourneyNodeData;
-  const { addChildNode, updateNodeData, participants, addParticipant } = useJourneyContext();
+  const { addChildNode, updateNodeData, jobTitles, addJobTitle } = useJourneyContext();
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -65,32 +64,32 @@ function TriggerNodeInner({ id, data }: NodeProps) {
           </span>
         </div>
         <Select
-          value={nodeData.stakeholderId ?? ""}
+          value={nodeData.jobTitle ?? ""}
           onValueChange={(val) => {
-            if (val === "__add__") { setShowAddModal(true); return; }
-            updateNodeData(id, { stakeholderId: val || null });
+            if (val === "__manage__") { setShowAddModal(true); return; }
+            updateNodeData(id, { jobTitle: val || null });
           }}
         >
           <SelectTrigger className="nodrag nopan w-full max-w-48">
-            <SelectValue placeholder="Stakeholder..." />
+            <SelectValue placeholder="Job title..." />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__add__" className="font-medium text-[#6A35FF]">
-              + Add stakeholder
+            <SelectItem value="__manage__" className="font-medium text-[#6A35FF]">
+              Manage Job Titles
             </SelectItem>
-            {participants.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
+            {jobTitles.map((jobTitle) => (
+              <SelectItem key={jobTitle} value={jobTitle}>
+                {jobTitle}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <AddStakeholderModal
+        <ManageJobTitlesModal
           open={showAddModal}
           onOpenChange={setShowAddModal}
-          onCreated={(p: JourneyParticipant) => {
-            addParticipant(p);
-            updateNodeData(id, { stakeholderId: p.id });
+          onCreated={(jobTitle: string) => {
+            addJobTitle(jobTitle);
+            updateNodeData(id, { jobTitle });
           }}
         />
       </div>

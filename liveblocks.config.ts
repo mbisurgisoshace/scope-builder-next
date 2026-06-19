@@ -6,7 +6,7 @@ export interface JourneyNodeStorage {
   id: string;
   type: 'trigger' | 'action' | 'split_route';
   content: string;
-  stakeholderId: string | null;
+  jobTitle: string | null;
   problems: Array<{
     id: string;
     description: string;

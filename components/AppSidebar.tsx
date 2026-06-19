@@ -81,7 +81,7 @@ const data = {
       name: "Interviews",
       url: "/participants/interviews",
       //icon: PieChart,
-      conditionalMenu: true,
+      conditionalMenu: false,
     },
     {
       name: "Office Hours",

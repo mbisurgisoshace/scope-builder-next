@@ -2,12 +2,14 @@ import { Button } from "@/components/ui/button";
 import ParticipantsTable from "./_components/ParticipantsTable";
 import AddParticipant from "./_components/AddParticipant";
 import { getParticipants, getParticipantTags } from "@/services/participants";
+import { getJobTitles } from "@/services/jobTitles";
 import { getSegments } from "@/services/segments";
 import ParticipantsKanbanView from "./interviews/_components/ParticipantsKanbanView";
 
 export default async function ParticipantsPage() {
   // const marketSegments = await getSegments();
   const tags = await getParticipantTags();
+  const jobTitles = await getJobTitles();
   const participants = await getParticipants();
 
   return (
@@ -22,10 +24,10 @@ export default async function ParticipantsPage() {
               Manage your interview pipeline and scheduling
             </span>
           </div>
-          <AddParticipant tags={tags} />
+          <AddParticipant tags={tags} jobTitles={jobTitles} />
         </header>
 
-        <ParticipantsTable data={participants} tags={tags} />
+        <ParticipantsTable data={participants} tags={tags} jobTitles={jobTitles} />
 
         {/* <ParticipantsKanbanView /> */}
       </div>

@@ -17,7 +17,7 @@ import { journeyNodeTypes } from "./nodes/nodeTypes";
 import { journeyEdgeTypes } from "./edges/edgeTypes";
 import { useJourneyDataBridge } from "./hooks/useJourneyDataBridge";
 import { useLayout } from "./hooks/useLayout";
-import { JourneyContext, type JourneyParticipant } from "./JourneyContext";
+import { JourneyContext } from "./JourneyContext";
 import { SelectedNodeContext } from "./SelectedNodeContext";
 import { NodeProblemsContext } from "./NodeProblemsContext";
 import { NodeSolutionsContext } from "./NodeSolutionsContext";
@@ -25,11 +25,11 @@ import { NodeConclusionsContext } from "./NodeConclusionsContext";
 import { ActionNodeSheet } from "./components/ActionNodeSheet";
 
 interface ProblemJourneyCanvasProps {
-  participants: JourneyParticipant[];
+  jobTitles: string[];
 }
 
 function CanvasInner({
-  participants: initialParticipants,
+  jobTitles: initialJobTitles,
 }: ProblemJourneyCanvasProps) {
   const {
     nodes,
@@ -52,10 +52,9 @@ function CanvasInner({
 
   useLayout(setNodes);
 
-  const [participants, setParticipants] =
-    useState<JourneyParticipant[]>(initialParticipants);
-  const addParticipant = useCallback((p: JourneyParticipant) => {
-    setParticipants((prev) => [...prev, p]);
+  const [jobTitles, setJobTitles] = useState<string[]>(initialJobTitles);
+  const addJobTitle = useCallback((jobTitle: string) => {
+    setJobTitles((prev) => [...prev, jobTitle]);
   }, []);
 
   const [selectedActionNodeId, setSelectedActionNodeId] = useState<
@@ -82,8 +81,8 @@ function CanvasInner({
                 addTriggerNode,
                 addChildNode,
                 updateNodeData,
-                participants,
-                addParticipant,
+                jobTitles,
+                addJobTitle,
               }}
             >
               <div style={{ width: "100%", height: "100%" }}>
@@ -184,11 +183,11 @@ function CanvasInner({
 }
 
 export function ProblemJourneyCanvas({
-  participants,
+  jobTitles,
 }: ProblemJourneyCanvasProps) {
   return (
     <ReactFlowProvider>
-      <CanvasInner participants={participants} />
+      <CanvasInner jobTitles={jobTitles} />
     </ReactFlowProvider>
   );
 }

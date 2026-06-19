@@ -17,7 +17,7 @@ const INITIAL_TRIGGER_NODE: Node = {
     id: INITIAL_TRIGGER_ID,
     type: 'trigger',
     content: '',
-    stakeholderId: null,
+    jobTitle: null,
   } as unknown as Record<string, unknown>,
 };
 
@@ -28,7 +28,7 @@ function colorForType(type: JourneyNodeType) {
 }
 
 function buildNodeStorage(id: string, type: JourneyNodeType): JourneyNodeStorage {
-  return { id, type, content: '', stakeholderId: null, problems: [], solutions: [], conclusions: [] };
+  return { id, type, content: '', jobTitle: null, problems: [], solutions: [], conclusions: [] };
 }
 
 function lbNodeToRFNode(lb: JourneyNodeStorage): Node {
@@ -40,7 +40,7 @@ function lbNodeToRFNode(lb: JourneyNodeStorage): Node {
       id: lb.id,
       type: lb.type,
       content: lb.content,
-      stakeholderId: lb.stakeholderId,
+      jobTitle: lb.jobTitle,
       color: colorForType(lb.type),
     } as unknown as Record<string, unknown>,
   };
@@ -110,7 +110,7 @@ export function useJourneyDataBridge() {
           const rf = currentNodes.find((n) => n.id === lb.id);
           if (!rf) return false;
           const data = rf.data as unknown as JourneyNodeData;
-          return data.content !== lb.content || data.stakeholderId !== lb.stakeholderId;
+          return data.content !== lb.content || data.jobTitle !== lb.jobTitle;
         });
         if (!hasDataChange) return currentNodes;
 
@@ -118,8 +118,8 @@ export function useJourneyDataBridge() {
           const lb = lbNodes.find((lb) => lb.id === n.id);
           if (!lb) return n;
           const data = n.data as unknown as JourneyNodeData;
-          if (data.content === lb.content && data.stakeholderId === lb.stakeholderId) return n;
-          return { ...n, data: { ...n.data, content: lb.content, stakeholderId: lb.stakeholderId } as unknown as Record<string, unknown> };
+          if (data.content === lb.content && data.jobTitle === lb.jobTitle) return n;
+          return { ...n, data: { ...n.data, content: lb.content, jobTitle: lb.jobTitle } as unknown as Record<string, unknown> };
         });
       }
 
@@ -161,7 +161,7 @@ export function useJourneyDataBridge() {
           id: newId,
           type: 'trigger',
           content: '',
-          stakeholderId: null,
+          jobTitle: null,
         } as unknown as Record<string, unknown>,
       },
     ]);
@@ -188,7 +188,7 @@ export function useJourneyDataBridge() {
               id: newId,
               type,
               content: '',
-              stakeholderId: null,
+              jobTitle: null,
               color: colorForType(type),
             } as unknown as Record<string, unknown>,
           },

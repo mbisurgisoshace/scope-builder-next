@@ -44,12 +44,15 @@ import {
   createParticipant,
   createParticipantTag,
 } from "@/services/participants";
+import { createJobTitle } from "@/services/jobTitles";
 import { MultiSelect } from "@/components/ui/multiselect";
+import { Combobox } from "@/components/ui/combobox";
 import { useState } from "react";
 
 interface AddParticipantProps {
   //marketSegments: any[];
   tags: string[];
+  jobTitles: string[];
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onSuccess?: () => void;
@@ -71,6 +74,7 @@ const ROLE_OPTIONS = [
 export default function AddParticipant({
   //marketSegments,
   tags,
+  jobTitles,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
   onSuccess,
@@ -120,6 +124,10 @@ export default function AddParticipant({
     await createParticipantTag(opt);
   }
 
+  async function onCreateJobTitleOption(opt: string) {
+    await createJobTitle(opt);
+  }
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       {!isControlled && (
@@ -163,7 +171,18 @@ export default function AddParticipant({
                   <FormItem>
                     <FormLabel>Job Title</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Combobox
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={jobTitles.map((jobTitle) => ({
+                          value: jobTitle,
+                          label: jobTitle,
+                        }))}
+                        placeholder="Select or create a job title"
+                        onCreateOption={(opt) =>
+                          onCreateJobTitleOption(opt.value)
+                        }
+                      />
                     </FormControl>
 
                     <FormMessage />

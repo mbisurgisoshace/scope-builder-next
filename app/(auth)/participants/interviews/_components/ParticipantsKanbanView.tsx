@@ -163,7 +163,13 @@ function KanbanBoard({
   );
 }
 
-export default function ParticipantsKanbanView({ tags }: { tags: string[] }) {
+export default function ParticipantsKanbanView({
+  tags,
+  jobTitles,
+}: {
+  tags: string[];
+  jobTitles: string[];
+}) {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedParticipant, setSelectedParticipant] =
@@ -193,6 +199,7 @@ export default function ParticipantsKanbanView({ tags }: { tags: string[] }) {
     <>
       <AddParticipant
         tags={tags}
+        jobTitles={jobTitles}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         onSuccess={refetch}
@@ -221,6 +228,7 @@ export default function ParticipantsKanbanView({ tags }: { tags: string[] }) {
                   <EditParticipantForm
                     participant={selectedParticipant}
                     tags={tags}
+                    jobTitles={jobTitles}
                     onSuccess={() => {
                       refetch();
                       setSelectedParticipant(null);

@@ -6,6 +6,7 @@ import {
   createParticipantTag,
   updateParticipant,
 } from "@/services/participants";
+import { createJobTitle } from "@/services/jobTitles";
 import {
   Form,
   FormControl,
@@ -41,6 +42,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { getSegments } from "@/services/segments";
 import { MultiSelect } from "@/components/ui/multiselect";
+import { Combobox } from "@/components/ui/combobox";
 
 const ROLE_OPTIONS = [
   { value: "End-User", label: "End-User" },
@@ -54,12 +56,14 @@ const ROLE_OPTIONS = [
 interface EditParticipantFormProps {
   participant: Participant;
   tags: string[];
+  jobTitles: string[];
   onSuccess?: () => void;
 }
 
 export default function EditParticipantForm({
   participant,
   tags,
+  jobTitles,
   onSuccess,
 }: EditParticipantFormProps) {
   const [marketSegments, setMarketSegments] = useState<any[]>([]);
@@ -97,6 +101,10 @@ export default function EditParticipantForm({
     await createParticipantTag(opt);
   }
 
+  async function onCreateJobTitleOption(opt: string) {
+    await createJobTitle(opt);
+  }
+
   return (
     <div className="h-full flex flex-col gap-8 overflow-auto">
       <Form {...form}>
@@ -125,7 +133,16 @@ export default function EditParticipantForm({
               <FormItem>
                 <FormLabel>Job Title</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Combobox
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={jobTitles.map((jobTitle) => ({
+                      value: jobTitle,
+                      label: jobTitle,
+                    }))}
+                    placeholder="Select or create a job title"
+                    onCreateOption={(opt) => onCreateJobTitleOption(opt.value)}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
