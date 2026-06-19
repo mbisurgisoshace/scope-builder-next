@@ -415,12 +415,15 @@ model OfficeHourSubSlot {
 }
 
 model OfficeHourBooking {
-  id          String            @id @default(uuid())
-  sub_slot_id String            @unique
-  user_id     String
-  created_at  DateTime          @default(now())
-  updated_at  DateTime          @updatedAt
-  subSlot     OfficeHourSubSlot @relation(fields: [sub_slot_id], references: [id], onDelete: Cascade)
+  id           String            @id @default(uuid())
+  sub_slot_id  String            @unique
+  user_id      String
+  user_name    String?
+  user_email   String?
+  meeting_link String?
+  created_at   DateTime          @default(now())
+  updated_at   DateTime          @updatedAt
+  subSlot      OfficeHourSubSlot @relation(fields: [sub_slot_id], references: [id], onDelete: Cascade)
 
   @@map("office_hour_bookings")
 }

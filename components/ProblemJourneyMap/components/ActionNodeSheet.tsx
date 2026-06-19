@@ -454,7 +454,7 @@ function HypothesisCard({ hypothesis, saved, onSave }: HypothesisCardProps) {
 const TABS = [
   { value: "problem", label: "Problem" },
   { value: "solution", label: "Solution" },
-  { value: "assumptions", label: "Assumptions & Hypothesis" },
+  { value: "assumptions", label: "Solution Ideas" },
   { value: "responses", label: "Responses" },
   { value: "conclusions", label: "Conclusions" },
 ] as const;

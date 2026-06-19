@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { parseISO, isSameDay } from "date-fns";
 import {
@@ -9,7 +9,12 @@ import {
   OfficeHourBooking,
 } from "@/lib/generated/prisma";
 import { generateWeeks, formatTimeDisplay } from "@/lib/officeHoursUtils";
-import { bookSlot, cancelBooking } from "@/services/officeHours";
+import {
+  bookSlot,
+  cancelBooking,
+  updateBookingLink,
+} from "@/services/officeHours";
+import BookingLinkPopover from "./BookingLinkPopover";
 
 type SubSlotWithBooking = OfficeHourSubSlot & {
   booking: OfficeHourBooking | null;
@@ -22,7 +27,7 @@ type TimeBlock = {
   entries: {
     subSlotId: string;
     mentorName: string;
-    booking: Pick<OfficeHourBooking, "id" | "user_id"> | null;
+    booking: Pick<OfficeHourBooking, "id" | "user_id" | "meeting_link"> | null;
   }[];
 };
 
@@ -33,19 +38,12 @@ interface BookingViewProps {
 
 const WEEKS_PER_PAGE = 3;
 
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
 export default function BookingView({
   initialSlots,
   currentUserId,
 }: BookingViewProps) {
   const [slots, setSlots] = useState<SlotWithSubSlots[]>(initialSlots);
   const [pageIndex, setPageIndex] = useState(0);
-  const [, startTransition] = useTransition();
 
   const programStart = parseISO(
     process.env.NEXT_PUBLIC_PROGRAM_START_DATE ?? "2026-01-01",
@@ -78,7 +76,11 @@ export default function BookingView({
           subSlotId: sub.id,
           mentorName: slot.mentor_name,
           booking: sub.booking
-            ? { id: sub.booking.id, user_id: sub.booking.user_id }
+            ? {
+                id: sub.booking.id,
+                user_id: sub.booking.user_id,
+                meeting_link: sub.booking.meeting_link,
+              }
             : null,
         });
       }
@@ -88,7 +90,7 @@ export default function BookingView({
     );
   }
 
-  function handleBook(subSlotId: string) {
+  async function handleBook(subSlotId: string, meetingLink: string) {
     setSlots((prev) =>
       prev.map((slot) => ({
         ...slot,
@@ -101,6 +103,9 @@ export default function BookingView({
                   slot_id: sub.slot_id,
                   sub_slot_id: subSlotId,
                   user_id: currentUserId,
+                  user_name: null,
+                  user_email: null,
+                  meeting_link: meetingLink,
                   created_at: new Date(),
                   updated_at: new Date(),
                 },
@@ -110,31 +115,61 @@ export default function BookingView({
       })),
     );
 
-    startTransition(async () => {
-      try {
-        const booking = await bookSlot(subSlotId);
-        setSlots((prev) =>
-          prev.map((slot) => ({
-            ...slot,
-            subSlots: slot.subSlots.map((sub) =>
-              sub.id === subSlotId ? { ...sub, booking } : sub,
-            ),
-          })),
-        );
-      } catch {
-        setSlots((prev) =>
-          prev.map((slot) => ({
-            ...slot,
-            subSlots: slot.subSlots.map((sub) =>
-              sub.id === subSlotId ? { ...sub, booking: null } : sub,
-            ),
-          })),
-        );
-      }
-    });
+    try {
+      const booking = await bookSlot(subSlotId, meetingLink);
+      setSlots((prev) =>
+        prev.map((slot) => ({
+          ...slot,
+          subSlots: slot.subSlots.map((sub) =>
+            sub.id === subSlotId ? { ...sub, booking } : sub,
+          ),
+        })),
+      );
+    } catch (err) {
+      setSlots((prev) =>
+        prev.map((slot) => ({
+          ...slot,
+          subSlots: slot.subSlots.map((sub) =>
+            sub.id === subSlotId ? { ...sub, booking: null } : sub,
+          ),
+        })),
+      );
+      throw err;
+    }
   }
 
-  function handleCancel(subSlotId: string) {
+  async function handleUpdateLink(subSlotId: string, meetingLink: string) {
+    const originalBooking =
+      slots.flatMap((s) => s.subSlots).find((sub) => sub.id === subSlotId)
+        ?.booking ?? null;
+
+    setSlots((prev) =>
+      prev.map((slot) => ({
+        ...slot,
+        subSlots: slot.subSlots.map((sub) =>
+          sub.id === subSlotId && sub.booking
+            ? { ...sub, booking: { ...sub.booking, meeting_link: meetingLink } }
+            : sub,
+        ),
+      })),
+    );
+
+    try {
+      await updateBookingLink(subSlotId, meetingLink);
+    } catch (err) {
+      setSlots((prev) =>
+        prev.map((slot) => ({
+          ...slot,
+          subSlots: slot.subSlots.map((sub) =>
+            sub.id === subSlotId ? { ...sub, booking: originalBooking } : sub,
+          ),
+        })),
+      );
+      throw err;
+    }
+  }
+
+  async function handleCancel(subSlotId: string) {
     const originalBooking =
       slots.flatMap((s) => s.subSlots).find((sub) => sub.id === subSlotId)
         ?.booking ?? null;
@@ -148,20 +183,19 @@ export default function BookingView({
       })),
     );
 
-    startTransition(async () => {
-      try {
-        await cancelBooking(subSlotId);
-      } catch {
-        setSlots((prev) =>
-          prev.map((slot) => ({
-            ...slot,
-            subSlots: slot.subSlots.map((sub) =>
-              sub.id === subSlotId ? { ...sub, booking: originalBooking } : sub,
-            ),
-          })),
-        );
-      }
-    });
+    try {
+      await cancelBooking(subSlotId);
+    } catch (err) {
+      setSlots((prev) =>
+        prev.map((slot) => ({
+          ...slot,
+          subSlots: slot.subSlots.map((sub) =>
+            sub.id === subSlotId ? { ...sub, booking: originalBooking } : sub,
+          ),
+        })),
+      );
+      throw err;
+    }
   }
 
   return (
@@ -237,25 +271,17 @@ export default function BookingView({
                                   const isBookedByOther =
                                     !!entry.booking && !isBookedByMe;
                                   return (
-                                    <button
+                                    <BookingLinkPopover
                                       key={entry.subSlotId}
+                                      subSlotId={entry.subSlotId}
+                                      mentorName={entry.mentorName}
+                                      mode={isBookedByMe ? "manage" : "book"}
+                                      currentLink={entry.booking?.meeting_link}
                                       disabled={isBookedByOther}
-                                      title={entry.mentorName}
-                                      onClick={() =>
-                                        isBookedByMe
-                                          ? handleCancel(entry.subSlotId)
-                                          : handleBook(entry.subSlotId)
-                                      }
-                                      className={`w-9 h-9 rounded-full border-2 text-xs font-bold flex items-center justify-center transition-colors ${
-                                        isBookedByOther
-                                          ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60"
-                                          : isBookedByMe
-                                            ? "bg-[#6A35FF] text-white border-[#6A35FF] hover:bg-[#5520e0]"
-                                            : "bg-white text-gray-600 border-gray-300 hover:border-[#6A35FF] hover:text-[#6A35FF]"
-                                      }`}
-                                    >
-                                      {getInitials(entry.mentorName)}
-                                    </button>
+                                      onBook={handleBook}
+                                      onUpdateLink={handleUpdateLink}
+                                      onCancel={handleCancel}
+                                    />
                                   );
                                 })}
                               </div>

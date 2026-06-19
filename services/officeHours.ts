@@ -6,6 +6,17 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { split30MinIntervals } from "@/lib/officeHoursUtils";
+import { bookingLinkFormSchema } from "@/schemas/officeHours";
+
+async function getCurrentUserDisplayInfo() {
+  const user = await currentUser();
+  const name =
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+    user?.emailAddresses?.[0]?.emailAddress ||
+    "Participant";
+  const email = user?.emailAddresses?.[0]?.emailAddress ?? null;
+  return { name, email };
+}
 
 export async function getOfficeHourSlots() {
   const { userId } = await auth();
@@ -116,16 +127,41 @@ export async function getAllSlotsWithBookings() {
   return slots;
 }
 
-export async function bookSlot(subSlotId: string) {
+export async function bookSlot(subSlotId: string, meetingLink: string) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
+
+  const { meetingLink: validatedLink } = bookingLinkFormSchema.parse({
+    meetingLink,
+  });
+  const { name, email } = await getCurrentUserDisplayInfo();
 
   const booking = await prisma.officeHourBooking.create({
     data: {
       id: uuidv4(),
       sub_slot_id: subSlotId,
       user_id: userId,
+      user_name: name,
+      user_email: email,
+      meeting_link: validatedLink,
     },
+  });
+
+  revalidatePath("/office-hours");
+  return booking;
+}
+
+export async function updateBookingLink(subSlotId: string, meetingLink: string) {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const { meetingLink: validatedLink } = bookingLinkFormSchema.parse({
+    meetingLink,
+  });
+
+  const booking = await prisma.officeHourBooking.update({
+    where: { sub_slot_id: subSlotId, user_id: userId },
+    data: { meeting_link: validatedLink },
   });
 
   revalidatePath("/office-hours");
