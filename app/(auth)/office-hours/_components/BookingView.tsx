@@ -37,7 +37,7 @@ interface BookingViewProps {
   currentUserId: string;
 }
 
-const WEEKS_PER_PAGE = 3;
+const WEEKS_PER_PAGE = 4;
 
 export default function BookingView({
   initialSlots,
@@ -280,7 +280,7 @@ export default function BookingView({
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden">
+      <div className="grid grid-cols-4 gap-4 flex-1 overflow-hidden">
         {visibleWeeks.map((week) => (
           <div
             key={week.weekStart.toISOString()}

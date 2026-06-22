@@ -16,7 +16,7 @@ import {
 } from "@/services/officeHours";
 import WeekColumn from "./WeekColumn";
 
-const WEEKS_PER_PAGE = 3;
+const WEEKS_PER_PAGE = 4;
 
 interface AvailabilityEditorProps {
   initialSlots: OfficeHourSlot[];
@@ -138,7 +138,7 @@ export default function AvailabilityEditor({
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden">
+      <div className="grid grid-cols-4 gap-4 flex-1 overflow-hidden">
         {visibleWeeks.map((week) => (
           <WeekColumn
             key={week.weekStart.toISOString()}
