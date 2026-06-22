@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { parseISO, isSameDay } from "date-fns";
+import { toast } from "sonner";
 import {
   OfficeHourSlot,
   OfficeHourSubSlot,
@@ -140,12 +141,17 @@ export default function BookingView({
     );
 
     try {
-      const booking = await bookSlot(subSlotId, meetingLink);
+      const result = await bookSlot(subSlotId, meetingLink);
+
+      if (result.status === "already_booked") {
+        toast.error("This slot was just booked by someone else.");
+      }
+
       setSlots((prev) =>
         prev.map((slot) => ({
           ...slot,
           subSlots: slot.subSlots.map((sub) =>
-            sub.id === subSlotId ? { ...sub, booking } : sub,
+            sub.id === subSlotId ? { ...sub, booking: result.booking } : sub,
           ),
         })),
       );
