@@ -9,6 +9,12 @@ export interface InterviewQuestion {
   id: string;
   /** The interview question the user is authoring. Empty string = not yet written. */
   title: string;
+  /**
+   * Whether the question has been committed/authored. Authored questions render
+   * as static text; the rest render as an editable input. Kept independent of
+   * `title` so typing doesn't flip the field out from under the cursor.
+   */
+  authored: boolean;
   responseType: ResponseType;
   /** Only meaningful when responseType === "dropdown". */
   options: DropdownOption[];

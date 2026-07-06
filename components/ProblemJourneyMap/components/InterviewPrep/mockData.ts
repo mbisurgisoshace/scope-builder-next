@@ -24,6 +24,7 @@ export const MOCK_PROBLEM_BLOCKS: ProblemBlock[] = [
         question: {
           id: "q-1",
           title: "Do you experience this issue personally?",
+          authored: true,
           responseType: "text",
           options: [],
         },
@@ -38,6 +39,7 @@ export const MOCK_PROBLEM_BLOCKS: ProblemBlock[] = [
         question: {
           id: "q-2",
           title: "",
+          authored: false,
           responseType: "scale",
           options: [],
         },
@@ -52,6 +54,7 @@ export const MOCK_PROBLEM_BLOCKS: ProblemBlock[] = [
         question: {
           id: "q-3",
           title: "",
+          authored: false,
           responseType: "dropdown",
           options: [
             { id: "opt-1", label: "Yes" },
@@ -81,6 +84,7 @@ export const MOCK_PROBLEM_BLOCKS: ProblemBlock[] = [
         question: {
           id: "q-4",
           title: "",
+          authored: false,
           responseType: "text",
           options: [],
         },
@@ -95,6 +99,7 @@ export const MOCK_PROBLEM_BLOCKS: ProblemBlock[] = [
         question: {
           id: "q-5",
           title: "",
+          authored: false,
           responseType: "scale",
           options: [],
         },

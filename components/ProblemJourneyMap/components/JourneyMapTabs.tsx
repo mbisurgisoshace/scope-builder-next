@@ -62,7 +62,7 @@ export function JourneyMapTabs({ canvas }: JourneyMapTabsProps) {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* Tab bar — a darker grey band than the content area below it. */}
       <div className="flex w-full items-end gap-1 bg-[#E2E4EA] px-4 pt-2  border-[#CDCFDE]">
         {TABS.map((tab) => {

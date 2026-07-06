@@ -37,7 +37,7 @@ export function QuestionEditor({ question, onChange }: QuestionEditorProps) {
       {/* Question title — bold text if answered, otherwise an input. */}
       <div className="flex flex-col gap-2">
         <span className="text-sm text-[#697288]">Question:</span>
-        {question.title ? (
+        {question.authored ? (
           <p className="text-sm font-semibold text-[#1F2430]">
             {question.title}
           </p>
