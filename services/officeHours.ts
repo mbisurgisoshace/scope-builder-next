@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { split30MinIntervals } from "@/lib/officeHoursUtils";
 import { bookingLinkFormSchema } from "@/schemas/officeHours";
+import { OfficeHourBooking } from "@/lib/generated/prisma";
 
 async function getCurrentUserDisplayInfo() {
   const user = await currentUser();
@@ -127,7 +128,14 @@ export async function getAllSlotsWithBookings() {
   return slots;
 }
 
-export async function bookSlot(subSlotId: string, meetingLink: string) {
+export type BookSlotResult =
+  | { status: "booked"; booking: OfficeHourBooking }
+  | { status: "already_booked"; booking: OfficeHourBooking | null };
+
+export async function bookSlot(
+  subSlotId: string,
+  meetingLink: string,
+): Promise<BookSlotResult> {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
@@ -136,19 +144,30 @@ export async function bookSlot(subSlotId: string, meetingLink: string) {
   });
   const { name, email } = await getCurrentUserDisplayInfo();
 
-  const booking = await prisma.officeHourBooking.create({
-    data: {
-      id: uuidv4(),
-      sub_slot_id: subSlotId,
-      user_id: userId,
-      user_name: name,
-      user_email: email,
-      meeting_link: validatedLink,
-    },
-  });
+  try {
+    const booking = await prisma.officeHourBooking.create({
+      data: {
+        id: uuidv4(),
+        sub_slot_id: subSlotId,
+        user_id: userId,
+        user_name: name,
+        user_email: email,
+        meeting_link: validatedLink,
+      },
+    });
 
-  revalidatePath("/office-hours");
-  return booking;
+    revalidatePath("/office-hours");
+    return { status: "booked", booking };
+  } catch (err) {
+    const code = (err as { code?: unknown } | null)?.code;
+    if (code === "P2002") {
+      const existing = await prisma.officeHourBooking.findUnique({
+        where: { sub_slot_id: subSlotId },
+      });
+      return { status: "already_booked", booking: existing };
+    }
+    throw err;
+  }
 }
 
 export async function updateBookingLink(subSlotId: string, meetingLink: string) {
