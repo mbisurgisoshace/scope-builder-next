@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Lock } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { InterviewPrep } from "./InterviewPrep/InterviewPrep";
 
 const STORAGE_KEY = "pjm-active-tab";
 
@@ -92,7 +93,13 @@ export function JourneyMapTabs({ canvas }: JourneyMapTabsProps) {
 
       {/* Content — matches the active folder tab colour so they read as connected. */}
       <div className="min-h-0 flex-1 bg-[#EFF0F4]">
-        {value === "canvas" ? canvas : <EmptyTab />}
+        {value === "canvas" ? (
+          canvas
+        ) : value === "interview-prep" ? (
+          <InterviewPrep />
+        ) : (
+          <EmptyTab />
+        )}
       </div>
     </div>
   );
