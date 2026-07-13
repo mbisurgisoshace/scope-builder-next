@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { CheckCircle2, Info, Calendar, type LucideIcon } from 'lucide-react';
+
+import { useMilestoneSelection } from '../MilestoneSelectionContext';
 
 type SubStepStatus = 'done' | 'active' | 'pending';
 
@@ -21,7 +23,6 @@ interface Milestone {
 
 interface MilestoneHeaderProps {
   milestones?: Milestone[];
-  defaultExpanded?: number;
   payerInterviews?: number;
   currentNumber?: number;
 }
@@ -139,11 +140,13 @@ function SubStepCell({ subStep, showDivider }: { subStep: SubStep; showDivider: 
 
 export function MilestoneHeader({
   milestones = DEFAULT_MILESTONES,
-  defaultExpanded = 0,
   payerInterviews = 8,
   currentNumber = 4,
 }: MilestoneHeaderProps) {
-  const [expandedIndex, setExpandedIndex] = useState(defaultExpanded);
+  // Selected milestone is shared via context so the tab content (Get Started)
+  // can react to it. `expandedIndex` here mirrors the selected milestone.
+  const { selectedMilestone: expandedIndex, setSelectedMilestone } =
+    useMilestoneSelection();
   const total = milestones.length;
 
   return (
@@ -158,7 +161,7 @@ export function MilestoneHeader({
             <button
               type="button"
               key={milestone.label}
-              onClick={() => setExpandedIndex(index)}
+              onClick={() => setSelectedMilestone(index)}
               className="relative flex w-[130px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 bg-white py-3 pl-6 pr-4 transition-colors hover:bg-gray-50"
               style={{ zIndex }}
             >

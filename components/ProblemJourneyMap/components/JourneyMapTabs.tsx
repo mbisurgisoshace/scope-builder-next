@@ -5,6 +5,7 @@ import { Lock } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { InterviewPrep } from "./InterviewPrep/InterviewPrep";
+import { GetStarted } from "./GetStarted/GetStarted";
 
 const STORAGE_KEY = "pjm-active-tab";
 
@@ -95,6 +96,8 @@ export function JourneyMapTabs({ canvas }: JourneyMapTabsProps) {
       <div className="min-h-0 flex-1 bg-[#EFF0F4]">
         {value === "canvas" ? (
           canvas
+        ) : value === "get-started" ? (
+          <GetStarted />
         ) : value === "interview-prep" ? (
           <InterviewPrep />
         ) : (

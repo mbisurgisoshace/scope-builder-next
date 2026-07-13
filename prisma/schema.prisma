@@ -295,6 +295,57 @@ model TopicProgress {
   @@map("topic_progress")
 }
 
+model GetStartedCard {
+  id        Int     @id @default(autoincrement())
+  milestone Int // 1..5, matches MilestoneHeader index+1
+  type      String // "text" | "links" | "videos"
+  title     String
+  body      String? // used by text cards
+  order     Int     @default(0)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  items   GetStartedItem[]
+  reviews GetStartedReview[]
+
+  @@map("get_started_cards")
+}
+
+model GetStartedItem {
+  id      Int    @id @default(autoincrement())
+  card_id Int
+  title   String
+  url     String
+  order   Int    @default(0)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  card    GetStartedCard     @relation(fields: [card_id], references: [id], onDelete: Cascade)
+  reviews GetStartedReview[]
+
+  @@map("get_started_items")
+}
+
+model GetStartedReview {
+  id       Int     @id @default(autoincrement())
+  org_id   String
+  card_id  Int? // set for text cards (whole-card review)
+  item_id  Int? // set for link/video subitems
+  reviewed Boolean @default(false)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  card GetStartedCard? @relation(fields: [card_id], references: [id], onDelete: Cascade)
+  item GetStartedItem? @relation(fields: [item_id], references: [id], onDelete: Cascade)
+
+  @@unique([org_id, card_id])
+  @@unique([org_id, item_id])
+  @@map("get_started_reviews")
+}
+
 model Hypothesis {
   id                 Int     @id @default(autoincrement())
   org_id             String  @default("")
