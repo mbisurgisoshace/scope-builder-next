@@ -10,7 +10,14 @@ export interface JourneyNodeStorage {
   problems: Array<{
     id: string;
     description: string;
-    questions: Array<{ bankQuestionId: string; answer: string | string[] }>;
+    type: string;
+    painOrGain: "pain" | "gain";
+    questions: Array<{
+      bankQuestionId: string;
+      answer: string | string[];
+      source: string;
+      confidence: number;
+    }>;
   }>;
   solutions: Array<{
     id: string;

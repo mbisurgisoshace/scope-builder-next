@@ -3,7 +3,7 @@
 import { useStorage, useMutation } from '@liveblocks/react/suspense';
 import { LiveObject } from '@liveblocks/client';
 import type { JourneyNodeStorage, JourneyEdgeStorage } from '@/liveblocks.config';
-import type { ProblemQuestionAnswer, SolutionQuestionAnswer, NodeConclusion } from '../components/ActionNodeSheet';
+import type { ProblemQuestionAnswer, SolutionQuestionAnswer, NodeConclusion, PainOrGain } from '../components/ActionNodeSheet';
 
 export type { JourneyNodeStorage, JourneyEdgeStorage };
 
@@ -40,13 +40,18 @@ export function useRealtimeJourney() {
     (
       { storage },
       nodeId: string,
-      problem: { id: string; description: string; questions: ProblemQuestionAnswer[] }
+      problem: {
+        id: string;
+        description: string;
+        type: string;
+        painOrGain: PainOrGain;
+        questions: ProblemQuestionAnswer[];
+      }
     ) => {
       const nodes = (storage.get('journeyNodes') as any).toArray() as Array<any>;
       const node = nodes.find((n: any) => n.get('id') === nodeId);
       if (node) {
-        const current: Array<{ id: string; description: string; questions: ProblemQuestionAnswer[] }> =
-          node.get('problems') ?? [];
+        const current: Array<typeof problem> = node.get('problems') ?? [];
         node.update({ problems: [...current, problem] });
       }
     },
@@ -58,12 +63,17 @@ export function useRealtimeJourney() {
       { storage },
       nodeId: string,
       problemId: string,
-      patch: { description: string; questions: ProblemQuestionAnswer[] }
+      patch: {
+        description: string;
+        type: string;
+        painOrGain: PainOrGain;
+        questions: ProblemQuestionAnswer[];
+      }
     ) => {
       const nodes = (storage.get('journeyNodes') as any).toArray() as Array<any>;
       const node = nodes.find((n: any) => n.get('id') === nodeId);
       if (node) {
-        const current: Array<{ id: string; description: string; questions: ProblemQuestionAnswer[] }> =
+        const current: Array<{ id: string } & typeof patch> =
           node.get('problems') ?? [];
         const updated = current.map((p) =>
           p.id === problemId ? { ...p, ...patch } : p

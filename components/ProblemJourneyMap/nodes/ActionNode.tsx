@@ -77,18 +77,13 @@ function ActionNodeInner({ id, data }: NodeProps) {
         onClick={(e) => e.stopPropagation()}
       />
 
-      {problems.length > 0 && (
+      {problems[0]?.description && (
         <div className="mt-3 pt-3 border-t border-gray-100">
-          <p className=" font-semibold text-[#111827] mb-2">Problems</p>
-          <div className="flex flex-col gap-2">
-            {problems.map((p) => (
-              <div key={p.id} className="bg-[#F3F3F6] rounded-lg p-3">
-                <span className="text-xs font-semibold bg-[#D02D50] text-white rounded-full px-2 py-0.5">
-                  Problem
-                </span>
-                <p className="text-sm text-gray-700 mt-1.5">{p.description}</p>
-              </div>
-            ))}
+          <p className="text-xs text-gray-400 mb-1.5">
+            What is the problem/pain?
+          </p>
+          <div className="bg-[#F3F3F6] rounded-lg p-3">
+            <p className="text-sm text-gray-700">{problems[0].description}</p>
           </div>
         </div>
       )}

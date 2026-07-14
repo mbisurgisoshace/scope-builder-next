@@ -40,14 +40,12 @@ function CanvasInner({
     addTriggerNode,
     addChildNode,
     updateNodeData,
-    addProblem,
-    updateProblem,
+    saveProblem,
     addSolution,
     updateSolution,
     nodeProblems,
     nodeSolutions,
     nodeConclusions,
-    upsertConclusion,
   } = useJourneyDataBridge();
 
   useLayout(setNodes);
@@ -128,21 +126,19 @@ function CanvasInner({
                 onOpenChange={(open) => {
                   if (!open) setSelectedActionNodeId(null);
                 }}
-                problems={
+                nodeId={selectedActionNodeId}
+                problem={
                   selectedActionNodeId
-                    ? (nodeProblems.get(selectedActionNodeId) ?? [])
-                    : []
+                    ? (nodeProblems.get(selectedActionNodeId)?.[0] ?? null)
+                    : null
                 }
-                onAddProblem={(desc, questions) => {
+                onSaveProblem={(desc, type, painOrGain, questions) => {
                   if (selectedActionNodeId)
-                    addProblem(selectedActionNodeId, desc, questions);
-                }}
-                onUpdateProblem={(problemId, desc, questions) => {
-                  if (selectedActionNodeId)
-                    updateProblem(
+                    saveProblem(
                       selectedActionNodeId,
-                      problemId,
                       desc,
+                      type,
+                      painOrGain,
                       questions,
                     );
                 }}
@@ -163,15 +159,6 @@ function CanvasInner({
                       desc,
                       questions,
                     );
-                }}
-                conclusions={
-                  selectedActionNodeId
-                    ? (nodeConclusions.get(selectedActionNodeId) ?? [])
-                    : []
-                }
-                onUpsertConclusion={(id, status, content) => {
-                  if (selectedActionNodeId)
-                    upsertConclusion(selectedActionNodeId, id, status, content);
                 }}
               />
             </JourneyContext.Provider>

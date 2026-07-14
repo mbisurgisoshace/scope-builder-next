@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNodesState, useEdgesState, type Node, type Edge } from '@xyflow/react';
 
 import type { JourneyNodeType, JourneyNodeData } from '../JourneyContext';
-import type { Problem, Solution, ProblemQuestionAnswer, SolutionQuestionAnswer, NodeConclusion, ConclusionStatus } from '../components/ActionNodeSheet';
+import type { Problem, Solution, ProblemQuestionAnswer, SolutionQuestionAnswer, NodeConclusion, ConclusionStatus, PainOrGain } from '../components/ActionNodeSheet';
 import { useRealtimeJourney, type JourneyNodeStorage, type JourneyEdgeStorage } from './useRealtimeJourney';
 
 const INITIAL_TRIGGER_ID = 'initial-trigger';
@@ -227,24 +227,36 @@ export function useJourneyDataBridge() {
     [setNodes, updateJourneyNode]
   );
 
-  const addProblem = useCallback(
-    (nodeId: string, description: string, questions: ProblemQuestionAnswer[]) => {
-      const problem = { id: crypto.randomUUID(), description, questions };
-      lbAddProblem(nodeId, problem);
-    },
-    [lbAddProblem]
-  );
-
-  const updateProblem = useCallback(
+  // Single-problem upsert: update the node's existing problem if present,
+  // otherwise create it.
+  const saveProblem = useCallback(
     (
       nodeId: string,
-      problemId: string,
       description: string,
+      type: string,
+      painOrGain: PainOrGain,
       questions: ProblemQuestionAnswer[]
     ) => {
-      lbUpdateProblem(nodeId, problemId, { description, questions });
+      const existing = nodeProblems.get(nodeId)?.[0];
+      if (existing) {
+        lbUpdateProblem(nodeId, existing.id, {
+          description,
+          type,
+          painOrGain,
+          questions,
+        });
+      } else {
+        lbAddProblem(nodeId, {
+          id: crypto.randomUUID(),
+          description,
+          type,
+          painOrGain,
+          questions,
+        });
+      }
     },
-    [lbUpdateProblem]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lbAddProblem, lbUpdateProblem, lbNodes]
   );
 
   const addSolution = useCallback(
@@ -273,8 +285,16 @@ export function useJourneyDataBridge() {
       map.set(
         lb.id,
         (lb.problems ?? []).map((p) => ({
-          ...p,
-          questions: p.questions ?? [],
+          id: p.id,
+          description: p.description,
+          type: p.type ?? '',
+          painOrGain: (p.painOrGain ?? 'pain') as PainOrGain,
+          questions: (p.questions ?? []).map((q) => ({
+            bankQuestionId: q.bankQuestionId,
+            answer: q.answer,
+            source: q.source ?? '',
+            confidence: q.confidence ?? 0,
+          })),
         }))
       );
     }
@@ -319,8 +339,7 @@ export function useJourneyDataBridge() {
     addTriggerNode,
     addChildNode,
     updateNodeData,
-    addProblem,
-    updateProblem,
+    saveProblem,
     addSolution,
     updateSolution,
     nodeProblems,
