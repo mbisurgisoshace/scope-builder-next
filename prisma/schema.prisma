@@ -478,3 +478,41 @@ model OfficeHourBooking {
 
   @@map("office_hour_bookings")
 }
+
+model StakeholderRow {
+  id               Int    @id @default(autoincrement())
+  org_id           String
+  stakeholder_type String // "end_user" | "buyer_decision_maker" | "payer" | "influencer" | "recommender" | "saboteur"
+  value            String
+  order            Int    @default(0)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("stakeholder_rows")
+}
+
+model MarketSegment {
+  id        Int     @id @default(autoincrement())
+  org_id    String
+  name      String  @default("")
+  notes     String  @default("") // the per-row "Notes" column
+  beachhead Boolean @default(false)
+  order     Int     @default(0)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("market_segments")
+}
+
+model MarketSegmentNote {
+  id      Int    @id @default(autoincrement())
+  org_id  String @unique // one section-level note per startup
+  content String @default("")
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("market_segment_notes")
+}

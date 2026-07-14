@@ -6,6 +6,7 @@ import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InterviewPrep } from "./InterviewPrep/InterviewPrep";
 import { GetStarted } from "./GetStarted/GetStarted";
+import { Market } from "./Market/Market";
 
 const STORAGE_KEY = "pjm-active-tab";
 
@@ -98,6 +99,8 @@ export function JourneyMapTabs({ canvas }: JourneyMapTabsProps) {
           canvas
         ) : value === "get-started" ? (
           <GetStarted />
+        ) : value === "market" ? (
+          <Market />
         ) : value === "interview-prep" ? (
           <InterviewPrep />
         ) : (
