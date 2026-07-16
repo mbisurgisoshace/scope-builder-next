@@ -3,10 +3,11 @@
 import { Participant } from "@/lib/generated/prisma";
 import { getParticipants } from "@/services/participants";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import AddParticipant from "@/app/(auth)/participants/_components/AddParticipant";
 import EditParticipantForm from "@/app/(auth)/participants/_components/EditParticipantForm";
 import {
@@ -15,6 +16,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { InterviewAnswersView } from "./InterviewAnswers/InterviewAnswersView";
 
 const PROGRESS_COLUMNS = [
   { key: "need_to_schedule", label: "Interviewee" },
@@ -54,19 +56,37 @@ function ParticipantCard({
   participant,
   hideRelationship = false,
   onCardClick,
+  onEditClick,
 }: {
   participant: Participant;
   hideRelationship?: boolean;
   onCardClick?: () => void;
+  onEditClick?: () => void;
 }) {
   return (
     <div
       onClick={onCardClick}
       className="bg-white rounded-lg w-[250px] border border-[#C9CAD4] p-3 hover:shadow-md transition-shadow cursor-pointer space-y-2"
     >
-      <p className="font-semibold text-[16px] text-[#111827]">
-        {participant.name}
-      </p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="font-semibold text-[16px] text-[#111827]">
+          {participant.name}
+        </p>
+        {onEditClick && (
+          <button
+            // The card's own onClick sits on the wrapping div, so without this an
+            // edit click would open the interview view too.
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditClick();
+            }}
+            aria-label={`Edit ${participant.name}`}
+            className="shrink-0 text-[#70747D] hover:text-[#111827]"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
       {!hideRelationship && (
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold">Relationship:</span>
@@ -107,6 +127,7 @@ function KanbanBoard({
   hideRelationship = false,
   onAddClick,
   onCardClick,
+  onEditClick,
 }: {
   columns: { key: string; label: string }[];
   getColumnCards: (key: string) => Participant[];
@@ -114,6 +135,7 @@ function KanbanBoard({
   hideRelationship?: boolean;
   onAddClick?: () => void;
   onCardClick?: (participant: Participant) => void;
+  onEditClick?: (participant: Participant) => void;
 }) {
   return (
     <div className="flex flex-row gap-4 overflow-x-auto h-full">
@@ -148,6 +170,9 @@ function KanbanBoard({
                   participant={participant}
                   hideRelationship={hideRelationship}
                   onCardClick={() => onCardClick?.(participant)}
+                  onEditClick={
+                    onEditClick ? () => onEditClick(participant) : undefined
+                  }
                 />
               ))}
               {cards.length === 0 && (
@@ -170,12 +195,27 @@ export default function ParticipantsKanbanView({
   tags: string[];
   jobTitles: string[];
 }) {
+  const router = useRouter();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [selectedParticipant, setSelectedParticipant] =
+  const [editParticipant, setEditParticipant] = useState<Participant | null>(
+    null,
+  );
+  const [interviewParticipant, setInterviewParticipant] =
     useState<Participant | null>(null);
+  // Controlled so swapping to the interview view and back doesn't remount the tabs
+  // and silently drop the user from Relationship back to Progress.
+  const [boardTab, setBoardTab] = useState("progress");
 
-  const refetch = () => getParticipants().then(setParticipants);
+  const refetch = () =>
+    getParticipants().then((next) => {
+      setParticipants(next);
+      // The interview view holds a snapshot, so re-point it at the fresh row after an
+      // edit made from its own header — and drop it if the participant is gone.
+      setInterviewParticipant((current) =>
+        current ? (next.find((p) => p.id === current.id) ?? null) : null,
+      );
+    });
 
   useEffect(() => {
     refetch();
@@ -205,72 +245,84 @@ export default function ParticipantsKanbanView({
         onSuccess={refetch}
       />
       <Sheet
-        open={selectedParticipant !== null}
+        open={editParticipant !== null}
         onOpenChange={(open) => {
-          if (!open) setSelectedParticipant(null);
+          if (!open) setEditParticipant(null);
         }}
       >
         <SheetContent>
           <SheetHeader className="border-b">
             <SheetTitle className="text-[26px] font-medium text-[#162A4F]">
-              {selectedParticipant?.name}
+              {editParticipant?.name}
             </SheetTitle>
           </SheetHeader>
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-4">
-            <Tabs defaultValue="questions" className="flex-1 min-h-0">
-              <TabsList>
-                <TabsTrigger value="questions">Questions</TabsTrigger>
-                <TabsTrigger value="profile">Profile</TabsTrigger>
-              </TabsList>
-              <TabsContent value="questions">Questions</TabsContent>
-              <TabsContent value="profile" className="min-h-0 overflow-hidden">
-                {selectedParticipant && (
-                  <EditParticipantForm
-                    participant={selectedParticipant}
-                    tags={tags}
-                    jobTitles={jobTitles}
-                    onSuccess={() => {
-                      refetch();
-                      setSelectedParticipant(null);
-                    }}
-                  />
-                )}
-              </TabsContent>
-            </Tabs>
+            {editParticipant && (
+              <EditParticipantForm
+                participant={editParticipant}
+                tags={tags}
+                jobTitles={jobTitles}
+                onSuccess={() => {
+                  refetch();
+                  setEditParticipant(null);
+                }}
+              />
+            )}
           </div>
         </SheetContent>
       </Sheet>
-      <Tabs defaultValue="progress" className="flex flex-col h-full">
-        <TabsList>
-          <TabsTrigger value="progress">Progress</TabsTrigger>
-          <TabsTrigger value="relationship">Relationship</TabsTrigger>
-        </TabsList>
-        <TabsContent
-          value="progress"
-          className="flex-1 min-h-0 overflow-hidden mt-4"
+      {interviewParticipant ? (
+        <InterviewAnswersView
+          participant={interviewParticipant}
+          onBack={() => setInterviewParticipant(null)}
+          onEditProfile={() => setEditParticipant(interviewParticipant)}
+          onSaved={() => {
+            setInterviewParticipant(null);
+            refetch();
+            // The milestone header's payer count is server-rendered, so without this
+            // it would still show the old number next to the freshly moved card.
+            router.refresh();
+          }}
+        />
+      ) : (
+        <Tabs
+          value={boardTab}
+          onValueChange={setBoardTab}
+          className="flex flex-col h-full"
         >
-          <KanbanBoard
-            columns={PROGRESS_COLUMNS}
-            getColumnCards={(key) => groupedByStatus[key] ?? []}
-            getColumnColor={(key) => PROGRESS_COLORS[key] ?? "#F5F5F8"}
-            onAddClick={() => setSheetOpen(true)}
-            onCardClick={setSelectedParticipant}
-          />
-        </TabsContent>
-        <TabsContent
-          value="relationship"
-          className="flex-1 min-h-0 overflow-hidden mt-4"
-        >
-          <KanbanBoard
-            columns={RELATIONSHIP_COLUMNS}
-            getColumnCards={(key) => groupedByRelationship[key] ?? []}
-            getColumnColor={(key) => RELATIONSHIP_COLORS[key] ?? "#F5F5F8"}
-            hideRelationship
-            onAddClick={() => setSheetOpen(true)}
-            onCardClick={setSelectedParticipant}
-          />
-        </TabsContent>
-      </Tabs>
+          <TabsList>
+            <TabsTrigger value="progress">Progress</TabsTrigger>
+            <TabsTrigger value="relationship">Relationship</TabsTrigger>
+          </TabsList>
+          <TabsContent
+            value="progress"
+            className="flex-1 min-h-0 overflow-hidden mt-4"
+          >
+            <KanbanBoard
+              columns={PROGRESS_COLUMNS}
+              getColumnCards={(key) => groupedByStatus[key] ?? []}
+              getColumnColor={(key) => PROGRESS_COLORS[key] ?? "#F5F5F8"}
+              onAddClick={() => setSheetOpen(true)}
+              onCardClick={setInterviewParticipant}
+              onEditClick={setEditParticipant}
+            />
+          </TabsContent>
+          <TabsContent
+            value="relationship"
+            className="flex-1 min-h-0 overflow-hidden mt-4"
+          >
+            <KanbanBoard
+              columns={RELATIONSHIP_COLUMNS}
+              getColumnCards={(key) => groupedByRelationship[key] ?? []}
+              getColumnColor={(key) => RELATIONSHIP_COLORS[key] ?? "#F5F5F8"}
+              hideRelationship
+              onAddClick={() => setSheetOpen(true)}
+              onCardClick={setInterviewParticipant}
+              onEditClick={setEditParticipant}
+            />
+          </TabsContent>
+        </Tabs>
+      )}
     </>
   );
 }

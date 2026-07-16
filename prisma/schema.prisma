@@ -56,6 +56,8 @@ model Participant {
   ParticipantRoom        ParticipantRoom?
   interview_responses    InterviewResponse[]
 
+  problem_interview_answers ProblemInterviewAnswer[]
+
   @@map("participants")
 }
 
@@ -539,7 +541,35 @@ model ProblemInterviewQuestion {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  answers ProblemInterviewAnswer[]
+
   @@unique([org_id, node_id, problem_id, bank_question_id])
   @@index([org_id])
   @@map("problem_interview_questions")
+}
+
+// One participant's answer to one authored interview question. Unlike the question
+// itself — whose problem lives in Liveblocks and is addressed by id — both sides of
+// this row are real records, so both are real relations.
+model ProblemInterviewAnswer {
+  id             String @id @default(cuid())
+  org_id         String
+  question_id    String
+  participant_id String
+
+  // The answer, serialized: text -> the text; scale -> "1".."5"; dropdown -> the
+  // option id. A value that no longer fits the question's response_type (because the
+  // type was changed after answering) is kept but renders as unanswered.
+  value String @default("")
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  question    ProblemInterviewQuestion @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  participant Participant              @relation(fields: [participant_id], references: [id], onDelete: Cascade)
+
+  @@unique([question_id, participant_id])
+  @@index([org_id])
+  @@index([participant_id])
+  @@map("problem_interview_answers")
 }

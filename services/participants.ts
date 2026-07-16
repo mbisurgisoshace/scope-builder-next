@@ -140,6 +140,22 @@ export async function markParticipantAsComplete(participantId: string) {
   revalidatePath(`/participants`);
 }
 
+export async function markParticipantAsDocumented(participantId: string) {
+  const { orgId, userId } = await auth();
+
+  if (!orgId || !userId) return redirect("/sign-in");
+
+  await prisma.participant.update({
+    where: { id: participantId, org_id: orgId },
+    data: { status: "documented" },
+  });
+
+  // "layout" so the nested /participants/interviews is revalidated too — a bare
+  // revalidatePath("/participants") only busts that exact page, and this status
+  // change is what the interviews header's payer count is counting.
+  revalidatePath(`/participants`, "layout");
+}
+
 export async function deleteParticipant(participantId: string) {
   const { orgId, userId } = await auth();
 
