@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Select,
   SelectContent,
@@ -25,26 +26,57 @@ const RESPONSE_TYPES: { value: ResponseType; label: string }[] = [
 interface QuestionEditorProps {
   question: InterviewQuestion;
   onChange: (patch: Partial<InterviewQuestion>) => void;
+  /**
+   * Persist the question. Pass a patch when committing in the same tick as the edit —
+   * state hasn't re-rendered yet, so the patch is the only fresh copy of the change.
+   */
+  onCommit: (patch?: Partial<InterviewQuestion>) => void;
 }
 
-export function QuestionEditor({ question, onChange }: QuestionEditorProps) {
-  const handleOptionsChange = (options: DropdownOption[]) => {
+export function QuestionEditor({
+  question,
+  onChange,
+  onCommit,
+}: QuestionEditorProps) {
+  const [editing, setEditing] = useState(false);
+
+  // A written question reads as text; clicking it puts the input back.
+  const authored = question.title.trim() !== "" && !editing;
+
+  const handleOptionsChange = (
+    options: DropdownOption[],
+    { commit }: { commit: boolean },
+  ) => {
     onChange({ options });
+    if (commit) onCommit({ options });
   };
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Question title — bold text if answered, otherwise an input. */}
+      {/* Question title — bold text once written, otherwise an input. */}
       <div className="flex flex-col gap-2">
         <span className="text-sm text-[#697288]">Question:</span>
-        {question.authored ? (
-          <p className="text-sm font-semibold text-[#1F2430]">
+        {authored ? (
+          <p
+            role="button"
+            tabIndex={0}
+            onClick={() => setEditing(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") setEditing(true);
+            }}
+            className="cursor-text text-sm font-semibold text-[#1F2430]"
+          >
             {question.title}
           </p>
         ) : (
           <Input
+            autoFocus={editing}
             value={question.title}
             onChange={(e) => onChange({ title: e.target.value })}
+            onBlur={() => {
+              setEditing(false);
+              onCommit();
+            }}
             placeholder="Type your question"
             className="h-9 bg-white"
           />
@@ -56,9 +88,11 @@ export function QuestionEditor({ question, onChange }: QuestionEditorProps) {
         <span className="text-sm text-[#697288]">Response type:</span>
         <Select
           value={question.responseType}
-          onValueChange={(value) =>
-            onChange({ responseType: value as ResponseType })
-          }
+          onValueChange={(value) => {
+            const responseType = value as ResponseType;
+            onChange({ responseType });
+            onCommit({ responseType });
+          }}
         >
           <SelectTrigger
             size="sm"
@@ -82,6 +116,7 @@ export function QuestionEditor({ question, onChange }: QuestionEditorProps) {
           onChange={handleOptionsChange}
         />
       )}
+      {/* `scale` has no extra configuration — the response is a fixed 1-5 rating. */}
     </div>
   );
 }

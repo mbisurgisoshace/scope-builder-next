@@ -13,9 +13,22 @@ interface ProblemCardProps {
     hypothesisId: string,
     patch: Partial<InterviewQuestion>,
   ) => void;
+  onQuestionCommit: (
+    hypothesisId: string,
+    patch?: Partial<InterviewQuestion>,
+  ) => void;
 }
 
-export function ProblemCard({ block, onQuestionChange }: ProblemCardProps) {
+export function ProblemCard({
+  block,
+  onQuestionChange,
+  onQuestionCommit,
+}: ProblemCardProps) {
+  const totalCount = block.hypotheses.length;
+  const answeredCount = block.hypotheses.filter((h) =>
+    h.question.title.trim(),
+  ).length;
+
   return (
     <div className="rounded-2xl bg-white shadow-sm">
       <div className="flex">
@@ -36,7 +49,7 @@ export function ProblemCard({ block, onQuestionChange }: ProblemCardProps) {
             </ul>
           )}
           <p className="text-sm font-bold text-[#1F2430]">
-            {block.answeredCount}/{block.totalCount}{" "}
+            {answeredCount}/{totalCount}{" "}
             <span className="font-normal text-[#697288]">Questions</span>
           </p>
         </aside>
@@ -66,6 +79,9 @@ export function ProblemCard({ block, onQuestionChange }: ProblemCardProps) {
                 hypothesis={hypothesis}
                 onQuestionChange={(patch) =>
                   onQuestionChange(hypothesis.id, patch)
+                }
+                onQuestionCommit={(patch) =>
+                  onQuestionCommit(hypothesis.id, patch)
                 }
               />
             </div>

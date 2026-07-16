@@ -7,15 +7,13 @@ import { cn } from "@/lib/utils";
 
 import type { DropdownOption } from "./types";
 
-let optionCounter = 0;
-function nextOptionId() {
-  optionCounter += 1;
-  return `opt-new-${optionCounter}-${Date.now()}`;
-}
-
 interface DropdownOptionsEditorProps {
   options: DropdownOption[];
-  onChange: (options: DropdownOption[]) => void;
+  /** `commit` distinguishes a keystroke from a change that should persist right away. */
+  onChange: (
+    options: DropdownOption[],
+    meta: { commit: boolean },
+  ) => void;
 }
 
 export function DropdownOptionsEditor({
@@ -23,15 +21,20 @@ export function DropdownOptionsEditor({
   onChange,
 }: DropdownOptionsEditorProps) {
   const updateLabel = (id: string, label: string) => {
-    onChange(options.map((opt) => (opt.id === id ? { ...opt, label } : opt)));
+    onChange(
+      options.map((opt) => (opt.id === id ? { ...opt, label } : opt)),
+      { commit: false },
+    );
   };
 
   const removeOption = (id: string) => {
-    onChange(options.filter((opt) => opt.id !== id));
+    onChange(options.filter((opt) => opt.id !== id), { commit: true });
   };
 
   const addOption = () => {
-    onChange([...options, { id: nextOptionId(), label: "" }]);
+    onChange([...options, { id: crypto.randomUUID(), label: "" }], {
+      commit: true,
+    });
   };
 
   return (
@@ -49,6 +52,7 @@ export function DropdownOptionsEditor({
           <Input
             value={option.label}
             onChange={(e) => updateLabel(option.id, e.target.value)}
+            onBlur={() => onChange(options, { commit: true })}
             placeholder="Enter dropdown option"
             className="h-9 bg-white"
           />

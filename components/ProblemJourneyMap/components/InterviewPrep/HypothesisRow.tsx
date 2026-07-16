@@ -8,11 +8,13 @@ import type { Hypothesis, InterviewQuestion } from "./types";
 interface HypothesisRowProps {
   hypothesis: Hypothesis;
   onQuestionChange: (patch: Partial<InterviewQuestion>) => void;
+  onQuestionCommit: (patch?: Partial<InterviewQuestion>) => void;
 }
 
 export function HypothesisRow({
   hypothesis,
   onQuestionChange,
+  onQuestionCommit,
 }: HypothesisRowProps) {
   return (
     <div className="relative grid grid-cols-2">
@@ -50,6 +52,7 @@ export function HypothesisRow({
         <QuestionEditor
           question={hypothesis.question}
           onChange={onQuestionChange}
+          onCommit={onQuestionCommit}
         />
       </div>
 

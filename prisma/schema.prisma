@@ -516,3 +516,30 @@ model MarketSegmentNote {
 
   @@map("market_segment_notes")
 }
+
+enum InterviewResponseType {
+  text
+  scale
+  dropdown
+}
+
+// The interview question a user writes against one hypothesis-marked question of a
+// journey-map problem. The problem itself lives in Liveblocks storage, so the columns
+// below address it by id rather than by relation.
+model ProblemInterviewQuestion {
+  id               String                @id @default(cuid())
+  org_id           String
+  node_id          String
+  problem_id       String
+  bank_question_id String
+  title            String                @default("")
+  response_type    InterviewResponseType @default(text)
+  options          Json[] // [{ id, label }], only meaningful for response_type=dropdown
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([org_id, node_id, problem_id, bank_question_id])
+  @@index([org_id])
+  @@map("problem_interview_questions")
+}
