@@ -17,6 +17,7 @@ export interface JourneyNodeStorage {
       answer: string | string[];
       source: string;
       confidence: number;
+      isHypothesis: boolean;
     }>;
   }>;
   solutions: Array<{

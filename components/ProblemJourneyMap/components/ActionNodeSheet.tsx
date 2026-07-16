@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PencilIcon, PlusIcon, CircleHelpIcon, StarIcon } from "lucide-react";
+import {
+  PencilIcon,
+  PlusIcon,
+  CircleHelpIcon,
+  StarIcon,
+  CheckIcon,
+} from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -20,7 +26,12 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type AnswerType = "plain_text" | "single_choice" | "multiple_choice";
+export type AnswerType =
+  | "plain_text"
+  | "yes_no"
+  | "scale"
+  | "single_choice"
+  | "multiple_choice";
 
 export interface BankQuestion {
   id: string;
@@ -35,6 +46,7 @@ export interface ProblemQuestionAnswer {
   answer: string | string[];
   source: string;
   confidence: number;
+  isHypothesis: boolean;
 }
 
 export type PainOrGain = "pain" | "gain";
@@ -95,40 +107,31 @@ const BANK_QUESTIONS: BankQuestion[] = [
     id: "bq-2",
     category: "Market Size",
     text: "How are they solving it today?",
-    answerType: "single_choice",
-    options: [
-      "Because customers dislike hearing about new ideas",
-      "Because the goal is to listen and learn from customers, not to sell",
-    ],
+    answerType: "plain_text",
   },
   {
     id: "bq-3",
     category: "Market Size",
     text: "How significant is the problem for these people?",
-    answerType: "plain_text",
+    answerType: "scale",
   },
   {
     id: "bq-4",
     category: "Significance",
     text: "Would customers pay to solve this problem?",
-    answerType: "single_choice",
-    options: ["Yes", "No", "50/50"],
+    answerType: "yes_no",
   },
   {
     id: "bq-5",
     category: "Significance",
     text: "What factors make this problem significant?",
-    answerType: "multiple_choice",
-    options: [
-      "Because customers dislike hearing about new ideas",
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    ],
+    answerType: "plain_text",
   },
   {
     id: "bq-6",
     category: "Significance",
     text: "What is the frequency of this problem?",
-    answerType: "plain_text",
+    answerType: "scale",
   },
 ];
 
@@ -269,6 +272,56 @@ function AnswerInput({ question, value, onChange }: AnswerInputProps) {
     );
   }
 
+  if (question.answerType === "yes_no") {
+    const strValue = (value as string) ?? "";
+    return (
+      <div className="flex gap-2">
+        {["Yes", "No"].map((opt) => {
+          const selected = strValue === opt;
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => onChange(selected ? "" : opt)}
+              className={`h-9 px-5 rounded-lg border text-sm font-medium transition-colors ${
+                selected
+                  ? "border-[#6A35FF] bg-[#F4F0FF] text-[#6A35FF]"
+                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+              }`}
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  if (question.answerType === "scale") {
+    const numValue = value ? Number(value) : 0;
+    return (
+      <div className="flex gap-1.5">
+        {[1, 2, 3, 4, 5].map((n) => {
+          const selected = numValue === n;
+          return (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange(selected ? "" : String(n))}
+              className={`h-9 w-9 rounded-lg border text-sm font-medium transition-colors ${
+                selected
+                  ? "border-[#6A35FF] bg-[#F4F0FF] text-[#6A35FF]"
+                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+              }`}
+            >
+              {n}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   if (question.answerType === "single_choice") {
     const strValue = (value as string) ?? "";
     return (
@@ -345,27 +398,18 @@ function AnswerInput({ question, value, onChange }: AnswerInputProps) {
   );
 }
 
-// ─── Active question ──────────────────────────────────────────────────────────
+// ─── Active question (solutions — stacked) ────────────────────────────────────
 
 interface ActiveQuestionItemProps {
   question: BankQuestion;
   value: string | string[];
   onChange: (value: string | string[]) => void;
-  /** When provided, render the Source + confidence metadata row (problems only). */
-  source?: string;
-  confidence?: number;
-  onSourceChange?: (source: string) => void;
-  onConfidenceChange?: (confidence: number) => void;
 }
 
 function ActiveQuestionItem({
   question,
   value,
   onChange,
-  source,
-  confidence,
-  onSourceChange,
-  onConfidenceChange,
 }: ActiveQuestionItemProps) {
   return (
     <div className="mb-3">
@@ -373,32 +417,89 @@ function ActiveQuestionItem({
         {question.text}
       </p>
       <AnswerInput question={question} value={value} onChange={onChange} />
+    </div>
+  );
+}
 
-      {onSourceChange && onConfidenceChange && (
-        <div className="flex items-end gap-6 mt-2">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-gray-500 font-medium">Source</span>
-            <Select value={source ?? ""} onValueChange={onSourceChange}>
-              <SelectTrigger className="h-8 text-xs bg-white w-[170px]">
-                <SelectValue placeholder="Select source" />
-              </SelectTrigger>
-              <SelectContent>
-                {SOURCE_OPTIONS.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-gray-500 font-medium">
-              Your confidence
-            </span>
-            <StarRating value={confidence ?? 0} onChange={onConfidenceChange} />
-          </div>
+// ─── Problem question row (question | Source | confidence) ────────────────────
+
+interface ProblemQuestionRowProps {
+  index: number;
+  question: BankQuestion;
+  value: string | string[];
+  onChange: (value: string | string[]) => void;
+  source: string;
+  confidence: number;
+  isHypothesis: boolean;
+  onSourceChange: (source: string) => void;
+  onConfidenceChange: (confidence: number) => void;
+  onToggleHypothesis: (isHypothesis: boolean) => void;
+}
+
+function ProblemQuestionRow({
+  index,
+  question,
+  value,
+  onChange,
+  source,
+  confidence,
+  isHypothesis,
+  onSourceChange,
+  onConfidenceChange,
+  onToggleHypothesis,
+}: ProblemQuestionRowProps) {
+  return (
+    <div className="flex items-start gap-4 py-4 border-t border-gray-100 first:border-t-0">
+      {/* Question + answer */}
+      <div className="flex-1 min-w-0 flex flex-col gap-2">
+        <p className="text-sm font-semibold text-gray-800">
+          <span className="text-[#6A35FF] mr-1.5">{index}.</span>
+          {question.text}
+        </p>
+        <AnswerInput question={question} value={value} onChange={onChange} />
+      </div>
+
+      {/* Hypothesis toggle */}
+      <button
+        type="button"
+        onClick={() => onToggleHypothesis(!isHypothesis)}
+        aria-pressed={isHypothesis}
+        title={isHypothesis ? "Marked as hypothesis" : "Mark as hypothesis"}
+        className={`shrink-0 w-7 h-7 rounded-full border flex items-center justify-center text-xs font-bold transition-colors ${
+          isHypothesis
+            ? "border-[#6A35FF] text-[#6A35FF] bg-[#F4F0FF]"
+            : "border-gray-300 text-gray-400 hover:border-[#6A35FF] hover:text-[#6A35FF]"
+        }`}
+      >
+        H
+      </button>
+
+      {/* Source */}
+      <div className="w-[180px] shrink-0 flex flex-col gap-1.5">
+        <span className="text-xs text-gray-500 font-medium">Source:</span>
+        <Select value={source ?? ""} onValueChange={onSourceChange}>
+          <SelectTrigger className="h-9 text-sm bg-white">
+            <SelectValue placeholder="Select source" />
+          </SelectTrigger>
+          <SelectContent>
+            {SOURCE_OPTIONS.map((s) => (
+              <SelectItem key={s} value={s}>
+                {s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Confidence */}
+      <div className="w-[130px] shrink-0 flex flex-col gap-1.5">
+        <span className="text-xs text-gray-500 font-medium">
+          Your confidence:
+        </span>
+        <div className="h-9 flex items-center">
+          <StarRating value={confidence ?? 0} onChange={onConfidenceChange} />
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -418,12 +519,6 @@ function BankOfQuestions({
 }: BankOfQuestionsProps) {
   const activeSet = new Set(activeQuestionIds);
 
-  const visibleCategories = BANK_CATEGORIES.filter((cat) =>
-    BANK_QUESTIONS.some((q) => q.category === cat && !activeSet.has(q.id)),
-  );
-
-  if (visibleCategories.length === 0) return null;
-
   return (
     <div className="mt-4">
       <div className="flex items-center gap-1.5 mb-3">
@@ -431,31 +526,37 @@ function BankOfQuestions({
         <span className="text-sm font-semibold text-gray-700">{title}</span>
       </div>
 
-      {visibleCategories.map((cat) => {
-        const questions = BANK_QUESTIONS.filter(
-          (q) => q.category === cat && !activeSet.has(q.id),
-        );
+      {BANK_CATEGORIES.map((cat) => {
+        const questions = BANK_QUESTIONS.filter((q) => q.category === cat);
         return (
-          <div
-            key={cat}
-            className="border border-gray-100 rounded-xl p-3 mb-3 bg-white"
-          >
+          <div key={cat} className="mb-4">
             <p className="text-xs font-semibold text-gray-500 mb-2">{cat}</p>
-            <div className="flex flex-col gap-2">
-              {questions.map((q) => (
-                <div
-                  key={q.id}
-                  className="flex items-center justify-between bg-[#F3F3F6] border border-gray-100 rounded-lg px-3 py-2"
-                >
-                  <span className="text-sm text-gray-700 pr-2">{q.text}</span>
-                  <button
-                    onClick={() => onAdd(q.id)}
-                    className="flex-shrink-0 w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 hover:border-[#6A35FF] hover:text-[#6A35FF] transition-colors"
+            <div className="bg-[#F3F3F6] rounded-xl px-4">
+              {questions.map((q, idx) => {
+                const added = activeSet.has(q.id);
+                return (
+                  <div
+                    key={q.id}
+                    className={`flex items-center justify-between gap-3 py-3 ${
+                      idx > 0 ? "border-t border-gray-200" : ""
+                    }`}
                   >
-                    <PlusIcon className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+                    <span className="text-sm text-gray-700 pr-2">{q.text}</span>
+                    {added ? (
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#6A35FF] flex items-center justify-center text-white">
+                        <CheckIcon className="w-3.5 h-3.5" />
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => onAdd(q.id)}
+                        className="flex-shrink-0 w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 hover:border-[#6A35FF] hover:text-[#6A35FF] transition-colors"
+                      >
+                        <PlusIcon className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
@@ -584,6 +685,9 @@ export function ActionNodeSheet({
   const [questionConfidence, setQuestionConfidence] = useState<
     Record<string, number>
   >({});
+  const [questionHypothesis, setQuestionHypothesis] = useState<
+    Record<string, boolean>
+  >({});
 
   // ── Solution editor state ──
   const [isAddingSolution, setIsAddingSolution] = useState(false);
@@ -614,14 +718,17 @@ export function ActionNodeSheet({
     const answers: Record<string, string | string[]> = {};
     const sources: Record<string, string> = {};
     const conf: Record<string, number> = {};
+    const hyp: Record<string, boolean> = {};
     for (const q of problem?.questions ?? []) {
       answers[q.bankQuestionId] = q.answer;
       sources[q.bankQuestionId] = q.source ?? "";
       conf[q.bankQuestionId] = q.confidence ?? 0;
+      hyp[q.bankQuestionId] = q.isHypothesis ?? false;
     }
     setQuestionAnswers(answers);
     setQuestionSources(sources);
     setQuestionConfidence(conf);
+    setQuestionHypothesis(hyp);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, nodeId]);
 
@@ -661,6 +768,7 @@ export function ActionNodeSheet({
     setQuestionAnswers((prev) => ({ ...prev, [questionId]: defaultAnswer }));
     setQuestionSources((prev) => ({ ...prev, [questionId]: "" }));
     setQuestionConfidence((prev) => ({ ...prev, [questionId]: 0 }));
+    setQuestionHypothesis((prev) => ({ ...prev, [questionId]: false }));
   }
 
   function handleAddSolutionBankQuestion(questionId: string) {
@@ -681,6 +789,7 @@ export function ActionNodeSheet({
       answer: questionAnswers[id] ?? "",
       source: questionSources[id] ?? "",
       confidence: questionConfidence[id] ?? 0,
+      isHypothesis: questionHypothesis[id] ?? false,
     }));
   }
 
@@ -718,7 +827,7 @@ export function ActionNodeSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[720px] sm:max-w-[720px] flex flex-col p-2 gap-0 [&>button:last-of-type]:hidden overflow-y-auto"
+        className="w-[820px] sm:max-w-[820px] flex flex-col p-2 gap-0 [&>button:last-of-type]:hidden overflow-y-auto"
       >
         <Tabs defaultValue="problem" className="w-full">
           <TabsList className="w-80 bg-white border-1 rounded-lg">
@@ -811,12 +920,13 @@ export function ActionNodeSheet({
                 </span>
               </div>
 
-              {activeQuestionIds.map((qId) => {
+              {activeQuestionIds.map((qId, i) => {
                 const bq = BANK_QUESTIONS.find((q) => q.id === qId);
                 if (!bq) return null;
                 return (
-                  <ActiveQuestionItem
+                  <ProblemQuestionRow
                     key={qId}
+                    index={i + 1}
                     question={bq}
                     value={
                       questionAnswers[qId] ??
@@ -827,11 +937,15 @@ export function ActionNodeSheet({
                     }
                     source={questionSources[qId] ?? ""}
                     confidence={questionConfidence[qId] ?? 0}
+                    isHypothesis={questionHypothesis[qId] ?? false}
                     onSourceChange={(val) =>
                       setQuestionSources((prev) => ({ ...prev, [qId]: val }))
                     }
                     onConfidenceChange={(val) =>
                       setQuestionConfidence((prev) => ({ ...prev, [qId]: val }))
+                    }
+                    onToggleHypothesis={(val) =>
+                      setQuestionHypothesis((prev) => ({ ...prev, [qId]: val }))
                     }
                   />
                 );

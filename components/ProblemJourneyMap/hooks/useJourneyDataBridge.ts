@@ -294,6 +294,7 @@ export function useJourneyDataBridge() {
             answer: q.answer,
             source: q.source ?? '',
             confidence: q.confidence ?? 0,
+            isHypothesis: q.isHypothesis ?? false,
           })),
         }))
       );
