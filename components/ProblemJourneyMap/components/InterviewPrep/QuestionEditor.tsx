@@ -72,6 +72,9 @@ export function QuestionEditor({
           <Input
             autoFocus={editing}
             value={question.title}
+            // Without this the first keystroke fills `title`, flips the field to
+            // authored, and unmounts the input from under the cursor.
+            onFocus={() => setEditing(true)}
             onChange={(e) => onChange({ title: e.target.value })}
             onBlur={() => {
               setEditing(false);
