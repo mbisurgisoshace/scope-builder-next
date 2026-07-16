@@ -23,7 +23,14 @@ export interface JourneyNodeStorage {
   solutions: Array<{
     id: string;
     description: string;
-    questions: Array<{ bankQuestionId: string; answer: string | string[] }>;
+    type: string;
+    relieverOrCreator: "reliever" | "creator";
+    questions: Array<{
+      bankQuestionId: string;
+      answer: string | string[];
+      source: string;
+      confidence: number;
+    }>;
   }>;
   conclusions: Array<{
     id: string;

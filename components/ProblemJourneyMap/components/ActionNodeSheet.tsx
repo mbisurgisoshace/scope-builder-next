@@ -1,13 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import {
-  PencilIcon,
-  PlusIcon,
-  CircleHelpIcon,
-  StarIcon,
-  CheckIcon,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { PlusIcon, CircleHelpIcon, StarIcon, CheckIcon } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -62,11 +56,17 @@ export interface Problem {
 export interface SolutionQuestionAnswer {
   bankQuestionId: string;
   answer: string | string[];
+  source: string;
+  confidence: number;
 }
+
+export type RelieverOrCreator = "reliever" | "creator";
 
 export interface Solution {
   id: string;
   description: string;
+  type: string;
+  relieverOrCreator: RelieverOrCreator;
   questions: SolutionQuestionAnswer[];
 }
 
@@ -86,6 +86,16 @@ const PAIN_OR_GAIN_OPTIONS: { value: PainOrGain; label: string }[] = [
   { value: "pain", label: "Pain" },
   { value: "gain", label: "Gain" },
 ];
+
+// ─── Solution metadata options ────────────────────────────────────────────────
+
+const SOLUTION_TYPES = ["Functional", "Emotional", "Social"] as const;
+
+const RELIEVER_OR_CREATOR_OPTIONS: { value: RelieverOrCreator; label: string }[] =
+  [
+    { value: "reliever", label: "Reliever" },
+    { value: "creator", label: "Creator" },
+  ];
 
 const SOURCE_OPTIONS = [
   "Shared personally",
@@ -135,10 +145,8 @@ const BANK_QUESTIONS: BankQuestion[] = [
   },
 ];
 
-const BANK_CATEGORIES = Array.from(
-  new Set(BANK_QUESTIONS.map((q) => q.category)),
-);
-
+// Kept as its own literal rather than derived from BANK_QUESTIONS so the two
+// banks can diverge; the distinct ids also key solution answers separately.
 const SOLUTION_BANK_QUESTIONS: BankQuestion[] = [
   {
     id: "sbq-1",
@@ -150,46 +158,33 @@ const SOLUTION_BANK_QUESTIONS: BankQuestion[] = [
     id: "sbq-2",
     category: "Market Size",
     text: "How are they solving it today?",
-    answerType: "single_choice",
-    options: [
-      "Because customers dislike hearing about new ideas",
-      "Because the goal is to listen and learn from customers, not to sell",
-    ],
+    answerType: "plain_text",
   },
   {
     id: "sbq-3",
     category: "Market Size",
     text: "How significant is the problem for these people?",
-    answerType: "plain_text",
+    answerType: "scale",
   },
   {
     id: "sbq-4",
     category: "Significance",
     text: "Would customers pay to solve this problem?",
-    answerType: "single_choice",
-    options: ["Yes", "No", "50/50"],
+    answerType: "yes_no",
   },
   {
     id: "sbq-5",
     category: "Significance",
     text: "What factors make this problem significant?",
-    answerType: "multiple_choice",
-    options: [
-      "Because customers dislike hearing about new ideas",
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    ],
+    answerType: "plain_text",
   },
   {
     id: "sbq-6",
     category: "Significance",
     text: "What is the frequency of this problem?",
-    answerType: "plain_text",
+    answerType: "scale",
   },
 ];
-
-const SOLUTION_BANK_CATEGORIES = Array.from(
-  new Set(SOLUTION_BANK_QUESTIONS.map((q) => q.category)),
-);
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -204,14 +199,11 @@ interface ActionNodeSheetProps {
     painOrGain: PainOrGain,
     questions: ProblemQuestionAnswer[],
   ) => void;
-  solutions: Solution[];
-  onAddSolution: (
+  solution: Solution | null;
+  onSaveSolution: (
     description: string,
-    questions: SolutionQuestionAnswer[],
-  ) => void;
-  onUpdateSolution: (
-    solutionId: string,
-    description: string,
+    type: string,
+    relieverOrCreator: RelieverOrCreator,
     questions: SolutionQuestionAnswer[],
   ) => void;
 }
@@ -398,56 +390,34 @@ function AnswerInput({ question, value, onChange }: AnswerInputProps) {
   );
 }
 
-// ─── Active question (solutions — stacked) ────────────────────────────────────
+// ─── Question row (question | [H] | Source | confidence) ──────────────────────
 
-interface ActiveQuestionItemProps {
-  question: BankQuestion;
-  value: string | string[];
-  onChange: (value: string | string[]) => void;
-}
-
-function ActiveQuestionItem({
-  question,
-  value,
-  onChange,
-}: ActiveQuestionItemProps) {
-  return (
-    <div className="mb-3">
-      <p className="text-sm font-semibold text-gray-800 mb-1.5">
-        {question.text}
-      </p>
-      <AnswerInput question={question} value={value} onChange={onChange} />
-    </div>
-  );
-}
-
-// ─── Problem question row (question | Source | confidence) ────────────────────
-
-interface ProblemQuestionRowProps {
+interface QuestionRowProps {
   index: number;
   question: BankQuestion;
   value: string | string[];
   onChange: (value: string | string[]) => void;
   source: string;
   confidence: number;
-  isHypothesis: boolean;
   onSourceChange: (source: string) => void;
   onConfidenceChange: (confidence: number) => void;
-  onToggleHypothesis: (isHypothesis: boolean) => void;
+  /** When provided, render the hypothesis toggle (problems only). */
+  isHypothesis?: boolean;
+  onToggleHypothesis?: (isHypothesis: boolean) => void;
 }
 
-function ProblemQuestionRow({
+function QuestionRow({
   index,
   question,
   value,
   onChange,
   source,
   confidence,
-  isHypothesis,
   onSourceChange,
   onConfidenceChange,
+  isHypothesis,
   onToggleHypothesis,
-}: ProblemQuestionRowProps) {
+}: QuestionRowProps) {
   return (
     <div className="flex items-start gap-4 py-4 border-t border-gray-100 first:border-t-0">
       {/* Question + answer */}
@@ -460,19 +430,21 @@ function ProblemQuestionRow({
       </div>
 
       {/* Hypothesis toggle */}
-      <button
-        type="button"
-        onClick={() => onToggleHypothesis(!isHypothesis)}
-        aria-pressed={isHypothesis}
-        title={isHypothesis ? "Marked as hypothesis" : "Mark as hypothesis"}
-        className={`shrink-0 w-7 h-7 rounded-full border flex items-center justify-center text-xs font-bold transition-colors ${
-          isHypothesis
-            ? "border-[#6A35FF] text-[#6A35FF] bg-[#F4F0FF]"
-            : "border-gray-300 text-gray-400 hover:border-[#6A35FF] hover:text-[#6A35FF]"
-        }`}
-      >
-        H
-      </button>
+      {onToggleHypothesis && (
+        <button
+          type="button"
+          onClick={() => onToggleHypothesis(!isHypothesis)}
+          aria-pressed={isHypothesis}
+          title={isHypothesis ? "Marked as hypothesis" : "Mark as hypothesis"}
+          className={`shrink-0 w-7 h-7 rounded-full border flex items-center justify-center text-xs font-bold transition-colors ${
+            isHypothesis
+              ? "border-[#6A35FF] text-[#6A35FF] bg-[#F4F0FF]"
+              : "border-gray-300 text-gray-400 hover:border-[#6A35FF] hover:text-[#6A35FF]"
+          }`}
+        >
+          H
+        </button>
+      )}
 
       {/* Source */}
       <div className="w-[180px] shrink-0 flex flex-col gap-1.5">
@@ -507,17 +479,20 @@ function ProblemQuestionRow({
 // ─── Bank of Questions ────────────────────────────────────────────────────────
 
 interface BankOfQuestionsProps {
+  questions: BankQuestion[];
   activeQuestionIds: string[];
   onAdd: (questionId: string) => void;
   title?: string;
 }
 
 function BankOfQuestions({
+  questions: bankQuestions,
   activeQuestionIds,
   onAdd,
   title = "Bank of questions",
 }: BankOfQuestionsProps) {
   const activeSet = new Set(activeQuestionIds);
+  const categories = Array.from(new Set(bankQuestions.map((q) => q.category)));
 
   return (
     <div className="mt-4">
@@ -526,8 +501,8 @@ function BankOfQuestions({
         <span className="text-sm font-semibold text-gray-700">{title}</span>
       </div>
 
-      {BANK_CATEGORIES.map((cat) => {
-        const questions = BANK_QUESTIONS.filter((q) => q.category === cat);
+      {categories.map((cat) => {
+        const questions = bankQuestions.filter((q) => q.category === cat);
         return (
           <div key={cat} className="mb-4">
             <p className="text-xs font-semibold text-gray-500 mb-2">{cat}</p>
@@ -565,100 +540,6 @@ function BankOfQuestions({
   );
 }
 
-// ─── Bank of Solutions ────────────────────────────────────────────────────────
-
-interface BankOfSolutionsProps {
-  activeQuestionIds: string[];
-  onAdd: (questionId: string) => void;
-}
-
-function BankOfSolutions({ activeQuestionIds, onAdd }: BankOfSolutionsProps) {
-  const activeSet = new Set(activeQuestionIds);
-
-  const visibleCategories = SOLUTION_BANK_CATEGORIES.filter((cat) =>
-    SOLUTION_BANK_QUESTIONS.some(
-      (q) => q.category === cat && !activeSet.has(q.id),
-    ),
-  );
-
-  if (visibleCategories.length === 0) return null;
-
-  return (
-    <div className="mt-4">
-      <div className="flex items-center gap-1.5 mb-3">
-        <CircleHelpIcon className="w-4 h-4 text-gray-400" />
-        <span className="text-sm font-semibold text-gray-700">
-          Bank of questions
-        </span>
-      </div>
-
-      {visibleCategories.map((cat) => {
-        const questions = SOLUTION_BANK_QUESTIONS.filter(
-          (q) => q.category === cat && !activeSet.has(q.id),
-        );
-        return (
-          <div
-            key={cat}
-            className="border border-gray-100 rounded-xl p-3 mb-3 bg-white"
-          >
-            <p className="text-xs font-semibold text-gray-500 mb-2">{cat}</p>
-            <div className="flex flex-col gap-2">
-              {questions.map((q) => (
-                <div
-                  key={q.id}
-                  className="flex items-center justify-between bg-[#F3F3F6] border border-gray-100 rounded-lg px-3 py-2"
-                >
-                  <span className="text-sm text-gray-700 pr-2">{q.text}</span>
-                  <button
-                    onClick={() => onAdd(q.id)}
-                    className="flex-shrink-0 w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 hover:border-[#6A35FF] hover:text-[#6A35FF] transition-colors"
-                  >
-                    <PlusIcon className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Solution card ────────────────────────────────────────────────────────────
-
-interface SolutionCardProps {
-  solution: Solution;
-  onEdit: () => void;
-}
-
-function SolutionCard({ solution, onEdit }: SolutionCardProps) {
-  return (
-    <div className="bg-[#E8FAE9] border border-gray-100 rounded-xl p-4 mb-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold bg-[#70E38F] text-[#111827] rounded-full px-2 py-0.5">
-          Solution
-        </span>
-        <button
-          onClick={onEdit}
-          className="text-gray-300 hover:text-gray-500 transition-colors"
-        >
-          <PencilIcon className="w-3.5 h-3.5" />
-        </button>
-      </div>
-      <p className="text-sm font-semibold text-gray-800 mt-2">
-        {solution.description}
-      </p>
-      {solution.questions.length > 0 && (
-        <p className="text-xs text-gray-400 mt-1">
-          {solution.questions.length} question
-          {solution.questions.length !== 1 ? "s" : ""} answered
-        </p>
-      )}
-    </div>
-  );
-}
-
 // ─── Main sheet ───────────────────────────────────────────────────────────────
 
 export function ActionNodeSheet({
@@ -667,9 +548,8 @@ export function ActionNodeSheet({
   nodeId,
   problem,
   onSaveProblem,
-  solutions,
-  onAddSolution,
-  onUpdateSolution,
+  solution,
+  onSaveSolution,
 }: ActionNodeSheetProps) {
   // ── Problem editor state (single problem, inline) ──
   const [problemDraft, setProblemDraft] = useState("");
@@ -689,21 +569,23 @@ export function ActionNodeSheet({
     Record<string, boolean>
   >({});
 
-  // ── Solution editor state ──
-  const [isAddingSolution, setIsAddingSolution] = useState(false);
-  const [editingSolutionId, setEditingSolutionId] = useState<string | null>(
-    null,
-  );
+  // ── Solution editor state (single solution, inline) ──
   const [solutionDraft, setSolutionDraft] = useState("");
+  const [solutionType, setSolutionType] = useState("");
+  const [solutionRelieverCreator, setSolutionRelieverCreator] =
+    useState<RelieverOrCreator>("reliever");
   const [activeSolutionQuestionIds, setActiveSolutionQuestionIds] = useState<
     string[]
   >([]);
   const [solutionQuestionAnswers, setSolutionQuestionAnswers] = useState<
     Record<string, string | string[]>
   >({});
-  const solutionTextareaRef = useRef<HTMLTextAreaElement>(null);
-
-  const isEditingSolution = isAddingSolution || editingSolutionId !== null;
+  const [solutionQuestionSources, setSolutionQuestionSources] = useState<
+    Record<string, string>
+  >({});
+  const [solutionQuestionConfidence, setSolutionQuestionConfidence] = useState<
+    Record<string, number>
+  >({});
 
   // Hydrate the problem editor whenever the sheet opens or the selected node
   // changes. Not keyed on `problem` so remote/round-trip updates don't clobber
@@ -732,32 +614,27 @@ export function ActionNodeSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, nodeId]);
 
-  function resetSolutionEditor() {
-    setIsAddingSolution(false);
-    setEditingSolutionId(null);
-    setSolutionDraft("");
-    setActiveSolutionQuestionIds([]);
-    setSolutionQuestionAnswers({});
-  }
-
+  // Hydrate the solution editor on the same terms as the problem editor above.
   useEffect(() => {
-    if (!open) resetSolutionEditor();
-  }, [open]);
-
-  useEffect(() => {
-    if (isEditingSolution) solutionTextareaRef.current?.focus();
-  }, [isEditingSolution]);
-
-  function handleEditSolution(solution: Solution) {
-    setSolutionDraft(solution.description);
-    setEditingSolutionId(solution.id);
-    setIsAddingSolution(false);
-    const ids = solution.questions.map((q) => q.bankQuestionId);
+    if (!open) return;
+    setSolutionDraft(solution?.description ?? "");
+    setSolutionType(solution?.type ?? "");
+    setSolutionRelieverCreator(solution?.relieverOrCreator ?? "reliever");
+    const ids = solution?.questions.map((q) => q.bankQuestionId) ?? [];
     setActiveSolutionQuestionIds(ids);
     const answers: Record<string, string | string[]> = {};
-    for (const q of solution.questions) answers[q.bankQuestionId] = q.answer;
+    const sources: Record<string, string> = {};
+    const conf: Record<string, number> = {};
+    for (const q of solution?.questions ?? []) {
+      answers[q.bankQuestionId] = q.answer;
+      sources[q.bankQuestionId] = q.source ?? "";
+      conf[q.bankQuestionId] = q.confidence ?? 0;
+    }
     setSolutionQuestionAnswers(answers);
-  }
+    setSolutionQuestionSources(sources);
+    setSolutionQuestionConfidence(conf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, nodeId]);
 
   function handleAddBankQuestion(questionId: string) {
     if (activeQuestionIds.includes(questionId)) return;
@@ -781,6 +658,8 @@ export function ActionNodeSheet({
       ...prev,
       [questionId]: defaultAnswer,
     }));
+    setSolutionQuestionSources((prev) => ({ ...prev, [questionId]: "" }));
+    setSolutionQuestionConfidence((prev) => ({ ...prev, [questionId]: 0 }));
   }
 
   function collectProblemAnswers(): ProblemQuestionAnswer[] {
@@ -797,6 +676,8 @@ export function ActionNodeSheet({
     return activeSolutionQuestionIds.map((id) => ({
       bankQuestionId: id,
       answer: solutionQuestionAnswers[id] ?? "",
+      source: solutionQuestionSources[id] ?? "",
+      confidence: solutionQuestionConfidence[id] ?? 0,
     }));
   }
 
@@ -814,13 +695,12 @@ export function ActionNodeSheet({
   function handleSaveSolution() {
     const trimmed = solutionDraft.trim();
     if (!trimmed) return;
-    const collectedAnswers = collectSolutionAnswers();
-    if (editingSolutionId) {
-      onUpdateSolution(editingSolutionId, trimmed, collectedAnswers);
-    } else {
-      onAddSolution(trimmed, collectedAnswers);
-    }
-    resetSolutionEditor();
+    onSaveSolution(
+      trimmed,
+      solutionType,
+      solutionRelieverCreator,
+      collectSolutionAnswers(),
+    );
   }
 
   return (
@@ -924,7 +804,7 @@ export function ActionNodeSheet({
                 const bq = BANK_QUESTIONS.find((q) => q.id === qId);
                 if (!bq) return null;
                 return (
-                  <ProblemQuestionRow
+                  <QuestionRow
                     key={qId}
                     index={i + 1}
                     question={bq}
@@ -952,6 +832,7 @@ export function ActionNodeSheet({
               })}
 
               <BankOfQuestions
+                questions={BANK_QUESTIONS}
                 activeQuestionIds={activeQuestionIds}
                 onAdd={handleAddBankQuestion}
                 title="Bank of market questions"
@@ -966,98 +847,132 @@ export function ActionNodeSheet({
             </div>
           </TabsContent>
 
-          {/* ── Solution tab (unchanged) ── */}
+          {/* ── Solution tab ── */}
           <TabsContent value="solution" className="p-2">
-            {!isEditingSolution && (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm font-semibold text-gray-700">
-                    Solutions
+            <div className="p-1">
+              {/* What the solution? */}
+              <div className="mb-5 bg-[#F3F3F6] rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-gray-800">
+                    What the solution?
                   </span>
-                  <Button
-                    onClick={() => setIsAddingSolution(true)}
-                    className="text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors px-3 py-1.5 rounded-full"
-                  >
-                    + Add new solution
-                  </Button>
+                  <span className="text-xs font-semibold bg-[#70E38F] text-[#111827] rounded-full px-2.5 py-0.5">
+                    Solution
+                  </span>
                 </div>
-
-                {solutions.map((solution) => (
-                  <SolutionCard
-                    key={solution.id}
-                    solution={solution}
-                    onEdit={() => handleEditSolution(solution)}
+                <div className="flex gap-4 items-center">
+                  <textarea
+                    className="flex-1 self-stretch bg-white border border-gray-200 rounded-lg p-3 text-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none focus:ring-1 focus:ring-[#6A35FF] leading-snug"
+                    rows={3}
+                    placeholder="Describe your solution..."
+                    value={solutionDraft}
+                    onChange={(e) => setSolutionDraft(e.target.value)}
                   />
-                ))}
-              </>
-            )}
-
-            {isEditingSolution && (
-              <div className="bg-[#E8FAE9] rounded-xl p-4">
-                {/* What the solution? */}
-                <div className="mb-4">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-sm font-semibold text-gray-800">
-                      What the solution?
-                    </span>
-                    <button
-                      onClick={handleSaveSolution}
-                      className="text-sm font-medium text-[#6A35FF] hover:text-purple-800 transition-colors"
-                    >
-                      ✓ Save
-                    </button>
-                  </div>
-                  <div className="bg-white rounded-xl border border-gray-200 p-3">
-                    <textarea
-                      ref={solutionTextareaRef}
-                      className="w-full text-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none leading-snug bg-transparent"
-                      rows={3}
-                      placeholder="Describe your solution..."
-                      value={solutionDraft}
-                      onChange={(e) => setSolutionDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey))
-                          handleSaveSolution();
-                      }}
-                    />
+                  <div className="flex flex-col gap-3 w-[250px] shrink-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs text-gray-500 font-medium whitespace-nowrap">
+                        Type of solution
+                      </span>
+                      <Select
+                        value={solutionType}
+                        onValueChange={setSolutionType}
+                      >
+                        <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {SOLUTION_TYPES.map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs text-gray-500 font-medium whitespace-nowrap">
+                        Is it reliever or creator?
+                      </span>
+                      <Select
+                        value={solutionRelieverCreator}
+                        onValueChange={(v) =>
+                          setSolutionRelieverCreator(v as RelieverOrCreator)
+                        }
+                      >
+                        <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {RELIEVER_OR_CREATOR_OPTIONS.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
-
-                {/* Active questions */}
-                {activeSolutionQuestionIds.map((qId) => {
-                  const bq = SOLUTION_BANK_QUESTIONS.find((q) => q.id === qId);
-                  if (!bq) return null;
-                  return (
-                    <ActiveQuestionItem
-                      key={qId}
-                      question={bq}
-                      value={
-                        solutionQuestionAnswers[qId] ??
-                        (bq.answerType === "multiple_choice" ? [] : "")
-                      }
-                      onChange={(val) =>
-                        setSolutionQuestionAnswers((prev) => ({
-                          ...prev,
-                          [qId]: val,
-                        }))
-                      }
-                    />
-                  );
-                })}
-
-                <BankOfSolutions
-                  activeQuestionIds={activeSolutionQuestionIds}
-                  onAdd={handleAddSolutionBankQuestion}
-                />
-
-                <button
-                  onClick={resetSolutionEditor}
-                  className="mt-3 text-xs text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  Cancel
-                </button>
               </div>
-            )}
+
+              {/* Market Questions */}
+              <div className="flex items-center gap-1.5 mb-3">
+                <CircleHelpIcon className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-semibold text-gray-700">
+                  Market Questions
+                </span>
+              </div>
+
+              {activeSolutionQuestionIds.map((qId, i) => {
+                const bq = SOLUTION_BANK_QUESTIONS.find((q) => q.id === qId);
+                if (!bq) return null;
+                return (
+                  <QuestionRow
+                    key={qId}
+                    index={i + 1}
+                    question={bq}
+                    value={
+                      solutionQuestionAnswers[qId] ??
+                      (bq.answerType === "multiple_choice" ? [] : "")
+                    }
+                    onChange={(val) =>
+                      setSolutionQuestionAnswers((prev) => ({
+                        ...prev,
+                        [qId]: val,
+                      }))
+                    }
+                    source={solutionQuestionSources[qId] ?? ""}
+                    confidence={solutionQuestionConfidence[qId] ?? 0}
+                    onSourceChange={(val) =>
+                      setSolutionQuestionSources((prev) => ({
+                        ...prev,
+                        [qId]: val,
+                      }))
+                    }
+                    onConfidenceChange={(val) =>
+                      setSolutionQuestionConfidence((prev) => ({
+                        ...prev,
+                        [qId]: val,
+                      }))
+                    }
+                  />
+                );
+              })}
+
+              <BankOfQuestions
+                questions={SOLUTION_BANK_QUESTIONS}
+                activeQuestionIds={activeSolutionQuestionIds}
+                onAdd={handleAddSolutionBankQuestion}
+                title="Bank of market questions"
+              />
+
+              <Button
+                onClick={handleSaveSolution}
+                className="mt-4 w-full text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors rounded-full"
+              >
+                ✓ Save solution
+              </Button>
+            </div>
           </TabsContent>
         </Tabs>
       </SheetContent>

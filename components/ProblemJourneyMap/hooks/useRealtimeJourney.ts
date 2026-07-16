@@ -3,7 +3,7 @@
 import { useStorage, useMutation } from '@liveblocks/react/suspense';
 import { LiveObject } from '@liveblocks/client';
 import type { JourneyNodeStorage, JourneyEdgeStorage } from '@/liveblocks.config';
-import type { ProblemQuestionAnswer, SolutionQuestionAnswer, NodeConclusion, PainOrGain } from '../components/ActionNodeSheet';
+import type { ProblemQuestionAnswer, SolutionQuestionAnswer, NodeConclusion, PainOrGain, RelieverOrCreator } from '../components/ActionNodeSheet';
 
 export type { JourneyNodeStorage, JourneyEdgeStorage };
 
@@ -84,40 +84,23 @@ export function useRealtimeJourney() {
     []
   );
 
-  const addSolution = useMutation(
+  // A node holds at most one solution: saving replaces the list wholesale, so
+  // any extras left over from the old multi-solution editor are dropped.
+  const saveSolution = useMutation(
     (
       { storage },
       nodeId: string,
-      solution: { id: string; description: string; questions: SolutionQuestionAnswer[] }
+      solution: {
+        id: string;
+        description: string;
+        type: string;
+        relieverOrCreator: RelieverOrCreator;
+        questions: SolutionQuestionAnswer[];
+      }
     ) => {
       const nodes = (storage.get('journeyNodes') as any).toArray() as Array<any>;
       const node = nodes.find((n: any) => n.get('id') === nodeId);
-      if (node) {
-        const current: Array<{ id: string; description: string; questions: SolutionQuestionAnswer[] }> =
-          node.get('solutions') ?? [];
-        node.update({ solutions: [...current, solution] });
-      }
-    },
-    []
-  );
-
-  const updateSolution = useMutation(
-    (
-      { storage },
-      nodeId: string,
-      solutionId: string,
-      patch: { description: string; questions: SolutionQuestionAnswer[] }
-    ) => {
-      const nodes = (storage.get('journeyNodes') as any).toArray() as Array<any>;
-      const node = nodes.find((n: any) => n.get('id') === nodeId);
-      if (node) {
-        const current: Array<{ id: string; description: string; questions: SolutionQuestionAnswer[] }> =
-          node.get('solutions') ?? [];
-        const updated = current.map((s) =>
-          s.id === solutionId ? { ...s, ...patch } : s
-        );
-        node.update({ solutions: updated });
-      }
+      if (node) node.update({ solutions: [solution] });
     },
     []
   );
@@ -151,8 +134,7 @@ export function useRealtimeJourney() {
     updateJourneyNode,
     addProblem,
     updateProblem,
-    addSolution,
-    updateSolution,
+    saveSolution,
     upsertConclusion,
   };
 }

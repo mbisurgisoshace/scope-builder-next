@@ -88,18 +88,16 @@ function ActionNodeInner({ id, data }: NodeProps) {
         </div>
       )}
 
-      {solutions.length > 0 && (
+      {solutions[0]?.description && (
         <div className="mt-3 pt-3 border-t border-gray-100">
-          <p className="font-semibold text-[#111827] mb-2">Solutions</p>
-          <div className="flex flex-col gap-2">
-            {solutions.map((s) => (
-              <div key={s.id} className="bg-[#E8FAE9] rounded-lg p-3">
-                <span className="text-xs font-semibold bg-[#70E38F] text-[#111827] rounded-full px-2 py-0.5">
-                  Solution
-                </span>
-                <p className="text-sm text-gray-700 mt-1.5">{s.description}</p>
-              </div>
-            ))}
+          <p className="font-semibold text-[#111827] mb-2">Solution</p>
+          <div className="bg-[#E8FAE9] rounded-lg p-3">
+            <span className="text-xs font-semibold bg-[#70E38F] text-[#111827] rounded-full px-2 py-0.5">
+              Solution
+            </span>
+            <p className="text-sm text-gray-700 mt-1.5">
+              {solutions[0].description}
+            </p>
           </div>
         </div>
       )}

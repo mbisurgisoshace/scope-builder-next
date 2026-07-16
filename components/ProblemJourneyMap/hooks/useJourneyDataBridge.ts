@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNodesState, useEdgesState, type Node, type Edge } from '@xyflow/react';
 
 import type { JourneyNodeType, JourneyNodeData } from '../JourneyContext';
-import type { Problem, Solution, ProblemQuestionAnswer, SolutionQuestionAnswer, NodeConclusion, ConclusionStatus, PainOrGain } from '../components/ActionNodeSheet';
+import type { Problem, Solution, ProblemQuestionAnswer, SolutionQuestionAnswer, NodeConclusion, ConclusionStatus, PainOrGain, RelieverOrCreator } from '../components/ActionNodeSheet';
 import { useRealtimeJourney, type JourneyNodeStorage, type JourneyEdgeStorage } from './useRealtimeJourney';
 
 const INITIAL_TRIGGER_ID = 'initial-trigger';
@@ -66,8 +66,7 @@ export function useJourneyDataBridge() {
     updateJourneyNode,
     addProblem: lbAddProblem,
     updateProblem: lbUpdateProblem,
-    addSolution: lbAddSolution,
-    updateSolution: lbUpdateSolution,
+    saveSolution: lbSaveSolution,
     upsertConclusion: lbUpsertConclusion,
   } = useRealtimeJourney();
 
@@ -259,24 +258,27 @@ export function useJourneyDataBridge() {
     [lbAddProblem, lbUpdateProblem, lbNodes]
   );
 
-  const addSolution = useCallback(
-    (nodeId: string, description: string, questions: SolutionQuestionAnswer[]) => {
-      const solution = { id: crypto.randomUUID(), description, questions };
-      lbAddSolution(nodeId, solution);
-    },
-    [lbAddSolution]
-  );
-
-  const updateSolution = useCallback(
+  // Single-solution upsert, mirroring saveProblem: reuse the existing id when
+  // there is one so edits don't churn it.
+  const saveSolution = useCallback(
     (
       nodeId: string,
-      solutionId: string,
       description: string,
+      type: string,
+      relieverOrCreator: RelieverOrCreator,
       questions: SolutionQuestionAnswer[]
     ) => {
-      lbUpdateSolution(nodeId, solutionId, { description, questions });
+      const existing = nodeSolutions.get(nodeId)?.[0];
+      lbSaveSolution(nodeId, {
+        id: existing?.id ?? crypto.randomUUID(),
+        description,
+        type,
+        relieverOrCreator,
+        questions,
+      });
     },
-    [lbUpdateSolution]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lbSaveSolution, lbNodes]
   );
 
   const nodeProblems = useMemo(() => {
@@ -308,8 +310,16 @@ export function useJourneyDataBridge() {
       map.set(
         lb.id,
         (lb.solutions ?? []).map((s) => ({
-          ...s,
-          questions: s.questions ?? [],
+          id: s.id,
+          description: s.description,
+          type: s.type ?? '',
+          relieverOrCreator: (s.relieverOrCreator ?? 'reliever') as RelieverOrCreator,
+          questions: (s.questions ?? []).map((q) => ({
+            bankQuestionId: q.bankQuestionId,
+            answer: q.answer,
+            source: q.source ?? '',
+            confidence: q.confidence ?? 0,
+          })),
         }))
       );
     }
@@ -341,8 +351,7 @@ export function useJourneyDataBridge() {
     addChildNode,
     updateNodeData,
     saveProblem,
-    addSolution,
-    updateSolution,
+    saveSolution,
     nodeProblems,
     nodeSolutions,
     nodeConclusions,

@@ -41,8 +41,7 @@ function CanvasInner({
     addChildNode,
     updateNodeData,
     saveProblem,
-    addSolution,
-    updateSolution,
+    saveSolution,
     nodeProblems,
     nodeSolutions,
     nodeConclusions,
@@ -142,21 +141,18 @@ function CanvasInner({
                       questions,
                     );
                 }}
-                solutions={
+                solution={
                   selectedActionNodeId
-                    ? (nodeSolutions.get(selectedActionNodeId) ?? [])
-                    : []
+                    ? (nodeSolutions.get(selectedActionNodeId)?.[0] ?? null)
+                    : null
                 }
-                onAddSolution={(desc, questions) => {
+                onSaveSolution={(desc, type, relieverOrCreator, questions) => {
                   if (selectedActionNodeId)
-                    addSolution(selectedActionNodeId, desc, questions);
-                }}
-                onUpdateSolution={(solutionId, desc, questions) => {
-                  if (selectedActionNodeId)
-                    updateSolution(
+                    saveSolution(
                       selectedActionNodeId,
-                      solutionId,
                       desc,
+                      type,
+                      relieverOrCreator,
                       questions,
                     );
                 }}
