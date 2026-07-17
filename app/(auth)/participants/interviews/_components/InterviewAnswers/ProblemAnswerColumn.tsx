@@ -15,7 +15,7 @@ export function ProblemAnswerColumn({
   onAnswerCommit,
 }: ProblemAnswerColumnProps) {
   return (
-    <div className="flex w-[460px] min-w-[460px] flex-col overflow-y-auto rounded-2xl bg-white p-6 shadow-sm">
+    <div className="flex w-full flex-col">
       {/* Problem summary — read-only; it's authored on the journey map. */}
       <div className="rounded-lg bg-[#F5F5F8] p-4">
         <div className="flex items-start justify-between gap-4">

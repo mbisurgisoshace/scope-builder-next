@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeftIcon, Pencil } from "lucide-react";
+import { Check, ChevronLeftIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,20 +19,17 @@ import type { AnswerableProblem } from "./types";
 interface InterviewAnswersViewProps {
   participant: Participant;
   onBack: () => void;
-  onEditProfile: () => void;
   onSaved: () => void;
 }
 
 function InterviewHeader({
   participant,
   onBack,
-  onEditProfile,
   onSave,
   saving,
 }: {
   participant: Participant;
   onBack: () => void;
-  onEditProfile: () => void;
   onSave: () => void;
   saving: boolean;
 }) {
@@ -59,19 +56,26 @@ function InterviewHeader({
             <h1 className="truncate text-xl font-semibold text-[#111827]">
               {participant.name}
             </h1>
-            {roles.map((role) => (
-              <Badge key={role} className="bg-[#EEEFF5] text-[#111827]">
-                {role}
-              </Badge>
-            ))}
-            <button
-              type="button"
-              onClick={onEditProfile}
-              aria-label="Edit participant profile"
-              className="flex size-6 shrink-0 items-center justify-center rounded-full text-[#70747D] hover:bg-white hover:text-[#111827]"
-            >
-              <Pencil className="size-3.5" />
-            </button>
+            {roles.map((role) =>
+              // Payer is the interview this whole page counts, so it gets a green
+              // "done"-style badge; other roles stay neutral.
+              role.toLowerCase() === "payer" ? (
+                <Badge
+                  key={role}
+                  className="gap-1 rounded-full bg-green-100 text-green-700"
+                >
+                  <Check className="size-3" />
+                  {role}
+                </Badge>
+              ) : (
+                <Badge
+                  key={role}
+                  className="rounded-full bg-[#EEEFF5] text-[#111827]"
+                >
+                  {role}
+                </Badge>
+              ),
+            )}
           </div>
         </div>
       </div>
@@ -90,7 +94,6 @@ function InterviewHeader({
 export function InterviewAnswersView({
   participant,
   onBack,
-  onEditProfile,
   onSaved,
 }: InterviewAnswersViewProps) {
   const [problems, setProblems] = useState<AnswerableProblem[] | null>(null);
@@ -161,43 +164,50 @@ export function InterviewAnswersView({
   }, [participant.id, onSaved]);
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <InterviewHeader
-        participant={participant}
-        onBack={onBack}
-        onEditProfile={onEditProfile}
-        onSave={handleSave}
-        saving={saving}
-      />
+    // Break out of the page's px-8/py-4 gutter so the white surface runs edge to edge,
+    // matching the design; the +2rem height makes up for the cancelled vertical padding.
+    <div className="-mx-8 -my-4 flex h-[calc(100%+2rem)] flex-col bg-white">
+      <div className="shrink-0 border-b border-[#E4E5ED] px-8 py-4">
+        <InterviewHeader
+          participant={participant}
+          onBack={onBack}
+          onSave={handleSave}
+          saving={saving}
+        />
+      </div>
 
       {!problems ? (
         <div className="flex flex-1 items-center justify-center">
           <Loader />
         </div>
       ) : problems.length === 0 ? (
-        <div className="rounded-2xl bg-white px-8 py-12 text-center shadow-sm">
-          <h3 className="text-base font-semibold text-[#1F2430]">
-            No questions to ask yet
-          </h3>
-          <p className="mx-auto mt-2 max-w-md text-xs text-[#697288]">
-            Write the interview questions for your problems on the Interview Prep
-            tab of the journey map, and they will show up here ready to answer.
-          </p>
+        <div className="flex flex-1 items-center justify-center px-8">
+          <div className="max-w-md text-center">
+            <h3 className="text-base font-semibold text-[#1F2430]">
+              No questions to ask yet
+            </h3>
+            <p className="mx-auto mt-2 text-xs text-[#697288]">
+              Write the interview questions for your problems on the Interview Prep
+              tab of the journey map, and they will show up here ready to answer.
+            </p>
+          </div>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-row gap-4 overflow-x-auto">
-          {problems.map((problem) => (
-            <ProblemAnswerColumn
-              key={problem.id}
-              problem={problem}
-              onAnswerChange={(questionId, value) =>
-                handleAnswerChange(problem.id, questionId, value)
-              }
-              onAnswerCommit={(questionId, value) =>
-                handleAnswerCommit(problem.id, questionId, value)
-              }
-            />
-          ))}
+        <div className="min-h-0 flex-1 overflow-y-auto px-8 py-8">
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-10">
+            {problems.map((problem) => (
+              <ProblemAnswerColumn
+                key={problem.id}
+                problem={problem}
+                onAnswerChange={(questionId, value) =>
+                  handleAnswerChange(problem.id, questionId, value)
+                }
+                onAnswerCommit={(questionId, value) =>
+                  handleAnswerCommit(problem.id, questionId, value)
+                }
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>

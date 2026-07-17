@@ -275,7 +275,6 @@ export default function ParticipantsKanbanView({
         <InterviewAnswersView
           participant={interviewParticipant}
           onBack={() => setInterviewParticipant(null)}
-          onEditProfile={() => setEditParticipant(interviewParticipant)}
           onSaved={() => {
             setInterviewParticipant(null);
             refetch();
