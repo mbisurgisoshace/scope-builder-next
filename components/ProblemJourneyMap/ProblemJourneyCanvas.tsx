@@ -8,7 +8,6 @@ import {
   BackgroundVariant,
   Controls,
   Panel,
-  type Node,
 } from "@xyflow/react";
 import { ZapIcon } from "lucide-react";
 import "@xyflow/react/dist/style.css";
@@ -18,7 +17,7 @@ import { journeyEdgeTypes } from "./edges/edgeTypes";
 import { useJourneyDataBridge } from "./hooks/useJourneyDataBridge";
 import { useLayout } from "./hooks/useLayout";
 import { JourneyContext } from "./JourneyContext";
-import { SelectedNodeContext } from "./SelectedNodeContext";
+import { SelectedNodeContext, type SelectedProblem } from "./SelectedNodeContext";
 import { NodeProblemsContext } from "./NodeProblemsContext";
 import { NodeSolutionsContext } from "./NodeSolutionsContext";
 import { NodeConclusionsContext } from "./NodeConclusionsContext";
@@ -41,9 +40,12 @@ function CanvasInner({
     addChildNode,
     updateNodeData,
     saveProblem,
+    addEmptyProblem,
+    removeProblem,
     saveSolution,
     nodeProblems,
     nodeSolutions,
+    solutionForProblem,
     nodeConclusions,
   } = useJourneyDataBridge();
 
@@ -54,25 +56,32 @@ function CanvasInner({
     setJobTitles((prev) => [...prev, jobTitle]);
   }, []);
 
-  const [selectedActionNodeId, setSelectedActionNodeId] = useState<
-    string | null
-  >(null);
+  const [selectedProblem, setSelectedProblem] =
+    useState<SelectedProblem | null>(null);
 
-  const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
-    if (node.type === "action") {
-      setSelectedActionNodeId(node.id);
-    }
+  const openProblem = useCallback((nodeId: string, problemId: string) => {
+    setSelectedProblem({ nodeId, problemId });
   }, []);
 
   const onPaneClick = useCallback(() => {
-    setSelectedActionNodeId(null);
+    setSelectedProblem(null);
   }, []);
+
+  const selectedProblemData = selectedProblem
+    ? (nodeProblems
+        .get(selectedProblem.nodeId)
+        ?.find((p) => p.id === selectedProblem.problemId) ?? null)
+    : null;
+
+  const selectedSolutionData = selectedProblem
+    ? solutionForProblem(selectedProblem.nodeId, selectedProblem.problemId)
+    : null;
 
   return (
     <NodeConclusionsContext.Provider value={nodeConclusions}>
       <NodeSolutionsContext.Provider value={nodeSolutions}>
         <NodeProblemsContext.Provider value={nodeProblems}>
-          <SelectedNodeContext.Provider value={selectedActionNodeId}>
+          <SelectedNodeContext.Provider value={selectedProblem}>
             <JourneyContext.Provider
               value={{
                 addTriggerNode,
@@ -80,6 +89,10 @@ function CanvasInner({
                 updateNodeData,
                 jobTitles,
                 addJobTitle,
+                openProblem,
+                addEmptyProblem,
+                removeProblem,
+                solutionForProblem,
               }}
             >
               <div style={{ width: "100%", height: "100%" }}>
@@ -99,7 +112,6 @@ function CanvasInner({
                   minZoom={0.2}
                   maxZoom={2}
                   proOptions={{ hideAttribution: true }}
-                  onNodeClick={onNodeClick}
                   onPaneClick={onPaneClick}
                 >
                   <Background
@@ -121,35 +133,30 @@ function CanvasInner({
               </div>
 
               <ActionNodeSheet
-                open={selectedActionNodeId !== null}
+                open={selectedProblem !== null}
                 onOpenChange={(open) => {
-                  if (!open) setSelectedActionNodeId(null);
+                  if (!open) setSelectedProblem(null);
                 }}
-                nodeId={selectedActionNodeId}
-                problem={
-                  selectedActionNodeId
-                    ? (nodeProblems.get(selectedActionNodeId)?.[0] ?? null)
-                    : null
-                }
+                nodeId={selectedProblem?.nodeId ?? null}
+                problemId={selectedProblem?.problemId ?? null}
+                problem={selectedProblemData}
                 onSaveProblem={(desc, type, painOrGain, questions) => {
-                  if (selectedActionNodeId)
+                  if (selectedProblem)
                     saveProblem(
-                      selectedActionNodeId,
+                      selectedProblem.nodeId,
+                      selectedProblem.problemId,
                       desc,
                       type,
                       painOrGain,
                       questions,
                     );
                 }}
-                solution={
-                  selectedActionNodeId
-                    ? (nodeSolutions.get(selectedActionNodeId)?.[0] ?? null)
-                    : null
-                }
+                solution={selectedSolutionData}
                 onSaveSolution={(desc, type, relieverOrCreator, questions) => {
-                  if (selectedActionNodeId)
+                  if (selectedProblem)
                     saveSolution(
-                      selectedActionNodeId,
+                      selectedProblem.nodeId,
+                      selectedProblem.problemId,
                       desc,
                       type,
                       relieverOrCreator,

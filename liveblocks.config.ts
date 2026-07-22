@@ -22,6 +22,9 @@ export interface JourneyNodeStorage {
   }>;
   solutions: Array<{
     id: string;
+    // The problem this solution belongs to. Legacy rooms wrote node-scoped
+    // solutions without this field; readers treat those as the first problem's.
+    problemId?: string;
     description: string;
     type: string;
     relieverOrCreator: "reliever" | "creator";

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { PlusIcon, CircleHelpIcon, StarIcon, CheckIcon } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -55,6 +56,8 @@ export type RelieverOrCreator = "reliever" | "creator";
 
 export interface Solution {
   id: string;
+  /** The problem this solution belongs to. Absent on legacy node-scoped solutions. */
+  problemId?: string;
   description: string;
   type: string;
   relieverOrCreator: RelieverOrCreator;
@@ -101,6 +104,7 @@ interface ActionNodeSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   nodeId: string | null;
+  problemId: string | null;
   problem: Problem | null;
   onSaveProblem: (
     description: string,
@@ -455,6 +459,7 @@ export function ActionNodeSheet({
   open,
   onOpenChange,
   nodeId,
+  problemId,
   problem,
   onSaveProblem,
   solution,
@@ -521,7 +526,7 @@ export function ActionNodeSheet({
     setQuestionConfidence(conf);
     setQuestionHypothesis(hyp);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, nodeId]);
+  }, [open, nodeId, problemId]);
 
   // Hydrate the solution editor on the same terms as the problem editor above.
   useEffect(() => {
@@ -543,7 +548,7 @@ export function ActionNodeSheet({
     setSolutionQuestionSources(sources);
     setSolutionQuestionConfidence(conf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, nodeId]);
+  }, [open, nodeId, problemId]);
 
   function handleAddBankQuestion(questionId: string) {
     if (activeQuestionIds.includes(questionId)) return;
@@ -592,24 +597,32 @@ export function ActionNodeSheet({
 
   function handleSaveProblem() {
     const trimmed = problemDraft.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      toast.error("Add a description before saving the problem.");
+      return;
+    }
     onSaveProblem(
       trimmed,
       problemType,
       problemPainGain,
       collectProblemAnswers(),
     );
+    toast.success(problem?.description?.trim() ? "Problem updated" : "Problem saved");
   }
 
   function handleSaveSolution() {
     const trimmed = solutionDraft.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      toast.error("Add a description before saving the solution.");
+      return;
+    }
     onSaveSolution(
       trimmed,
       solutionType,
       solutionRelieverCreator,
       collectSolutionAnswers(),
     );
+    toast.success(solution?.description?.trim() ? "Solution updated" : "Solution saved");
   }
 
   return (

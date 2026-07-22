@@ -66,6 +66,7 @@ export function useJourneyDataBridge() {
     updateJourneyNode,
     addProblem: lbAddProblem,
     updateProblem: lbUpdateProblem,
+    removeProblem: lbRemoveProblem,
     saveSolution: lbSaveSolution,
     upsertConclusion: lbUpsertConclusion,
   } = useRealtimeJourney();
@@ -226,51 +227,78 @@ export function useJourneyDataBridge() {
     [setNodes, updateJourneyNode]
   );
 
-  // Single-problem upsert: update the node's existing problem if present,
-  // otherwise create it.
+  // Upsert a specific problem: update it when a target id is given, otherwise
+  // create a new one and return its id so the caller can keep the sheet on it.
   const saveProblem = useCallback(
     (
       nodeId: string,
+      problemId: string | null,
       description: string,
       type: string,
       painOrGain: PainOrGain,
       questions: ProblemQuestionAnswer[]
-    ) => {
-      const existing = nodeProblems.get(nodeId)?.[0];
-      if (existing) {
-        lbUpdateProblem(nodeId, existing.id, {
+    ): string => {
+      if (problemId) {
+        lbUpdateProblem(nodeId, problemId, {
           description,
           type,
           painOrGain,
           questions,
         });
-      } else {
-        lbAddProblem(nodeId, {
-          id: crypto.randomUUID(),
-          description,
-          type,
-          painOrGain,
-          questions,
-        });
+        return problemId;
       }
+      const newId = crypto.randomUUID();
+      lbAddProblem(nodeId, {
+        id: newId,
+        description,
+        type,
+        painOrGain,
+        questions,
+      });
+      return newId;
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [lbAddProblem, lbUpdateProblem, lbNodes]
+    [lbAddProblem, lbUpdateProblem]
   );
 
-  // Single-solution upsert, mirroring saveProblem: reuse the existing id when
-  // there is one so edits don't churn it.
+  // Append a blank problem and return its id. Backs the "Add a problem" button:
+  // create-then-open, so the sheet lands on the new problem immediately.
+  const addEmptyProblem = useCallback(
+    (nodeId: string): string => {
+      const newId = crypto.randomUUID();
+      lbAddProblem(nodeId, {
+        id: newId,
+        description: '',
+        type: '',
+        painOrGain: 'pain',
+        questions: [],
+      });
+      return newId;
+    },
+    [lbAddProblem]
+  );
+
+  const removeProblem = useCallback(
+    (nodeId: string, problemId: string) => {
+      lbRemoveProblem(nodeId, problemId);
+    },
+    [lbRemoveProblem]
+  );
+
+  // Per-problem solution upsert: reuse the existing solution's id for this
+  // problem when there is one so edits don't churn it.
   const saveSolution = useCallback(
     (
       nodeId: string,
+      problemId: string,
       description: string,
       type: string,
       relieverOrCreator: RelieverOrCreator,
       questions: SolutionQuestionAnswer[]
     ) => {
-      const existing = nodeSolutions.get(nodeId)?.[0];
+      const existing = solutionForProblem(nodeId, problemId);
       lbSaveSolution(nodeId, {
         id: existing?.id ?? crypto.randomUUID(),
+        problemId,
         description,
         type,
         relieverOrCreator,
@@ -311,6 +339,7 @@ export function useJourneyDataBridge() {
         lb.id,
         (lb.solutions ?? []).map((s) => ({
           id: s.id,
+          problemId: s.problemId,
           description: s.description,
           type: s.type ?? '',
           relieverOrCreator: (s.relieverOrCreator ?? 'reliever') as RelieverOrCreator,
@@ -325,6 +354,23 @@ export function useJourneyDataBridge() {
     }
     return map;
   }, [lbNodes]);
+
+  // Find a problem's solution. Falls back to a legacy node-scoped solution (no
+  // problemId) when the requested problem is the node's first — those were
+  // written before solutions were per-problem.
+  const solutionForProblem = useCallback(
+    (nodeId: string, problemId: string): Solution | null => {
+      const solutions = nodeSolutions.get(nodeId) ?? [];
+      const direct = solutions.find((s) => s.problemId === problemId);
+      if (direct) return direct;
+      const isFirstProblem = nodeProblems.get(nodeId)?.[0]?.id === problemId;
+      if (isFirstProblem) {
+        return solutions.find((s) => s.problemId === undefined) ?? null;
+      }
+      return null;
+    },
+    [nodeSolutions, nodeProblems]
+  );
 
   const nodeConclusions = useMemo(() => {
     const map = new Map<string, NodeConclusion[]>();
@@ -351,9 +397,12 @@ export function useJourneyDataBridge() {
     addChildNode,
     updateNodeData,
     saveProblem,
+    addEmptyProblem,
+    removeProblem,
     saveSolution,
     nodeProblems,
     nodeSolutions,
+    solutionForProblem,
     nodeConclusions,
     upsertConclusion,
   };

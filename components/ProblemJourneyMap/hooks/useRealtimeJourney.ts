@@ -84,14 +84,16 @@ export function useRealtimeJourney() {
     []
   );
 
-  // A node holds at most one solution: saving replaces the list wholesale, so
-  // any extras left over from the old multi-solution editor are dropped.
+  // One solution per problem: upsert into the node's solutions list keyed by
+  // `problemId`. Legacy solutions with no `problemId` are treated as the first
+  // problem's, so the first upsert for that problem adopts the existing entry.
   const saveSolution = useMutation(
     (
       { storage },
       nodeId: string,
       solution: {
         id: string;
+        problemId: string;
         description: string;
         type: string;
         relieverOrCreator: RelieverOrCreator;
@@ -100,7 +102,32 @@ export function useRealtimeJourney() {
     ) => {
       const nodes = (storage.get('journeyNodes') as any).toArray() as Array<any>;
       const node = nodes.find((n: any) => n.get('id') === nodeId);
-      if (node) node.update({ solutions: [solution] });
+      if (!node) return;
+      const current: Array<{ id: string; problemId?: string } & Record<string, unknown>> =
+        node.get('solutions') ?? [];
+      const exists = current.some((s) => s.problemId === solution.problemId);
+      node.update({
+        solutions: exists
+          ? current.map((s) =>
+              s.problemId === solution.problemId ? solution : s
+            )
+          : [...current, solution],
+      });
+    },
+    []
+  );
+
+  const removeProblem = useMutation(
+    ({ storage }, nodeId: string, problemId: string) => {
+      const nodes = (storage.get('journeyNodes') as any).toArray() as Array<any>;
+      const node = nodes.find((n: any) => n.get('id') === nodeId);
+      if (!node) return;
+      const problems: Array<{ id: string }> = node.get('problems') ?? [];
+      const solutions: Array<{ problemId?: string }> = node.get('solutions') ?? [];
+      node.update({
+        problems: problems.filter((p) => p.id !== problemId),
+        solutions: solutions.filter((s) => s.problemId !== problemId),
+      });
     },
     []
   );
@@ -134,6 +161,7 @@ export function useRealtimeJourney() {
     updateJourneyNode,
     addProblem,
     updateProblem,
+    removeProblem,
     saveSolution,
     upsertConclusion,
   };

@@ -167,53 +167,56 @@ async function loadProblemBlocks(orgId: string): Promise<LoadedBlock[]> {
   const blocks: LoadedBlock[] = [];
 
   for (const node of actionNodes) {
-    // A node holds at most one problem, and an empty description means the user never
-    // defined one — the same guard the canvas node itself uses.
-    const problem = node.problems?.[0];
-    if (!node.id || !problem?.id || !problem.description?.trim()) continue;
+    if (!node.id) continue;
 
-    const hypotheses = (problem.questions ?? [])
-      .filter((q) => q.isHypothesis && q.bankQuestionId)
-      .flatMap((q) => {
-        const bankQuestion = BANK_QUESTIONS.find((b) => b.id === q.bankQuestionId);
-        if (!bankQuestion) return [];
+    // A node can hold several problems; each becomes its own block. An empty
+    // description means the user never defined one — the same guard the canvas uses.
+    for (const problem of node.problems ?? []) {
+      if (!problem?.id || !problem.description?.trim()) continue;
 
-        const bankQuestionId = q.bankQuestionId!;
-        const row = savedByKey.get(`${node.id}:${problem.id}:${bankQuestionId}`);
+      const hypotheses = (problem.questions ?? [])
+        .filter((q) => q.isHypothesis && q.bankQuestionId)
+        .flatMap((q) => {
+          const bankQuestion = BANK_QUESTIONS.find((b) => b.id === q.bankQuestionId);
+          if (!bankQuestion) return [];
 
-        return [
-          {
-            id: `${problem.id}:${bankQuestionId}`,
-            bankQuestionId,
-            questionId: row?.id ?? null,
-            prompt: bankQuestion.text,
-            answer: Array.isArray(q.answer) ? q.answer.join(", ") : (q.answer ?? ""),
-            source: q.source ?? "",
-            confidence: q.confidence ?? 0,
-            question: {
-              title: row?.title ?? "",
-              responseType: (row?.response_type ?? "text") as ResponseType,
-              options: toDropdownOptions(row?.options),
+          const bankQuestionId = q.bankQuestionId!;
+          const row = savedByKey.get(`${node.id}:${problem.id}:${bankQuestionId}`);
+
+          return [
+            {
+              id: `${problem.id}:${bankQuestionId}`,
+              bankQuestionId,
+              questionId: row?.id ?? null,
+              prompt: bankQuestion.text,
+              answer: Array.isArray(q.answer) ? q.answer.join(", ") : (q.answer ?? ""),
+              source: q.source ?? "",
+              confidence: q.confidence ?? 0,
+              question: {
+                title: row?.title ?? "",
+                responseType: (row?.response_type ?? "text") as ResponseType,
+                options: toDropdownOptions(row?.options),
+              },
             },
-          },
-        ];
-      })
-      // Numbered last so a question dropped by the bank lookup can't leave a gap.
-      .map((h, i) => ({ ...h, index: i + 1 }));
+          ];
+        })
+        // Numbered last so a question dropped by the bank lookup can't leave a gap.
+        .map((h, i) => ({ ...h, index: i + 1 }));
 
-    if (hypotheses.length === 0) continue;
+      if (hypotheses.length === 0) continue;
 
-    blocks.push({
-      id: problem.id,
-      nodeId: node.id,
-      label: "Problem",
-      description: problem.description,
-      tags: [
-        problem.type ?? "",
-        problem.painOrGain === "gain" ? "Gain" : "Pain",
-      ].filter(Boolean),
-      hypotheses,
-    });
+      blocks.push({
+        id: problem.id,
+        nodeId: node.id,
+        label: "Problem",
+        description: problem.description,
+        tags: [
+          problem.type ?? "",
+          problem.painOrGain === "gain" ? "Gain" : "Pain",
+        ].filter(Boolean),
+        hypotheses,
+      });
+    }
   }
 
   return blocks;
