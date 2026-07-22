@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { CheckCircle2, Info, Calendar, type LucideIcon } from 'lucide-react';
 
 import { useMilestoneSelection } from '../MilestoneSelectionContext';
@@ -35,6 +36,13 @@ const CHEVRON_W = 14;
 
 const INDIGO = '#6935FD';
 const CHEVRON_GRAY = '#E5E7EB';
+const GRAY_TEXT = '#9CA3AF';
+const INDIGO_LABEL = '#C7D2FE'; // indigo-200, used for the "Milestone" caption
+
+// Shared transition for every animated property so resize, color and content
+// reveal all move together. easeInOut cubic-bezier, ~280ms.
+const TRANSITION = { duration: 0.28, ease: [0.4, 0, 0.2, 1] } as const;
+const INSTANT = { duration: 0 } as const;
 
 const FIXED_SUB_STEPS: Pick<SubStep, 'label' | 'icon'>[] = [
   { label: 'Market' },
@@ -64,16 +72,18 @@ function buildPendingSubSteps(): SubStep[] {
 /**
  * The arrow tip / divider drawn on the right edge of a block. `fill` paints the
  * triangle (use to extend a colored block or cover the seam); `stroke` draws the
- * two diagonal border lines.
+ * two diagonal border lines. Both animate so the tip crossfades with its block.
  */
 function Chevron({
   fill,
   stroke,
   width = CHEVRON_W,
+  transition = TRANSITION,
 }: {
   fill: string;
   stroke?: string;
   width?: number;
+  transition?: typeof TRANSITION | typeof INSTANT;
 }) {
   return (
     <svg
@@ -82,16 +92,19 @@ function Chevron({
       viewBox={`0 0 ${width} 100`}
       preserveAspectRatio="none"
     >
-      <path d={`M0 0 L${width} 50 L0 100 Z`} fill={fill} />
-      {stroke && (
-        <path
-          d={`M0 0 L${width} 50 L0 100`}
-          fill="none"
-          stroke={stroke}
-          strokeWidth={1}
-          vectorEffect="non-scaling-stroke"
-        />
-      )}
+      <motion.path
+        d={`M0 0 L${width} 50 L0 100 Z`}
+        animate={{ fill }}
+        transition={transition}
+      />
+      <motion.path
+        d={`M0 0 L${width} 50 L0 100`}
+        fill="none"
+        animate={{ stroke: stroke ?? 'rgba(0,0,0,0)' }}
+        strokeWidth={1}
+        vectorEffect="non-scaling-stroke"
+        transition={transition}
+      />
     </svg>
   );
 }
@@ -133,7 +146,7 @@ function SubStepCell({ subStep, showDivider }: { subStep: SubStep; showDivider: 
         <ProgressSegments filled={subStep.filled} />
       )}
 
-      {showDivider && <Chevron fill="none" stroke={CHEVRON_GRAY} />}
+      {showDivider && <Chevron fill="rgba(0,0,0,0)" stroke={CHEVRON_GRAY} />}
     </div>
   );
 }
@@ -149,62 +162,90 @@ export function MilestoneHeader({
     useMilestoneSelection();
   const total = milestones.length;
 
+  const reduceMotion = useReducedMotion();
+  const transition = reduceMotion ? INSTANT : TRANSITION;
+
   return (
     <div className="flex w-full items-stretch border-b border-[#E4E5ED] bg-white">
       {milestones.map((milestone, index) => {
-        const isExpanded = index === expandedIndex;
-        // Left blocks stack above right ones so their chevrons overlay the next block.
-        const zIndex = total - index;
+          const isExpanded = index === expandedIndex;
+          // Left blocks stack above right ones so their chevrons overlay the next block.
+          const zIndex = total - index;
 
-        if (!isExpanded) {
           return (
-            <button
-              type="button"
+            <motion.div
               key={milestone.label}
               onClick={() => setSelectedMilestone(index)}
-              className="relative flex w-[130px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 bg-white py-3 pl-6 pr-4 transition-colors hover:bg-gray-50"
-              style={{ zIndex }}
+              initial={false}
+              transition={transition}
+              // Animate flexGrow (a real layout property) rather than framer's
+              // transform-based `layout`, so the box you see is always the real
+              // box — no transform to release at the end of the animation, which
+              // is what caused the settle-jump. flexBasis pins the collapsed
+              // width; grow=1 lets the expanded one absorb the free space.
+              animate={{
+                flexGrow: isExpanded ? 1 : 0,
+                borderColor: isExpanded ? INDIGO : 'rgba(0,0,0,0)',
+              }}
+              style={{ zIndex, flexBasis: 130, flexShrink: 0, minWidth: 0 }}
+              className="group relative flex cursor-pointer items-stretch border-y border-l"
             >
-              <span className="text-xs font-medium text-gray-400">Milestone</span>
-              <span className="text-lg font-semibold leading-none text-gray-400">
-                {index + 1}
-              </span>
-              <Chevron fill="white" stroke={CHEVRON_GRAY} />
-            </button>
-          );
-        }
-
-        return (
-          <div
-            key={milestone.label}
-            className="relative flex flex-1 items-stretch border-y border-l border-[#6935FD]"
-            style={{ zIndex }}
-          >
-            {/* Active milestone label — arrow-shaped purple block */}
-            <div className="relative flex flex-col items-center justify-center bg-indigo-600 px-8 py-3">
-              <span className="text-xs font-medium text-indigo-200">Milestone</span>
-              <span className="text-lg font-semibold leading-none text-white">
-                {index + 1}
-              </span>
-              <Chevron fill={INDIGO} />
-            </div>
-
-            {/* Fixed sub-steps */}
-            <div className="flex flex-1 items-center">
-              {milestone.subSteps.map((subStep, i) => (
-                <SubStepCell
-                  key={subStep.label}
-                  subStep={subStep}
-                  showDivider={i < milestone.subSteps.length - 1}
+              {/* Milestone label — arrow-shaped block. Purple when expanded. */}
+              <motion.div
+                transition={transition}
+                animate={{ backgroundColor: isExpanded ? INDIGO : '#ffffff' }}
+                className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-3 ${
+                  isExpanded ? 'px-8' : 'px-4 group-hover:bg-gray-50'
+                }`}
+              >
+                <motion.span
+                  transition={transition}
+                  animate={{ color: isExpanded ? INDIGO_LABEL : GRAY_TEXT }}
+                  className="text-xs font-medium"
+                >
+                  Milestone
+                </motion.span>
+                <motion.span
+                  transition={transition}
+                  animate={{ color: isExpanded ? '#ffffff' : GRAY_TEXT }}
+                  className="text-lg font-semibold leading-none"
+                >
+                  {index + 1}
+                </motion.span>
+                <Chevron
+                  fill={isExpanded ? INDIGO : '#ffffff'}
+                  stroke={isExpanded ? undefined : CHEVRON_GRAY}
+                  transition={transition}
                 />
-              ))}
-            </div>
+              </motion.div>
 
-            {/* Purple arrow tip terminating the expanded block */}
-            <Chevron fill="white" stroke={INDIGO} />
-          </div>
-        );
-      })}
+              {/* Fixed sub-steps — fade + slide in only while expanded. */}
+              <AnimatePresence initial={false}>
+                {isExpanded && (
+                  <motion.div
+                    key="substeps"
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -8 }}
+                    transition={transition}
+                    className="flex items-center"
+                  >
+                    {milestone.subSteps.map((subStep, i) => (
+                      <SubStepCell
+                        key={subStep.label}
+                        subStep={subStep}
+                        showDivider={i < milestone.subSteps.length - 1}
+                      />
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Purple arrow tip terminating the expanded block. */}
+              {isExpanded && <Chevron fill="#ffffff" stroke={INDIGO} transition={transition} />}
+            </motion.div>
+          );
+        })}
 
       <div className="ml-auto flex shrink-0 flex-col items-end justify-center px-8 py-3">
         <div className="flex items-center gap-2 text-sm">
