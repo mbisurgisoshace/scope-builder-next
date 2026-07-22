@@ -278,8 +278,8 @@ export default function ParticipantsKanbanView({
           onSaved={() => {
             setInterviewParticipant(null);
             refetch();
-            // The milestone header's payer count is server-rendered, so without this
-            // it would still show the old number next to the freshly moved card.
+            // The milestone header's payer count is server-rendered, so re-sync it here
+            // rather than leaving a stale number behind after an interview session.
             router.refresh();
           }}
         />

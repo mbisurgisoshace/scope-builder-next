@@ -11,7 +11,6 @@ import {
   getInterviewAnswersData,
   upsertProblemInterviewAnswer,
 } from "@/services/interviewPrep";
-import { markParticipantAsDocumented } from "@/services/participants";
 
 import { ProblemAnswerColumn } from "./ProblemAnswerColumn";
 import type { AnswerableProblem } from "./types";
@@ -26,12 +25,10 @@ function InterviewHeader({
   participant,
   onBack,
   onSave,
-  saving,
 }: {
   participant: Participant;
   onBack: () => void;
   onSave: () => void;
-  saving: boolean;
 }) {
   const roles =
     participant.role
@@ -82,10 +79,9 @@ function InterviewHeader({
 
       <Button
         onClick={onSave}
-        disabled={saving}
         className="rounded-lg bg-[#111827] px-8 text-white hover:bg-[#374151]"
       >
-        {saving ? "Saving..." : "Save"}
+        Save
       </Button>
     </div>
   );
@@ -97,7 +93,6 @@ export function InterviewAnswersView({
   onSaved,
 }: InterviewAnswersViewProps) {
   const [problems, setProblems] = useState<AnswerableProblem[] | null>(null);
-  const [saving, setSaving] = useState(false);
 
   // Mirrors `problems` so a commit always persists the latest value rather than
   // whatever the handler closed over before the last keystroke.
@@ -153,15 +148,12 @@ export function InterviewAnswersView({
     [participant.id],
   );
 
-  const handleSave = useCallback(async () => {
-    setSaving(true);
-    try {
-      await markParticipantAsDocumented(participant.id);
-      onSaved();
-    } finally {
-      setSaving(false);
-    }
-  }, [participant.id, onSaved]);
+  // Answers already persist on blur, and clicking Save blurs the focused input first, so
+  // there's nothing left to write here. Saving deliberately leaves the participant in its
+  // current stage — how an interview gets moved to "documented" is still being designed.
+  const handleSave = useCallback(() => {
+    onSaved();
+  }, [onSaved]);
 
   return (
     // Break out of the page's px-8/py-4 gutter so the white surface runs edge to edge,
@@ -172,7 +164,6 @@ export function InterviewAnswersView({
           participant={participant}
           onBack={onBack}
           onSave={handleSave}
-          saving={saving}
         />
       </div>
 
