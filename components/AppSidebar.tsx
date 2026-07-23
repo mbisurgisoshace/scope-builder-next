@@ -134,6 +134,19 @@ const data = {
     //   ],
     // },
     {
+      title: "Examples",
+      items: [
+        {
+          title: "Problem Journey",
+          url: "/examples/problem-journey",
+        },
+        {
+          title: "Interviews",
+          url: "/examples/interviews",
+        },
+      ],
+    },
+    {
       title: "Resources",
       items: [
         {
