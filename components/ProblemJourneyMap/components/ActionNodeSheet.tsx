@@ -465,6 +465,10 @@ export function ActionNodeSheet({
   solution,
   onSaveSolution,
 }: ActionNodeSheetProps) {
+  const [activeTab, setActiveTab] = useState<"problem" | "solution">(
+    "problem",
+  );
+
   // ── Problem editor state (single problem, inline) ──
   const [problemDraft, setProblemDraft] = useState("");
   const [problemType, setProblemType] = useState("");
@@ -629,9 +633,13 @@ export function ActionNodeSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-[820px] sm:max-w-[820px] flex flex-col p-2 gap-0 [&>button:last-of-type]:hidden overflow-y-auto"
+        className="w-[820px] sm:max-w-[820px] flex flex-col p-2 gap-0 [&>button:last-of-type]:hidden"
       >
-        <Tabs defaultValue="problem" className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as "problem" | "solution")}
+          className="w-full flex flex-col flex-1 min-h-0"
+        >
           <TabsList className="w-80 bg-white border-1 rounded-lg">
             {TABS.map(({ value, label }) => (
               <TabsTrigger
@@ -646,6 +654,7 @@ export function ActionNodeSheet({
 
           <Separator />
 
+          <div className="flex-1 min-h-0 overflow-y-auto">
           {/* ── Problem tab ── */}
           <TabsContent value="problem" className="p-2">
             <div className="p-1">
@@ -759,13 +768,6 @@ export function ActionNodeSheet({
                 onAdd={handleAddBankQuestion}
                 title="Bank of market questions"
               />
-
-              <Button
-                onClick={handleSaveProblem}
-                className="mt-4 w-full text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors rounded-full"
-              >
-                ✓ Save problem
-              </Button>
             </div>
           </TabsContent>
 
@@ -887,15 +889,27 @@ export function ActionNodeSheet({
                 onAdd={handleAddSolutionBankQuestion}
                 title="Bank of market questions"
               />
+            </div>
+          </TabsContent>
+          </div>
 
+          <div className="shrink-0 border-t p-2">
+            {activeTab === "problem" ? (
+              <Button
+                onClick={handleSaveProblem}
+                className="w-full text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors rounded-full"
+              >
+                ✓ Save problem
+              </Button>
+            ) : (
               <Button
                 onClick={handleSaveSolution}
-                className="mt-4 w-full text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors rounded-full"
+                className="w-full text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors rounded-full"
               >
                 ✓ Save solution
               </Button>
-            </div>
-          </TabsContent>
+            )}
+          </div>
         </Tabs>
       </SheetContent>
     </Sheet>
