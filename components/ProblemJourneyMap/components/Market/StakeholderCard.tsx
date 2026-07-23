@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Plus, User, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { ChevronDown, Plus, User, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import {
@@ -39,6 +39,23 @@ export function StakeholderCard({
     })),
   );
   const [, startTransition] = useTransition();
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 1);
+  }, []);
+
+  useEffect(() => {
+    updateScrollState();
+  }, [rows.length, updateScrollState]);
+
+  const scrollDown = () => {
+    scrollRef.current?.scrollBy({ top: 80, behavior: "smooth" });
+  };
 
   const setRowValue = (localKey: string, value: string) => {
     setRows((prev) =>
@@ -137,29 +154,47 @@ export function StakeholderCard({
       </button>
 
       {/* Rows scroll when the list grows too long. */}
-      <div className="flex max-h-[168px] flex-col gap-2 overflow-y-auto">
-        {rows.map((row) => (
-          <div key={row.localKey} className="flex items-center gap-1">
-            <Input
-              value={row.value}
-              autoFocus={row.id === null && row.value === ""}
-              onChange={(e) => setRowValue(row.localKey, e.target.value)}
-              onBlur={() => commitRow(row.localKey)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") e.currentTarget.blur();
-              }}
-              className="h-8 border-[#E3E5EC] text-sm focus-visible:border-[#6A35FF] focus-visible:ring-0"
-            />
-            <button
-              type="button"
-              onClick={() => removeRow(row.localKey)}
-              className="flex size-6 shrink-0 items-center justify-center rounded text-[#9AA1B2] hover:text-[#6A35FF]"
-              aria-label="Remove row"
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-        ))}
+      <div className="relative">
+        <div
+          ref={scrollRef}
+          onScroll={updateScrollState}
+          className="flex max-h-[168px] flex-col gap-2 overflow-y-auto"
+        >
+          {rows.map((row) => (
+            <div key={row.localKey} className="flex items-center gap-1">
+              <Input
+                value={row.value}
+                autoFocus={row.id === null && row.value === ""}
+                onChange={(e) => setRowValue(row.localKey, e.target.value)}
+                onBlur={() => commitRow(row.localKey)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                }}
+                className="h-8 border-[#E3E5EC] text-sm focus-visible:border-[#6A35FF] focus-visible:ring-0"
+              />
+              <button
+                type="button"
+                onClick={() => removeRow(row.localKey)}
+                className="flex size-6 shrink-0 items-center justify-center rounded text-[#9AA1B2] hover:text-[#6A35FF]"
+                aria-label="Remove row"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Fades in when the list overflows and there's more below the fold. */}
+        {canScrollDown && (
+          <button
+            type="button"
+            onClick={scrollDown}
+            aria-label="Scroll to see more"
+            className="absolute inset-x-0 bottom-0 flex h-8 items-end justify-center bg-gradient-to-t from-white to-transparent pb-0.5"
+          >
+            <ChevronDown className="size-4 text-[#6A35FF]" />
+          </button>
+        )}
       </div>
     </div>
   );
