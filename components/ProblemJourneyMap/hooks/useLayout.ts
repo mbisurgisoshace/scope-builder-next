@@ -6,7 +6,7 @@
 // dimensions so nodes with dynamic content (problems / solutions) never overlap, and wider nodes
 // at any level naturally push their children further right.
 
-import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
+import { useEffect, type Dispatch, type SetStateAction } from "react";
 import {
   useReactFlow,
   useStore,
@@ -21,6 +21,7 @@ const HORIZONTAL_GAP = 200; // px between the right edge of a node and its child
 const VERTICAL_GAP = 40; // px gap between siblings (top ↔ bottom)
 const TREE_GAP = 80; // px gap between separate trigger chains
 const ANIMATION_DURATION = 300;
+const INITIAL_ZOOM = 0.75; // fixed comfortable zoom instead of fitting the whole tree
 
 function nodeHeight(n: Node): number {
   return n.measured?.height ?? 120;
@@ -184,7 +185,6 @@ const totalWidthSelector = (state: ReactFlowState) =>
 // so layout positions are written to the controlled state (not just the internal RF store,
 // which gets overwritten on every re-render in controlled mode).
 export function useLayout(setNodesState?: Dispatch<SetStateAction<Node[]>>) {
-  const initial = useRef(true);
   const nodeCount = useStore(nodeCountSelector);
   const edgeCount = useStore(edgeCountSelector);
   const totalHeight = useStore(totalHeightSelector);
@@ -194,7 +194,7 @@ export function useLayout(setNodesState?: Dispatch<SetStateAction<Node[]>>) {
     getNode,
     setNodes: setNodesInternal,
     getEdges,
-    fitView,
+    setCenter,
   } = useReactFlow();
   const setNodes = (setNodesState ??
     setNodesInternal) as typeof setNodesInternal;
@@ -240,10 +240,12 @@ export function useLayout(setNodesState?: Dispatch<SetStateAction<Node[]>>) {
         );
         t.stop();
 
-        if (!initial.current) {
-          fitView({ duration: 200, padding: 0.3 });
-        }
-        initial.current = false;
+        const rootNode = targetNodes[0];
+        setCenter(
+          rootNode.position.x + nodeWidth(rootNode) / 2,
+          rootNode.position.y + nodeHeight(rootNode) / 2,
+          { zoom: INITIAL_ZOOM, duration: 200 },
+        );
       }
     });
 

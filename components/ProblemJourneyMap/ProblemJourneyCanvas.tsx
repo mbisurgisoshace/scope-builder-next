@@ -108,7 +108,6 @@ function CanvasInner({
                   elementsSelectable={false}
                   deleteKeyCode={null}
                   zoomOnDoubleClick={false}
-                  fitView
                   minZoom={0.2}
                   maxZoom={2}
                   proOptions={{ hideAttribution: true }}
