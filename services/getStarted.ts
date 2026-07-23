@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma";
 
 export type GetStartedCardWithData = Prisma.GetStartedCardGetPayload<{
-  include: { items: true; reviews: true };
+  include: { items: { include: { reviews: true } }; reviews: true };
 }>;
 
 export async function getGetStartedCards(milestone: number) {
@@ -24,7 +24,10 @@ export async function getGetStartedCards(milestone: number) {
     where: { milestone },
     orderBy: { order: "asc" },
     include: {
-      items: { orderBy: { order: "asc" } },
+      items: {
+        orderBy: { order: "asc" },
+        include: { reviews: { where: { org_id: orgId } } },
+      },
       reviews: { where: { org_id: orgId } },
     },
   });

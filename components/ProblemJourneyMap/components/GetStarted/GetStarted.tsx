@@ -32,7 +32,11 @@ export function GetStarted() {
       for (const card of result) {
         for (const review of card.reviews) {
           if (review.card_id != null) cardMap[review.card_id] = review.reviewed;
-          if (review.item_id != null) itemMap[review.item_id] = review.reviewed;
+        }
+        for (const item of card.items) {
+          for (const review of item.reviews) {
+            itemMap[review.item_id!] = review.reviewed;
+          }
         }
       }
 
