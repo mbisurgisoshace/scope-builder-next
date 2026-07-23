@@ -153,3 +153,12 @@
     margin-top: 0 !important;
   }
 }
+
+/* Scrollable without a visible scrollbar — for strips where the bar would sit
+   across a border and read as a rendering artifact. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

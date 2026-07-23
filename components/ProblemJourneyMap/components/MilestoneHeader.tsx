@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { CheckCircle2, Info, Calendar, type LucideIcon } from 'lucide-react';
 
@@ -115,7 +115,7 @@ function ProgressSegments({ filled }: { filled: number }) {
       {Array.from({ length: SEGMENTS }).map((_, i) => (
         <span
           key={i}
-          className={`h-1.5 w-5 rounded-full ${
+          className={`h-1.5 w-3 rounded-full lg:w-4 xl:w-5 ${
             i < filled ? 'bg-indigo-600' : 'bg-gray-200'
           }`}
         />
@@ -124,12 +124,18 @@ function ProgressSegments({ filled }: { filled: number }) {
   );
 }
 
-function SubStepCell({ subStep, showDivider }: { subStep: SubStep; showDivider: boolean }) {
+function SubStepCell({
+  subStep,
+  showDivider,
+}: {
+  subStep: SubStep;
+  showDivider: boolean;
+}) {
   const Icon = subStep.icon;
   return (
-    <div className="relative flex flex-col items-center justify-center gap-1.5 px-8 py-3">
+    <div className="relative flex flex-col items-center justify-center gap-1.5 px-3 py-2 lg:px-5 lg:py-3 xl:px-8">
       <div className="flex items-center gap-1.5">
-        <span className="whitespace-nowrap text-sm font-medium text-gray-700">
+        <span className="whitespace-nowrap text-xs font-medium text-gray-700 xl:text-sm">
           {subStep.label}
         </span>
         {subStep.status !== 'done' && Icon && (
@@ -165,94 +171,159 @@ export function MilestoneHeader({
   const reduceMotion = useReducedMotion();
   const transition = reduceMotion ? INSTANT : TRANSITION;
 
+  // A collapsing block keeps its content-sized width until its sub-steps have
+  // finished exiting — otherwise it snaps narrow immediately and the outgoing
+  // sub-steps overlap the neighbouring blocks for the length of the exit.
+  const [exitingIndex, setExitingIndex] = useState<number | null>(null);
+
+  const blockRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const prevIndexRef = useRef(expandedIndex);
+
+  useEffect(() => {
+    const prev = prevIndexRef.current;
+    prevIndexRef.current = expandedIndex;
+    if (prev !== expandedIndex) setExitingIndex(prev);
+  }, [expandedIndex]);
+
+  // Bring the selected milestone into view when the strip is scrolled. Wait for
+  // the grow animation to settle, otherwise this measures the pre-grow box and
+  // under-scrolls.
+  useEffect(() => {
+    const scroll = () =>
+      blockRefs.current[expandedIndex]?.scrollIntoView({
+        inline: 'nearest',
+        block: 'nearest',
+        behavior: reduceMotion ? 'auto' : 'smooth',
+      });
+
+    if (reduceMotion) {
+      scroll();
+      return;
+    }
+    const id = window.setTimeout(scroll, TRANSITION.duration * 1000);
+    return () => window.clearTimeout(id);
+  }, [expandedIndex, reduceMotion]);
+
   return (
     <div className="flex w-full items-stretch border-b border-[#E4E5ED] bg-white">
-      {milestones.map((milestone, index) => {
-          const isExpanded = index === expandedIndex;
-          // Left blocks stack above right ones so their chevrons overlay the next block.
-          const zIndex = total - index;
+      <div className="no-scrollbar min-w-0 flex-1 overflow-x-auto">
+        <div className="flex w-full min-w-max items-stretch [--ms-basis:90px] lg:[--ms-basis:110px] xl:[--ms-basis:130px]">
+          {milestones.map((milestone, index) => {
+            const isExpanded = index === expandedIndex;
+            // Content-sized while expanded (and while collapsing) so the sub-steps
+            // widen the block instead of overflowing onto the next one.
+            const sizeToContent = isExpanded || index === exitingIndex;
+            // Left blocks stack above right ones so their chevrons overlay the next block.
+            const zIndex = total - index;
 
-          return (
-            <motion.div
-              key={milestone.label}
-              onClick={() => setSelectedMilestone(index)}
-              initial={false}
-              transition={transition}
-              // Animate flexGrow (a real layout property) rather than framer's
-              // transform-based `layout`, so the box you see is always the real
-              // box — no transform to release at the end of the animation, which
-              // is what caused the settle-jump. flexBasis pins the collapsed
-              // width; grow=1 lets the expanded one absorb the free space.
-              animate={{
-                flexGrow: isExpanded ? 1 : 0,
-                borderColor: isExpanded ? INDIGO : 'rgba(0,0,0,0)',
-              }}
-              style={{ zIndex, flexBasis: 130, flexShrink: 0, minWidth: 0 }}
-              className="group relative flex cursor-pointer items-stretch border-y border-l"
-            >
-              {/* Milestone label — arrow-shaped block. Purple when expanded. */}
+            return (
               <motion.div
+                key={milestone.label}
+                ref={(el) => {
+                  blockRefs.current[index] = el;
+                }}
+                onClick={() => setSelectedMilestone(index)}
+                initial={false}
                 transition={transition}
-                animate={{ backgroundColor: isExpanded ? INDIGO : '#ffffff' }}
-                className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-3 ${
-                  isExpanded ? 'px-8' : 'px-4 group-hover:bg-gray-50'
-                }`}
+                // Animate flexGrow (a real layout property) rather than framer's
+                // transform-based `layout`, so the box you see is always the real
+                // box — no transform to release at the end of the animation, which
+                // is what caused the settle-jump. flexBasis pins the collapsed
+                // width; grow=1 lets the expanded one absorb the free space.
+                animate={{
+                  flexGrow: isExpanded ? 1 : 0,
+                  borderColor: isExpanded ? INDIGO : 'rgba(0,0,0,0)',
+                }}
+                style={{
+                  zIndex,
+                  flexBasis: 'var(--ms-basis)',
+                  flexShrink: 0,
+                  minWidth: sizeToContent ? 'max-content' : 0,
+                }}
+                className="group relative flex cursor-pointer items-stretch border-y border-l"
               >
-                <motion.span
+                {/* Milestone label — arrow-shaped block. Purple when expanded. */}
+                <motion.div
                   transition={transition}
-                  animate={{ color: isExpanded ? INDIGO_LABEL : GRAY_TEXT }}
-                  className="text-xs font-medium"
+                  animate={{ backgroundColor: isExpanded ? INDIGO : '#ffffff' }}
+                  className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 lg:py-3 ${
+                    isExpanded
+                      ? 'px-3 lg:px-5 xl:px-8'
+                      : 'px-2 group-hover:bg-gray-50 lg:px-3 xl:px-4'
+                  }`}
                 >
-                  Milestone
-                </motion.span>
-                <motion.span
-                  transition={transition}
-                  animate={{ color: isExpanded ? '#ffffff' : GRAY_TEXT }}
-                  className="text-lg font-semibold leading-none"
-                >
-                  {index + 1}
-                </motion.span>
-                <Chevron
-                  fill={isExpanded ? INDIGO : '#ffffff'}
-                  stroke={isExpanded ? undefined : CHEVRON_GRAY}
-                  transition={transition}
-                />
-              </motion.div>
-
-              {/* Fixed sub-steps — fade + slide in only while expanded. */}
-              <AnimatePresence initial={false}>
-                {isExpanded && (
-                  <motion.div
-                    key="substeps"
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -8 }}
+                  <motion.span
                     transition={transition}
-                    className="flex items-center"
+                    animate={{ color: isExpanded ? INDIGO_LABEL : GRAY_TEXT }}
+                    className="text-[10px] font-medium xl:text-xs"
                   >
-                    {milestone.subSteps.map((subStep, i) => (
-                      <SubStepCell
-                        key={subStep.label}
-                        subStep={subStep}
-                        showDivider={i < milestone.subSteps.length - 1}
-                      />
-                    ))}
-                  </motion.div>
+                    Milestone
+                  </motion.span>
+                  <motion.span
+                    transition={transition}
+                    animate={{ color: isExpanded ? '#ffffff' : GRAY_TEXT }}
+                    className="text-base font-semibold leading-none lg:text-lg"
+                  >
+                    {index + 1}
+                  </motion.span>
+                  <Chevron
+                    fill={isExpanded ? INDIGO : '#ffffff'}
+                    stroke={isExpanded ? undefined : CHEVRON_GRAY}
+                    transition={transition}
+                  />
+                </motion.div>
+
+                {/* Fixed sub-steps — fade + slide in only while expanded. */}
+                <AnimatePresence
+                  initial={false}
+                  onExitComplete={() =>
+                    setExitingIndex((cur) => (cur === index ? null : cur))
+                  }
+                >
+                  {isExpanded && (
+                    <motion.div
+                      key="substeps"
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -8 }}
+                      transition={transition}
+                      className="flex items-center"
+                    >
+                      {milestone.subSteps.map((subStep, i) => (
+                        <SubStepCell
+                          key={subStep.label}
+                          subStep={subStep}
+                          showDivider={i < milestone.subSteps.length - 1}
+                        />
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Purple arrow tip terminating the expanded block. */}
+                {isExpanded && (
+                  <Chevron
+                    fill="#ffffff"
+                    stroke={INDIGO}
+                    transition={transition}
+                  />
                 )}
-              </AnimatePresence>
-
-              {/* Purple arrow tip terminating the expanded block. */}
-              {isExpanded && <Chevron fill="#ffffff" stroke={INDIGO} transition={transition} />}
-            </motion.div>
-          );
-        })}
-
-      <div className="ml-auto flex shrink-0 flex-col items-end justify-center px-8 py-3">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-gray-500">Payer interviews:</span>
-          <span className="font-semibold text-[#111827]">{payerInterviews}</span>
+              </motion.div>
+            );
+          })}
         </div>
-        <div className="flex items-center gap-2 text-sm">
+      </div>
+
+      {/* Pinned outside the scroll strip so the counts stay visible when the
+          milestones overflow. */}
+      <div className="flex shrink-0 flex-col items-end justify-center border-l border-[#E4E5ED] bg-white px-3 py-2 lg:px-5 lg:py-3 xl:px-8">
+        <div className="flex items-center gap-2 whitespace-nowrap text-xs xl:text-sm">
+          <span className="text-gray-500">Payer interviews:</span>
+          <span className="font-semibold text-[#111827]">
+            {payerInterviews}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 whitespace-nowrap text-xs xl:text-sm">
           <span className="text-gray-400">Current number:</span>
           <span className="font-medium text-gray-400">{currentNumber}</span>
         </div>
