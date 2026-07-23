@@ -48,10 +48,10 @@ export function ProblemCard({
               ))}
             </ul>
           )}
-          <p className="text-sm font-bold text-[#1F2430]">
+          {/* <p className="text-sm font-bold text-[#1F2430]">
             {answeredCount}/{totalCount}{" "}
             <span className="font-normal text-[#697288]">Questions</span>
-          </p>
+          </p> */}
         </aside>
 
         {/* Right area — hypothesis / interview-question rows. */}
