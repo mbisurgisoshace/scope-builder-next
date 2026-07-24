@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { CheckCircle2, Info, Calendar, type LucideIcon } from 'lucide-react';
+import React, { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { CheckCircle2, Info, Calendar, type LucideIcon } from "lucide-react";
 
-import { useMilestoneSelection } from '../MilestoneSelectionContext';
+import { useMilestoneSelection } from "../MilestoneSelectionContext";
 
-type SubStepStatus = 'done' | 'active' | 'pending';
+type SubStepStatus = "done" | "active" | "pending";
 
 interface SubStep {
   label: string;
@@ -34,40 +34,100 @@ const SEGMENTS = 3;
 // Width of the chevron arrow that terminates / separates each block.
 const CHEVRON_W = 14;
 
-const INDIGO = '#6935FD';
-const CHEVRON_GRAY = '#E5E7EB';
-const GRAY_TEXT = '#9CA3AF';
-const INDIGO_LABEL = '#C7D2FE'; // indigo-200, used for the "Milestone" caption
+const INDIGO = "#6935FD";
+const CHEVRON_GRAY = "#E5E7EB";
+const GRAY_TEXT = "#9CA3AF";
+const INDIGO_LABEL = "#C7D2FE"; // indigo-200, used for the "Milestone" caption
 
 // Shared transition for every animated property so resize, color and content
 // reveal all move together. easeInOut cubic-bezier, ~280ms.
 const TRANSITION = { duration: 0.28, ease: [0.4, 0, 0.2, 1] } as const;
 const INSTANT = { duration: 0 } as const;
 
-const FIXED_SUB_STEPS: Pick<SubStep, 'label' | 'icon'>[] = [
-  { label: 'Market' },
-  { label: 'Journey map', icon: Info },
-  { label: 'Check-In', icon: Calendar },
+const FIXED_SUB_STEPS: Pick<SubStep, "label" | "icon">[] = [
+  { label: "1.1 Visualize User Journey" },
+  { label: "1.2 Stakeholders", icon: Info },
+  { label: "1.3 Segments & Beachhead", icon: Calendar },
+  {
+    label: "1.4 Instructor Check-in / Review Journey & Market",
+    icon: Calendar,
+  },
+  { label: "1.5 Interviewee List", icon: Calendar },
+  { label: "2.1 Identify Jobs/Pains/Gains", icon: Calendar },
+  { label: "2.2 Expand on Pains/Gains", icon: Calendar },
+  { label: "2.3 Source & Confidence Score", icon: Calendar },
+  { label: "2.4 Instructor Check-in / Review Journey Details", icon: Calendar },
+  { label: "2.5 Schedule Interviews", icon: Calendar },
+  { label: "3.1 Hypotheses", icon: Calendar },
+  { label: "3.2 Interview Questions", icon: Calendar },
+  {
+    label: "3.3 Instructor Check-in / Review Hypotheses & Questions",
+    icon: Calendar,
+  },
+  { label: "3.4 Practice Interview", icon: Calendar },
+  { label: "4.1 Conduct & Document 5", icon: Calendar },
+  {
+    label: "4.2 Instructor Check-in / Review Interview Progress",
+    icon: Calendar,
+  },
+  { label: "4.3 Conduct & Document 5 more", icon: Calendar },
+  { label: "5.1 Conduct & Document 5+ more", icon: Calendar },
+  {
+    label: "5.2 Instructor Check-in / Review Interview Progress",
+    icon: Calendar,
+  },
+  { label: "5.3 Practice Presentation", icon: Calendar },
+  { label: "5.4 Final Presentation", icon: Calendar },
 ];
 
 const DEFAULT_MILESTONES: Milestone[] = [
   {
-    label: 'Milestone 1',
+    label: "User, their Journey & Market",
     subSteps: [
-      { ...FIXED_SUB_STEPS[0], status: 'done', filled: 3 },
-      { ...FIXED_SUB_STEPS[1], status: 'active', filled: 1 },
-      { ...FIXED_SUB_STEPS[2], status: 'active', filled: 1 },
+      { ...FIXED_SUB_STEPS[0], status: "done", filled: 3 },
+      { ...FIXED_SUB_STEPS[1], status: "active", filled: 1 },
+      { ...FIXED_SUB_STEPS[2], status: "active", filled: 1 },
+      { ...FIXED_SUB_STEPS[3], status: "active", filled: 1 },
+      { ...FIXED_SUB_STEPS[4], status: "active", filled: 1 },
     ],
   },
-  { label: 'Milestone 2', subSteps: buildPendingSubSteps() },
-  { label: 'Milestone 3', subSteps: buildPendingSubSteps() },
-  { label: 'Milestone 4', subSteps: buildPendingSubSteps() },
-  { label: 'Milestone 5', subSteps: buildPendingSubSteps() },
+  {
+    label: "Deep Dive into Journey",
+    subSteps: [
+      { ...FIXED_SUB_STEPS[5], status: "active", filled: 0 },
+      { ...FIXED_SUB_STEPS[6], status: "active", filled: 0 },
+      { ...FIXED_SUB_STEPS[7], status: "active", filled: 0 },
+      { ...FIXED_SUB_STEPS[8], status: "active", filled: 0 },
+      { ...FIXED_SUB_STEPS[9], status: "active", filled: 0 },
+    ],
+  },
+  {
+    label: "Interview Preparation",
+    subSteps: [
+      { ...FIXED_SUB_STEPS[10], status: "active", filled: 0 },
+      { ...FIXED_SUB_STEPS[11], status: "active", filled: 0 },
+      { ...FIXED_SUB_STEPS[12], status: "active", filled: 0 },
+      { ...FIXED_SUB_STEPS[13], status: "active", filled: 0 },
+    ],
+  },
+  {
+    label: "Conduct Interviews",
+    subSteps: [
+      { ...FIXED_SUB_STEPS[14], status: "active", filled: 0 },
+      { ...FIXED_SUB_STEPS[15], status: "active", filled: 0 },
+      { ...FIXED_SUB_STEPS[16], status: "active", filled: 0 },
+    ],
+  },
+  {
+    label: "Analyze & Present Findings",
+    subSteps: [
+      { ...FIXED_SUB_STEPS[17], status: "active", filled: 0 },
+      { ...FIXED_SUB_STEPS[18], status: "active", filled: 0 },
+      { ...FIXED_SUB_STEPS[19], status: "active", filled: 0 },
+      { ...FIXED_SUB_STEPS[20], status: "active", filled: 0 },
+    ],
+  },
 ];
-
-function buildPendingSubSteps(): SubStep[] {
-  return FIXED_SUB_STEPS.map((s) => ({ ...s, status: 'pending', filled: 0 }));
-}
 
 /**
  * The arrow tip / divider drawn on the right edge of a block. `fill` paints the
@@ -100,7 +160,7 @@ function Chevron({
       <motion.path
         d={`M0 0 L${width} 50 L0 100`}
         fill="none"
-        animate={{ stroke: stroke ?? 'rgba(0,0,0,0)' }}
+        animate={{ stroke: stroke ?? "rgba(0,0,0,0)" }}
         strokeWidth={1}
         vectorEffect="non-scaling-stroke"
         transition={transition}
@@ -116,7 +176,7 @@ function ProgressSegments({ filled }: { filled: number }) {
         <span
           key={i}
           className={`h-1.5 w-3 rounded-full lg:w-4 xl:w-5 ${
-            i < filled ? 'bg-indigo-600' : 'bg-gray-200'
+            i < filled ? "bg-indigo-600" : "bg-gray-200"
           }`}
         />
       ))}
@@ -138,12 +198,12 @@ function SubStepCell({
         <span className="whitespace-nowrap text-xs font-medium text-gray-700 xl:text-sm">
           {subStep.label}
         </span>
-        {subStep.status !== 'done' && Icon && (
+        {subStep.status !== "done" && Icon && (
           <Icon size={14} className="text-gray-400" />
         )}
       </div>
 
-      {subStep.status === 'done' ? (
+      {subStep.status === "done" ? (
         <div className="flex items-center gap-1">
           <CheckCircle2 size={13} className="text-green-500" />
           <span className="text-xs text-green-500">Done</span>
@@ -191,9 +251,9 @@ export function MilestoneHeader({
   useEffect(() => {
     const scroll = () =>
       blockRefs.current[expandedIndex]?.scrollIntoView({
-        inline: 'nearest',
-        block: 'nearest',
-        behavior: reduceMotion ? 'auto' : 'smooth',
+        inline: "nearest",
+        block: "nearest",
+        behavior: reduceMotion ? "auto" : "smooth",
       });
 
     if (reduceMotion) {
@@ -232,24 +292,24 @@ export function MilestoneHeader({
                 // width; grow=1 lets the expanded one absorb the free space.
                 animate={{
                   flexGrow: isExpanded ? 1 : 0,
-                  borderColor: isExpanded ? INDIGO : 'rgba(0,0,0,0)',
+                  borderColor: isExpanded ? INDIGO : "rgba(0,0,0,0)",
                 }}
                 style={{
                   zIndex,
-                  flexBasis: 'var(--ms-basis)',
+                  flexBasis: "var(--ms-basis)",
                   flexShrink: 0,
-                  minWidth: sizeToContent ? 'max-content' : 0,
+                  minWidth: sizeToContent ? "max-content" : 0,
                 }}
                 className="group relative flex cursor-pointer items-stretch border-y border-l"
               >
                 {/* Milestone label — arrow-shaped block. Purple when expanded. */}
                 <motion.div
                   transition={transition}
-                  animate={{ backgroundColor: isExpanded ? INDIGO : '#ffffff' }}
+                  animate={{ backgroundColor: isExpanded ? INDIGO : "#ffffff" }}
                   className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 lg:py-3 ${
                     isExpanded
-                      ? 'px-3 lg:px-5 xl:px-8'
-                      : 'px-2 group-hover:bg-gray-50 lg:px-3 xl:px-4'
+                      ? "px-3 lg:px-5 xl:px-8"
+                      : "px-2 group-hover:bg-gray-50 lg:px-3 xl:px-4"
                   }`}
                 >
                   <motion.span
@@ -257,17 +317,17 @@ export function MilestoneHeader({
                     animate={{ color: isExpanded ? INDIGO_LABEL : GRAY_TEXT }}
                     className="text-[10px] font-medium xl:text-xs"
                   >
-                    Milestone
+                    Milestone {index + 1}
                   </motion.span>
                   <motion.span
                     transition={transition}
-                    animate={{ color: isExpanded ? '#ffffff' : GRAY_TEXT }}
-                    className="text-base font-semibold leading-none lg:text-lg"
+                    animate={{ color: isExpanded ? "#ffffff" : GRAY_TEXT }}
+                    className="text-xs font-semibold leading-none "
                   >
-                    {index + 1}
+                    {milestone.label}
                   </motion.span>
                   <Chevron
-                    fill={isExpanded ? INDIGO : '#ffffff'}
+                    fill={isExpanded ? INDIGO : "#ffffff"}
                     stroke={isExpanded ? undefined : CHEVRON_GRAY}
                     transition={transition}
                   />
