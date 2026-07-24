@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -22,9 +22,12 @@ import { NodeProblemsContext } from "./NodeProblemsContext";
 import { NodeSolutionsContext } from "./NodeSolutionsContext";
 import { NodeConclusionsContext } from "./NodeConclusionsContext";
 import { ActionNodeSheet } from "./components/ActionNodeSheet";
+import type { StakeholderRow } from "@/services/market";
 
 interface ProblemJourneyCanvasProps {
-  jobTitles: string[];
+  /** Org-wide stakeholder rows from the Market tab, used by Trigger nodes to
+   * pick and display stakeholders. Loaded once server-side. */
+  stakeholderRows: StakeholderRow[];
   /** Render the canvas as a read-only viewer (Examples pages). */
   readOnly?: boolean;
 }
@@ -32,7 +35,7 @@ interface ProblemJourneyCanvasProps {
 const noop = () => {};
 
 function CanvasInner({
-  jobTitles: initialJobTitles,
+  stakeholderRows,
   readOnly = false,
 }: ProblemJourneyCanvasProps) {
   const {
@@ -55,11 +58,6 @@ function CanvasInner({
   } = useJourneyDataBridge();
 
   useLayout(setNodes);
-
-  const [jobTitles, setJobTitles] = useState<string[]>(initialJobTitles);
-  const addJobTitle = useCallback((jobTitle: string) => {
-    setJobTitles((prev) => [...prev, jobTitle]);
-  }, []);
 
   const [selectedProblem, setSelectedProblem] =
     useState<SelectedProblem | null>(null);
@@ -96,8 +94,7 @@ function CanvasInner({
                 addTriggerNode: readOnly ? noop : addTriggerNode,
                 addChildNode: readOnly ? noop : addChildNode,
                 updateNodeData: readOnly ? noop : updateNodeData,
-                jobTitles,
-                addJobTitle: readOnly ? noop : addJobTitle,
+                stakeholderRows,
                 openProblem,
                 addEmptyProblem: readOnly ? () => "" : addEmptyProblem,
                 removeProblem: readOnly ? noop : removeProblem,
@@ -184,12 +181,12 @@ function CanvasInner({
 }
 
 export function ProblemJourneyCanvas({
-  jobTitles,
+  stakeholderRows,
   readOnly = false,
 }: ProblemJourneyCanvasProps) {
   return (
     <ReactFlowProvider>
-      <CanvasInner jobTitles={jobTitles} readOnly={readOnly} />
+      <CanvasInner stakeholderRows={stakeholderRows} readOnly={readOnly} />
     </ReactFlowProvider>
   );
 }

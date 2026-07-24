@@ -5,14 +5,14 @@ import { JourneyMapTabs } from "@/components/ProblemJourneyMap/components/Journe
 import { MilestoneSelectionProvider } from "@/components/ProblemJourneyMap/MilestoneSelectionContext";
 import { Room } from "@/components/Room";
 import { generateProblemJourneyRoom } from "@/services/problemJourney";
-import { getJobTitles } from "@/services/jobTitles";
+import { getMarketData } from "@/services/market";
 
 export default async function ProblemJourneyMapPage() {
   const { orgId } = await auth();
   const roomId = `problem-journey-${orgId}`;
-  const [, jobTitles] = await Promise.all([
+  const [, marketData] = await Promise.all([
     generateProblemJourneyRoom(roomId),
-    getJobTitles(),
+    getMarketData(),
   ]);
 
   return (
@@ -22,7 +22,9 @@ export default async function ProblemJourneyMapPage() {
         <JourneyMapTabs
           canvas={
             <Room roomId={roomId}>
-              <ProblemJourneyCanvas jobTitles={jobTitles} />
+              <ProblemJourneyCanvas
+                stakeholderRows={marketData.stakeholderRows}
+              />
             </Room>
           }
         />

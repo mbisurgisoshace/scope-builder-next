@@ -9,6 +9,17 @@ import { useRealtimeJourney, type JourneyNodeStorage, type JourneyEdgeStorage } 
 
 const INITIAL_TRIGGER_ID = 'initial-trigger';
 
+// Order-insensitive equality for the stakeholder id arrays synced between
+// Liveblocks and React Flow node data.
+function sameIds(a: number[] | undefined, b: number[] | undefined): boolean {
+  const x = a ?? [];
+  const y = b ?? [];
+  if (x.length !== y.length) return false;
+  const sortedX = [...x].sort((m, n) => m - n);
+  const sortedY = [...y].sort((m, n) => m - n);
+  return sortedX.every((v, i) => v === sortedY[i]);
+}
+
 const INITIAL_TRIGGER_NODE: Node = {
   id: INITIAL_TRIGGER_ID,
   type: 'trigger',
@@ -17,7 +28,7 @@ const INITIAL_TRIGGER_NODE: Node = {
     id: INITIAL_TRIGGER_ID,
     type: 'trigger',
     content: '',
-    jobTitle: null,
+    stakeholderIds: [],
   } as unknown as Record<string, unknown>,
 };
 
@@ -28,7 +39,7 @@ function colorForType(type: JourneyNodeType) {
 }
 
 function buildNodeStorage(id: string, type: JourneyNodeType): JourneyNodeStorage {
-  return { id, type, content: '', jobTitle: null, problems: [], solutions: [], conclusions: [] };
+  return { id, type, content: '', stakeholderIds: [], problems: [], solutions: [], conclusions: [] };
 }
 
 function lbNodeToRFNode(lb: JourneyNodeStorage): Node {
@@ -40,7 +51,7 @@ function lbNodeToRFNode(lb: JourneyNodeStorage): Node {
       id: lb.id,
       type: lb.type,
       content: lb.content,
-      jobTitle: lb.jobTitle,
+      stakeholderIds: lb.stakeholderIds ?? [],
       color: colorForType(lb.type),
     } as unknown as Record<string, unknown>,
   };
@@ -110,7 +121,7 @@ export function useJourneyDataBridge() {
           const rf = currentNodes.find((n) => n.id === lb.id);
           if (!rf) return false;
           const data = rf.data as unknown as JourneyNodeData;
-          return data.content !== lb.content || data.jobTitle !== lb.jobTitle;
+          return data.content !== lb.content || !sameIds(data.stakeholderIds, lb.stakeholderIds);
         });
         if (!hasDataChange) return currentNodes;
 
@@ -118,8 +129,8 @@ export function useJourneyDataBridge() {
           const lb = lbNodes.find((lb) => lb.id === n.id);
           if (!lb) return n;
           const data = n.data as unknown as JourneyNodeData;
-          if (data.content === lb.content && data.jobTitle === lb.jobTitle) return n;
-          return { ...n, data: { ...n.data, content: lb.content, jobTitle: lb.jobTitle } as unknown as Record<string, unknown> };
+          if (data.content === lb.content && sameIds(data.stakeholderIds, lb.stakeholderIds)) return n;
+          return { ...n, data: { ...n.data, content: lb.content, stakeholderIds: lb.stakeholderIds ?? [] } as unknown as Record<string, unknown> };
         });
       }
 
@@ -161,7 +172,7 @@ export function useJourneyDataBridge() {
           id: newId,
           type: 'trigger',
           content: '',
-          jobTitle: null,
+          stakeholderIds: [],
         } as unknown as Record<string, unknown>,
       },
     ]);
@@ -188,7 +199,7 @@ export function useJourneyDataBridge() {
               id: newId,
               type,
               content: '',
-              jobTitle: null,
+              stakeholderIds: [],
               color: colorForType(type),
             } as unknown as Record<string, unknown>,
           },

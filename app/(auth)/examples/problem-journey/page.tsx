@@ -3,7 +3,7 @@ import { MilestoneHeader } from "@/components/ProblemJourneyMap/components/Miles
 import { JourneyMapTabs } from "@/components/ProblemJourneyMap/components/JourneyMapTabs";
 import { MilestoneSelectionProvider } from "@/components/ProblemJourneyMap/MilestoneSelectionContext";
 import { Room } from "@/components/Room";
-import { generateExampleProblemJourneyRoom, getExampleJobTitles } from "@/services/examples";
+import { generateExampleProblemJourneyRoom, getExampleMarketData } from "@/services/examples";
 import { exampleRoomId } from "@/lib/examples";
 
 // Read-only showcase mirror of /problem-journey-map. Everything is identical to the
@@ -12,9 +12,9 @@ const EXAMPLE_NUMBER = 1;
 
 export default async function ExampleProblemJourneyPage() {
   const roomId = exampleRoomId(EXAMPLE_NUMBER);
-  const [, jobTitles] = await Promise.all([
+  const [, marketData] = await Promise.all([
     generateExampleProblemJourneyRoom(roomId),
-    getExampleJobTitles(EXAMPLE_NUMBER),
+    getExampleMarketData(EXAMPLE_NUMBER),
   ]);
 
   return (
@@ -26,7 +26,10 @@ export default async function ExampleProblemJourneyPage() {
           exampleNumber={EXAMPLE_NUMBER}
           canvas={
             <Room roomId={roomId}>
-              <ProblemJourneyCanvas jobTitles={jobTitles} readOnly />
+              <ProblemJourneyCanvas
+                stakeholderRows={marketData.stakeholderRows}
+                readOnly
+              />
             </Room>
           }
         />

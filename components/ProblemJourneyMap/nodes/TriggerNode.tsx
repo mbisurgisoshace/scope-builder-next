@@ -5,28 +5,49 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { ZapIcon, PlusIcon } from "lucide-react";
 
 import { NodeTypeMenu } from "../components/NodeTypeMenu";
-import { ManageJobTitlesModal } from "../components/ManageJobTitlesModal";
+import { StakeholderPickerModal } from "../components/StakeholderPickerModal";
+import { STAKEHOLDER_DEFINITIONS } from "../components/Market/constants";
 import {
   useJourneyContext,
   type JourneyNodeType,
   type JourneyNodeData,
 } from "../JourneyContext";
+import type { StakeholderRow } from "@/services/market";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
+// Resolve the node's selected stakeholder ids to rows, grouped by category in
+// `STAKEHOLDER_DEFINITIONS` order. Ids with no matching row (deleted on the
+// Market tab) are dropped; empty categories are omitted.
+function groupSelected(
+  stakeholderRows: StakeholderRow[],
+  selectedIds: number[],
+): { title: string; values: string[] }[] {
+  const selected = new Set(selectedIds);
+  const rowsByType = new Map<string, StakeholderRow[]>();
+  for (const row of stakeholderRows) {
+    if (!selected.has(row.id)) continue;
+    const list = rowsByType.get(row.stakeholder_type) ?? [];
+    list.push(row);
+    rowsByType.set(row.stakeholder_type, list);
+  }
+
+  return STAKEHOLDER_DEFINITIONS.flatMap((definition) => {
+    const rows = rowsByType.get(definition.key) ?? [];
+    if (rows.length === 0) return [];
+    return [{ title: definition.title, values: rows.map((r) => r.value) }];
+  });
+}
 
 function TriggerNodeInner({ id, data }: NodeProps) {
   const nodeData = data as unknown as JourneyNodeData;
-  const { readOnly, addChildNode, updateNodeData, jobTitles, addJobTitle } =
+  const { readOnly, addChildNode, updateNodeData, stakeholderRows } =
     useJourneyContext();
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const selectedIds = nodeData.stakeholderIds ?? [];
+  const groups = groupSelected(stakeholderRows, selectedIds);
 
   const handleToggleMenu = useCallback(() => {
     if (anchorRect) {
@@ -64,44 +85,43 @@ function TriggerNodeInner({ id, data }: NodeProps) {
             Trigger
           </span>
         </div>
-        {readOnly ? (
-          <span className="w-full max-w-48 text-sm text-gray-700 truncate">
-            {nodeData.jobTitle || "—"}
-          </span>
-        ) : (
+        {!readOnly && (
           <>
-            <Select
-              value={nodeData.jobTitle ?? ""}
-              onValueChange={(val) => {
-                if (val === "__manage__") { setShowAddModal(true); return; }
-                updateNodeData(id, { jobTitle: val || null });
-              }}
+            <button
+              type="button"
+              className="nodrag nopan text-sm font-medium text-[#6A35FF] hover:underline"
+              onClick={() => setShowPicker(true)}
             >
-              <SelectTrigger className="nodrag nopan w-full max-w-48">
-                <SelectValue placeholder="Job title..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__manage__" className="font-medium text-[#6A35FF]">
-                  Manage Job Titles
-                </SelectItem>
-                {jobTitles.map((jobTitle) => (
-                  <SelectItem key={jobTitle} value={jobTitle}>
-                    {jobTitle}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <ManageJobTitlesModal
-              open={showAddModal}
-              onOpenChange={setShowAddModal}
-              onCreated={(jobTitle: string) => {
-                addJobTitle(jobTitle);
-                updateNodeData(id, { jobTitle });
-              }}
+              {selectedIds.length > 0
+                ? "Edit stakeholders"
+                : "Choose stakeholders"}
+            </button>
+            <StakeholderPickerModal
+              open={showPicker}
+              onOpenChange={setShowPicker}
+              stakeholderRows={stakeholderRows}
+              selectedIds={selectedIds}
+              onSave={(ids) => updateNodeData(id, { stakeholderIds: ids })}
             />
           </>
         )}
       </div>
+
+      {/* Selected stakeholders, grouped by category, comma-separated. */}
+      {groups.length > 0 ? (
+        <div className="mb-3 flex flex-col gap-0.5">
+          {groups.map((group) => (
+            <p key={group.title} className="text-xs leading-snug text-gray-700">
+              <span className="font-semibold text-gray-500">
+                {group.title}:
+              </span>{" "}
+              {group.values.join(", ")}
+            </p>
+          ))}
+        </div>
+      ) : (
+        readOnly && <p className="mb-3 text-xs text-gray-400">—</p>
+      )}
 
       <Input
         value={nodeData.content ?? ""}

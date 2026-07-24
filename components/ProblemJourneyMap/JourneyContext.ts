@@ -2,6 +2,7 @@
 
 import { createContext, useContext } from 'react';
 import type { Solution } from './components/ActionNodeSheet';
+import type { StakeholderRow } from '@/services/market';
 
 export type JourneyNodeType = 'trigger' | 'action' | 'split_route';
 
@@ -9,7 +10,7 @@ export interface JourneyNodeData extends Record<string, unknown> {
   id: string;
   type: JourneyNodeType;
   content?: string;
-  jobTitle?: string | null;
+  stakeholderIds?: number[];
 }
 
 interface JourneyContextValue {
@@ -19,8 +20,10 @@ interface JourneyContextValue {
   addTriggerNode: () => void;
   addChildNode: (parentId: string, type: JourneyNodeType) => void;
   updateNodeData: (id: string, patch: Partial<Omit<JourneyNodeData, 'id' | 'type'>>) => void;
-  jobTitles: string[];
-  addJobTitle: (jobTitle: string) => void;
+  /** Org-wide stakeholder rows from the Market tab, grouped elsewhere by
+   * `stakeholder_type`. Loaded once server-side; edits on the Market tab appear
+   * here after a reload. */
+  stakeholderRows: StakeholderRow[];
   /** Open the editor sheet scoped to a specific problem. */
   openProblem: (nodeId: string, problemId: string) => void;
   /** Append a blank problem to a node and return its id. */
