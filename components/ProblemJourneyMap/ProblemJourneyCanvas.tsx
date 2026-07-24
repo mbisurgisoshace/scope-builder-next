@@ -25,10 +25,15 @@ import { ActionNodeSheet } from "./components/ActionNodeSheet";
 
 interface ProblemJourneyCanvasProps {
   jobTitles: string[];
+  /** Render the canvas as a read-only viewer (Examples pages). */
+  readOnly?: boolean;
 }
+
+const noop = () => {};
 
 function CanvasInner({
   jobTitles: initialJobTitles,
+  readOnly = false,
 }: ProblemJourneyCanvasProps) {
   const {
     nodes,
@@ -84,14 +89,18 @@ function CanvasInner({
           <SelectedNodeContext.Provider value={selectedProblem}>
             <JourneyContext.Provider
               value={{
-                addTriggerNode,
-                addChildNode,
-                updateNodeData,
+                readOnly,
+                // Structural/field mutators are hard no-ops in read-only mode so
+                // nothing can write to the shared example room even if a control
+                // were somehow reachable.
+                addTriggerNode: readOnly ? noop : addTriggerNode,
+                addChildNode: readOnly ? noop : addChildNode,
+                updateNodeData: readOnly ? noop : updateNodeData,
                 jobTitles,
-                addJobTitle,
+                addJobTitle: readOnly ? noop : addJobTitle,
                 openProblem,
-                addEmptyProblem,
-                removeProblem,
+                addEmptyProblem: readOnly ? () => "" : addEmptyProblem,
+                removeProblem: readOnly ? noop : removeProblem,
                 solutionForProblem,
               }}
             >
@@ -119,19 +128,22 @@ function CanvasInner({
                     color="#e5e7eb"
                   />
                   <Controls showInteractive={false} />
-                  <Panel position="bottom-right">
-                    <button
-                      onClick={addTriggerNode}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#6A35FF] text-white text-sm font-medium shadow hover:bg-[#5a2de0] transition-colors"
-                    >
-                      <ZapIcon className="w-3.5 h-3.5" />
-                      Add Trigger
-                    </button>
-                  </Panel>
+                  {!readOnly && (
+                    <Panel position="bottom-right">
+                      <button
+                        onClick={addTriggerNode}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#6A35FF] text-white text-sm font-medium shadow hover:bg-[#5a2de0] transition-colors"
+                      >
+                        <ZapIcon className="w-3.5 h-3.5" />
+                        Add Trigger
+                      </button>
+                    </Panel>
+                  )}
                 </ReactFlow>
               </div>
 
               <ActionNodeSheet
+                readOnly={readOnly}
                 open={selectedProblem !== null}
                 onOpenChange={(open) => {
                   if (!open) setSelectedProblem(null);
@@ -173,10 +185,11 @@ function CanvasInner({
 
 export function ProblemJourneyCanvas({
   jobTitles,
+  readOnly = false,
 }: ProblemJourneyCanvasProps) {
   return (
     <ReactFlowProvider>
-      <CanvasInner jobTitles={jobTitles} />
+      <CanvasInner jobTitles={jobTitles} readOnly={readOnly} />
     </ReactFlowProvider>
   );
 }

@@ -13,6 +13,9 @@ export interface JourneyNodeData extends Record<string, unknown> {
 }
 
 interface JourneyContextValue {
+  /** When true the canvas is a pure viewer: all edit affordances are hidden and
+   * every mutator is a no-op. Milestone/card navigation stays enabled. */
+  readOnly: boolean;
   addTriggerNode: () => void;
   addChildNode: (parentId: string, type: JourneyNodeType) => void;
   updateNodeData: (id: string, patch: Partial<Omit<JourneyNodeData, 'id' | 'type'>>) => void;

@@ -17,12 +17,14 @@ interface ProblemCardProps {
     hypothesisId: string,
     patch?: Partial<InterviewQuestion>,
   ) => void;
+  readOnly?: boolean;
 }
 
 export function ProblemCard({
   block,
   onQuestionChange,
   onQuestionCommit,
+  readOnly = false,
 }: ProblemCardProps) {
   const totalCount = block.hypotheses.length;
   const answeredCount = block.hypotheses.filter((h) =>
@@ -77,6 +79,7 @@ export function ProblemCard({
             >
               <HypothesisRow
                 hypothesis={hypothesis}
+                readOnly={readOnly}
                 onQuestionChange={(patch) =>
                   onQuestionChange(hypothesis.id, patch)
                 }
@@ -90,12 +93,14 @@ export function ProblemCard({
       </div>
 
       {/* Add custom question — centered dark pill at the bottom. */}
-      <div className="flex justify-center py-5">
-        <Button className="rounded-full bg-[#1F2430] px-5 text-white hover:bg-[#2B3140]">
-          <Plus className="h-4 w-4" />
-          Add custom question
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="flex justify-center py-5">
+          <Button className="rounded-full bg-[#1F2430] px-5 text-white hover:bg-[#2B3140]">
+            <Plus className="h-4 w-4" />
+            Add custom question
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

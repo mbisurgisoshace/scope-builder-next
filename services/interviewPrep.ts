@@ -6,6 +6,7 @@ import { auth } from "@clerk/nextjs/server";
 import liveblocks from "@/lib/liveblocks";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/lib/generated/prisma";
+import { exampleRoomId } from "@/lib/examples";
 import { BANK_QUESTIONS } from "@/components/ProblemJourneyMap/questionBank";
 import type {
   DropdownOption,
@@ -132,18 +133,20 @@ type LoadedBlock = Omit<ProblemBlock, "hypotheses"> & {
 
 /**
  * Not exported, and it must stay that way: every exported async function in a
- * "use server" file is a public endpoint, so an exported helper taking `orgId` would
- * let any client read another org's journey map. Callers pass an orgId they got from
- * `requireOrg()` themselves.
+ * "use server" file is a public endpoint, so an exported helper taking a room id +
+ * `where` would let any client read another org's journey map. Callers first
+ * resolve the room id / filter from their own `requireOrg()` (real data) or from a
+ * fixed `example_number` (global example data).
  */
-async function loadProblemBlocks(orgId: string): Promise<LoadedBlock[]> {
-  const roomId = `problem-journey-${orgId}`;
-
+async function loadProblemBlocksFrom(
+  roomId: string,
+  questionWhere: Prisma.ProblemInterviewQuestionWhereInput,
+): Promise<LoadedBlock[]> {
   const [rawStorage, saved] = await Promise.all([
     // The "json" overload returns plain objects; the default one returns nested
     // { liveblocksType, data } wrappers that would need unwrapping at every level.
     liveblocks.getStorageDocument(roomId, "json"),
-    prisma.problemInterviewQuestion.findMany({ where: { org_id: orgId } }),
+    prisma.problemInterviewQuestion.findMany({ where: questionWhere }),
   ]);
 
   // Storage is declared as LiveList<LiveObject<any>>, so this arrives as readonly any[].
@@ -223,7 +226,22 @@ async function loadProblemBlocks(orgId: string): Promise<LoadedBlock[]> {
 }
 
 export async function getInterviewPrepData(): Promise<ProblemBlock[]> {
-  return loadProblemBlocks(await requireOrg());
+  const orgId = await requireOrg();
+  return loadProblemBlocksFrom(`problem-journey-${orgId}`, { org_id: orgId });
+}
+
+// Global read-only variant for the /examples/problem-journey page: reads the
+// example journey-map room and example-scoped questions. No org guard — example
+// data is shared across every org.
+export async function getExampleInterviewPrepData(
+  exampleNumber: number,
+): Promise<ProblemBlock[]> {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  return loadProblemBlocksFrom(exampleRoomId(exampleNumber), {
+    example_number: exampleNumber,
+  });
 }
 
 /**
@@ -243,8 +261,45 @@ export async function getInterviewAnswersData(
   });
   if (!participant) return [];
 
-  const blocks = await loadProblemBlocks(orgId);
+  const blocks = await loadProblemBlocksFrom(`problem-journey-${orgId}`, {
+    org_id: orgId,
+  });
 
+  return buildAnswerableProblems(blocks, participantId);
+}
+
+// Global read-only variant for the /examples/interviews page: participant and
+// blocks are example-scoped rather than org-scoped.
+export async function getExampleInterviewAnswersData(
+  exampleNumber: number,
+  participantId: string,
+): Promise<AnswerableProblem[]> {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const participant = await prisma.participant.findFirst({
+    where: { id: participantId, example_number: exampleNumber },
+    select: { id: true },
+  });
+  if (!participant) return [];
+
+  const blocks = await loadProblemBlocksFrom(exampleRoomId(exampleNumber), {
+    example_number: exampleNumber,
+  });
+
+  return buildAnswerableProblems(blocks, participantId);
+}
+
+/**
+ * Pair the authored questions of each block with one participant's answers so far.
+ * Shared by the real and example answering flows; the caller has already scoped the
+ * blocks + participant, and the answers are looked up by the (already-scoped)
+ * question ids, so this is filter-agnostic.
+ */
+async function buildAnswerableProblems(
+  blocks: LoadedBlock[],
+  participantId: string,
+): Promise<AnswerableProblem[]> {
   const answerable = blocks.flatMap((block) => {
     const authored = block.hypotheses.filter(
       (h) => h.questionId !== null && h.question.title.trim() !== "",

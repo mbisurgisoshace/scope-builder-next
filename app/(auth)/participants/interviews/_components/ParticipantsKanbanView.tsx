@@ -2,6 +2,7 @@
 
 import { Participant } from "@/lib/generated/prisma";
 import { getParticipants } from "@/services/participants";
+import { getExampleParticipants } from "@/services/examples";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -191,9 +192,13 @@ function KanbanBoard({
 export default function ParticipantsKanbanView({
   tags,
   jobTitles,
+  readOnly = false,
+  exampleNumber,
 }: {
   tags: string[];
   jobTitles: string[];
+  readOnly?: boolean;
+  exampleNumber?: number;
 }) {
   const router = useRouter();
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -208,7 +213,10 @@ export default function ParticipantsKanbanView({
   const [boardTab, setBoardTab] = useState("progress");
 
   const refetch = () =>
-    getParticipants().then((next) => {
+    (exampleNumber != null
+      ? getExampleParticipants(exampleNumber)
+      : getParticipants()
+    ).then((next) => {
       setParticipants(next);
       // The interview view holds a snapshot, so re-point it at the fresh row after an
       // edit made from its own header — and drop it if the participant is gone.
@@ -237,43 +245,50 @@ export default function ParticipantsKanbanView({
 
   return (
     <>
-      <AddParticipant
-        tags={tags}
-        jobTitles={jobTitles}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        onSuccess={refetch}
-      />
-      <Sheet
-        open={editParticipant !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditParticipant(null);
-        }}
-      >
-        <SheetContent>
-          <SheetHeader className="border-b">
-            <SheetTitle className="text-[26px] font-medium text-[#162A4F]">
-              {editParticipant?.name}
-            </SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-4">
-            {editParticipant && (
-              <EditParticipantForm
-                participant={editParticipant}
-                tags={tags}
-                jobTitles={jobTitles}
-                onSuccess={() => {
-                  refetch();
-                  setEditParticipant(null);
-                }}
-              />
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Add/Edit affordances only exist on the real page — examples are read-only. */}
+      {!readOnly && (
+        <>
+          <AddParticipant
+            tags={tags}
+            jobTitles={jobTitles}
+            open={sheetOpen}
+            onOpenChange={setSheetOpen}
+            onSuccess={refetch}
+          />
+          <Sheet
+            open={editParticipant !== null}
+            onOpenChange={(open) => {
+              if (!open) setEditParticipant(null);
+            }}
+          >
+            <SheetContent>
+              <SheetHeader className="border-b">
+                <SheetTitle className="text-[26px] font-medium text-[#162A4F]">
+                  {editParticipant?.name}
+                </SheetTitle>
+              </SheetHeader>
+              <div className="flex-1 min-h-0 flex flex-col overflow-hidden p-4">
+                {editParticipant && (
+                  <EditParticipantForm
+                    participant={editParticipant}
+                    tags={tags}
+                    jobTitles={jobTitles}
+                    onSuccess={() => {
+                      refetch();
+                      setEditParticipant(null);
+                    }}
+                  />
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </>
+      )}
       {interviewParticipant ? (
         <InterviewAnswersView
           participant={interviewParticipant}
+          readOnly={readOnly}
+          exampleNumber={exampleNumber}
           onBack={() => setInterviewParticipant(null)}
           onSaved={() => {
             setInterviewParticipant(null);
@@ -301,9 +316,9 @@ export default function ParticipantsKanbanView({
               columns={PROGRESS_COLUMNS}
               getColumnCards={(key) => groupedByStatus[key] ?? []}
               getColumnColor={(key) => PROGRESS_COLORS[key] ?? "#F5F5F8"}
-              onAddClick={() => setSheetOpen(true)}
+              onAddClick={readOnly ? undefined : () => setSheetOpen(true)}
               onCardClick={setInterviewParticipant}
-              onEditClick={setEditParticipant}
+              onEditClick={readOnly ? undefined : setEditParticipant}
             />
           </TabsContent>
           <TabsContent
@@ -315,9 +330,9 @@ export default function ParticipantsKanbanView({
               getColumnCards={(key) => groupedByRelationship[key] ?? []}
               getColumnColor={(key) => RELATIONSHIP_COLORS[key] ?? "#F5F5F8"}
               hideRelationship
-              onAddClick={() => setSheetOpen(true)}
+              onAddClick={readOnly ? undefined : () => setSheetOpen(true)}
               onCardClick={setInterviewParticipant}
-              onEditClick={setEditParticipant}
+              onEditClick={readOnly ? undefined : setEditParticipant}
             />
           </TabsContent>
         </Tabs>

@@ -26,6 +26,10 @@ const DEFAULT_TAB: TabValue = "canvas";
 interface JourneyMapTabsProps {
   /** The live journey-map canvas. Rendered only while the Canvas tab is active. */
   canvas: React.ReactNode;
+  /** Render every tab as a read-only viewer (Examples pages). */
+  readOnly?: boolean;
+  /** When set, tabs read example set N's data instead of the active org's. */
+  exampleNumber?: number;
 }
 
 function EmptyTab() {
@@ -46,7 +50,11 @@ function EmptyTab() {
   );
 }
 
-export function JourneyMapTabs({ canvas }: JourneyMapTabsProps) {
+export function JourneyMapTabs({
+  canvas,
+  readOnly = false,
+  exampleNumber,
+}: JourneyMapTabsProps) {
   const [value, setValue] = useState<TabValue>(DEFAULT_TAB);
 
   // Restore the last-used tab on mount (kept out of the initial state to avoid an
@@ -98,11 +106,11 @@ export function JourneyMapTabs({ canvas }: JourneyMapTabsProps) {
         {value === "canvas" ? (
           canvas
         ) : value === "get-started" ? (
-          <GetStarted />
+          <GetStarted readOnly={readOnly} exampleNumber={exampleNumber} />
         ) : value === "market" ? (
-          <Market />
+          <Market readOnly={readOnly} exampleNumber={exampleNumber} />
         ) : value === "interview-prep" ? (
-          <InterviewPrep />
+          <InterviewPrep readOnly={readOnly} exampleNumber={exampleNumber} />
         ) : (
           <EmptyTab />
         )}

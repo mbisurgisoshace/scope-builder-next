@@ -7,12 +7,14 @@ interface ProblemAnswerColumnProps {
   problem: AnswerableProblem;
   onAnswerChange: (questionId: string, value: string) => void;
   onAnswerCommit: (questionId: string, value?: string) => void;
+  readOnly?: boolean;
 }
 
 export function ProblemAnswerColumn({
   problem,
   onAnswerChange,
   onAnswerCommit,
+  readOnly = false,
 }: ProblemAnswerColumnProps) {
   return (
     <div className="flex w-full flex-col">
@@ -49,6 +51,7 @@ export function ProblemAnswerColumn({
               <AnswerInput
                 question={question}
                 value={question.answer}
+                readOnly={readOnly}
                 onChange={(value) => onAnswerChange(question.questionId, value)}
                 onCommit={(value) => onAnswerCommit(question.questionId, value)}
               />
@@ -57,14 +60,16 @@ export function ProblemAnswerColumn({
         ))}
 
         {/* Inert for now, matching the prep tab's "Add custom question". */}
-        <div className="flex gap-3">
-          <span className="w-4 shrink-0 text-sm font-medium text-[#B7BAC5]">
-            {problem.questions.length + 1}
-          </span>
-          <span className="text-sm font-medium text-[#6A35FF]">
-            + Add question
-          </span>
-        </div>
+        {!readOnly && (
+          <div className="flex gap-3">
+            <span className="w-4 shrink-0 text-sm font-medium text-[#B7BAC5]">
+              {problem.questions.length + 1}
+            </span>
+            <span className="text-sm font-medium text-[#6A35FF]">
+              + Add question
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

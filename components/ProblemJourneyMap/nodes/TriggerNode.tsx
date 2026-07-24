@@ -22,7 +22,8 @@ import {
 
 function TriggerNodeInner({ id, data }: NodeProps) {
   const nodeData = data as unknown as JourneyNodeData;
-  const { addChildNode, updateNodeData, jobTitles, addJobTitle } = useJourneyContext();
+  const { readOnly, addChildNode, updateNodeData, jobTitles, addJobTitle } =
+    useJourneyContext();
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -63,40 +64,49 @@ function TriggerNodeInner({ id, data }: NodeProps) {
             Trigger
           </span>
         </div>
-        <Select
-          value={nodeData.jobTitle ?? ""}
-          onValueChange={(val) => {
-            if (val === "__manage__") { setShowAddModal(true); return; }
-            updateNodeData(id, { jobTitle: val || null });
-          }}
-        >
-          <SelectTrigger className="nodrag nopan w-full max-w-48">
-            <SelectValue placeholder="Job title..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__manage__" className="font-medium text-[#6A35FF]">
-              Manage Job Titles
-            </SelectItem>
-            {jobTitles.map((jobTitle) => (
-              <SelectItem key={jobTitle} value={jobTitle}>
-                {jobTitle}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <ManageJobTitlesModal
-          open={showAddModal}
-          onOpenChange={setShowAddModal}
-          onCreated={(jobTitle: string) => {
-            addJobTitle(jobTitle);
-            updateNodeData(id, { jobTitle });
-          }}
-        />
+        {readOnly ? (
+          <span className="w-full max-w-48 text-sm text-gray-700 truncate">
+            {nodeData.jobTitle || "—"}
+          </span>
+        ) : (
+          <>
+            <Select
+              value={nodeData.jobTitle ?? ""}
+              onValueChange={(val) => {
+                if (val === "__manage__") { setShowAddModal(true); return; }
+                updateNodeData(id, { jobTitle: val || null });
+              }}
+            >
+              <SelectTrigger className="nodrag nopan w-full max-w-48">
+                <SelectValue placeholder="Job title..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__manage__" className="font-medium text-[#6A35FF]">
+                  Manage Job Titles
+                </SelectItem>
+                {jobTitles.map((jobTitle) => (
+                  <SelectItem key={jobTitle} value={jobTitle}>
+                    {jobTitle}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <ManageJobTitlesModal
+              open={showAddModal}
+              onOpenChange={setShowAddModal}
+              onCreated={(jobTitle: string) => {
+                addJobTitle(jobTitle);
+                updateNodeData(id, { jobTitle });
+              }}
+            />
+          </>
+        )}
       </div>
 
       <Input
         value={nodeData.content ?? ""}
         placeholder="Type your trigger..."
+        readOnly={readOnly}
         className="nodrag nopan w-full text-sm text-gray-700 bg-transparent resize-none placeholder-gray-400 focus:outline-none leading-snug"
         onChange={(e) => updateNodeData(id, { content: e.target.value })}
       />
@@ -109,22 +119,24 @@ function TriggerNodeInner({ id, data }: NodeProps) {
       />
 
       {/* "+" button — positioned on the right edge, outside the card boundary */}
-      <div className="nopan nodrag absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-3">
-        <button
-          ref={buttonRef}
-          className="nodrag nopan w-[30px] h-[30px] rounded-full bg-[#A198BA] text-white flex items-center justify-center shadow hover:bg-[#9486bb] transition-colors"
-          onClick={handleToggleMenu}
-        >
-          <PlusIcon className="w-3.5 h-3.5" />
-        </button>
-        {anchorRect && (
-          <NodeTypeMenu
-            anchorRect={anchorRect}
-            onSelect={handleSelect}
-            onClose={handleClose}
-          />
-        )}
-      </div>
+      {!readOnly && (
+        <div className="nopan nodrag absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-3">
+          <button
+            ref={buttonRef}
+            className="nodrag nopan w-[30px] h-[30px] rounded-full bg-[#A198BA] text-white flex items-center justify-center shadow hover:bg-[#9486bb] transition-colors"
+            onClick={handleToggleMenu}
+          >
+            <PlusIcon className="w-3.5 h-3.5" />
+          </button>
+          {anchorRect && (
+            <NodeTypeMenu
+              anchorRect={anchorRect}
+              onSelect={handleSelect}
+              onClose={handleClose}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { NodeTypeMenu } from '../components/NodeTypeMenu';
 import { useJourneyContext, type JourneyNodeType } from '../JourneyContext';
 
 function SplitRouteNodeInner({ id }: NodeProps) {
-  const { addChildNode } = useJourneyContext();
+  const { readOnly, addChildNode } = useJourneyContext();
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -56,22 +56,24 @@ function SplitRouteNodeInner({ id }: NodeProps) {
         className="!opacity-0 !pointer-events-none"
       />
 
-      <div className="nopan nodrag absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-1">
-        <button
-          ref={buttonRef}
-          className="nodrag nopan w-6 h-6 rounded-full bg-orange-400 text-white flex items-center justify-center shadow hover:bg-orange-500 transition-colors"
-          onClick={handleToggleMenu}
-        >
-          <PlusIcon className="w-3.5 h-3.5" />
-        </button>
-        {anchorRect && (
-          <NodeTypeMenu
-            anchorRect={anchorRect}
-            onSelect={handleSelect}
-            onClose={handleClose}
-          />
-        )}
-      </div>
+      {!readOnly && (
+        <div className="nopan nodrag absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-1">
+          <button
+            ref={buttonRef}
+            className="nodrag nopan w-6 h-6 rounded-full bg-orange-400 text-white flex items-center justify-center shadow hover:bg-orange-500 transition-colors"
+            onClick={handleToggleMenu}
+          >
+            <PlusIcon className="w-3.5 h-3.5" />
+          </button>
+          {anchorRect && (
+            <NodeTypeMenu
+              anchorRect={anchorRect}
+              onSelect={handleSelect}
+              onClose={handleClose}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

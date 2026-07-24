@@ -31,17 +31,20 @@ interface QuestionEditorProps {
    * state hasn't re-rendered yet, so the patch is the only fresh copy of the change.
    */
   onCommit: (patch?: Partial<InterviewQuestion>) => void;
+  readOnly?: boolean;
 }
 
 export function QuestionEditor({
   question,
   onChange,
   onCommit,
+  readOnly = false,
 }: QuestionEditorProps) {
   const [editing, setEditing] = useState(false);
 
-  // A written question reads as text; clicking it puts the input back.
-  const authored = question.title.trim() !== "" && !editing;
+  // A written question reads as text; clicking it puts the input back. In read-only
+  // mode it always reads as text (no going back to an input).
+  const authored = readOnly || (question.title.trim() !== "" && !editing);
 
   const handleOptionsChange = (
     options: DropdownOption[],
@@ -57,17 +60,27 @@ export function QuestionEditor({
       <div className="flex flex-col gap-2">
         <span className="text-sm text-[#697288]">Question:</span>
         {authored ? (
-          <p
-            role="button"
-            tabIndex={0}
-            onClick={() => setEditing(true)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") setEditing(true);
-            }}
-            className="cursor-text text-sm font-semibold text-[#1F2430]"
-          >
-            {question.title}
-          </p>
+          readOnly ? (
+            <p className="text-sm font-semibold text-[#1F2430]">
+              {question.title || (
+                <span className="font-normal text-[#9AA1B1]">
+                  No question yet
+                </span>
+              )}
+            </p>
+          ) : (
+            <p
+              role="button"
+              tabIndex={0}
+              onClick={() => setEditing(true)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") setEditing(true);
+              }}
+              className="cursor-text text-sm font-semibold text-[#1F2430]"
+            >
+              {question.title}
+            </p>
+          )
         ) : (
           <Input
             autoFocus={editing}
@@ -91,6 +104,7 @@ export function QuestionEditor({
         <span className="text-sm text-[#697288]">Response type:</span>
         <Select
           value={question.responseType}
+          disabled={readOnly}
           onValueChange={(value) => {
             const responseType = value as ResponseType;
             onChange({ responseType });
@@ -117,6 +131,7 @@ export function QuestionEditor({
         <DropdownOptionsEditor
           options={question.options}
           onChange={handleOptionsChange}
+          readOnly={readOnly}
         />
       )}
       {/* `scale` has no extra configuration — the response is a fixed 1-5 rating. */}

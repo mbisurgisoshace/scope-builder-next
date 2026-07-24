@@ -6,9 +6,10 @@ import { StakeholderCard } from "./StakeholderCard";
 
 interface StakeholdersSectionProps {
   rows: StakeholderRow[];
+  readOnly?: boolean;
 }
 
-export function StakeholdersSection({ rows }: StakeholdersSectionProps) {
+export function StakeholdersSection({ rows, readOnly = false }: StakeholdersSectionProps) {
   const rowsByType = new Map<string, StakeholderRow[]>();
   for (const row of rows) {
     const list = rowsByType.get(row.stakeholder_type) ?? [];
@@ -30,6 +31,7 @@ export function StakeholdersSection({ rows }: StakeholdersSectionProps) {
             key={definition.key}
             definition={definition}
             initialRows={rowsByType.get(definition.key) ?? []}
+            readOnly={readOnly}
           />
         ))}
       </div>

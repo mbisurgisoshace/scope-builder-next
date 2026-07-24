@@ -101,6 +101,8 @@ const SOURCE_OPTIONS = [
 // ─── Props ───────────────────────────────────────────────────────────────────
 
 interface ActionNodeSheetProps {
+  /** Pure viewer: inputs disabled, Save hidden, bank-of-questions hidden. */
+  readOnly?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   nodeId: string | null;
@@ -131,17 +133,19 @@ const TABS = [
 interface StarRatingProps {
   value: number;
   onChange: (value: number) => void;
+  readOnly?: boolean;
 }
 
-function StarRating({ value, onChange }: StarRatingProps) {
+function StarRating({ value, onChange, readOnly = false }: StarRatingProps) {
   return (
     <div className="flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map((i) => (
         <button
           key={i}
           type="button"
+          disabled={readOnly}
           onClick={() => onChange(i === value ? 0 : i)}
-          className="text-[#6A35FF] focus:outline-none"
+          className="text-[#6A35FF] focus:outline-none disabled:cursor-default"
           aria-label={`${i} star${i !== 1 ? "s" : ""}`}
         >
           <StarIcon
@@ -163,15 +167,17 @@ interface AnswerInputProps {
   question: BankQuestion;
   value: string | string[];
   onChange: (value: string | string[]) => void;
+  readOnly?: boolean;
 }
 
-function AnswerInput({ question, value, onChange }: AnswerInputProps) {
+function AnswerInput({ question, value, onChange, readOnly = false }: AnswerInputProps) {
   if (question.answerType === "plain_text") {
     return (
       <Input
         className="text-sm bg-white"
         placeholder="Answer..."
         value={(value as string) ?? ""}
+        readOnly={readOnly}
         onChange={(e) => onChange(e.target.value)}
       />
     );
@@ -187,8 +193,9 @@ function AnswerInput({ question, value, onChange }: AnswerInputProps) {
             <button
               key={opt}
               type="button"
+              disabled={readOnly}
               onClick={() => onChange(selected ? "" : opt)}
-              className={`h-9 px-5 rounded-lg border text-sm font-medium transition-colors ${
+              className={`h-9 px-5 rounded-lg border text-sm font-medium transition-colors disabled:cursor-default ${
                 selected
                   ? "border-[#6A35FF] bg-[#F4F0FF] text-[#6A35FF]"
                   : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
@@ -212,8 +219,9 @@ function AnswerInput({ question, value, onChange }: AnswerInputProps) {
             <button
               key={n}
               type="button"
+              disabled={readOnly}
               onClick={() => onChange(selected ? "" : String(n))}
-              className={`h-9 w-9 rounded-lg border text-sm font-medium transition-colors ${
+              className={`h-9 w-9 rounded-lg border text-sm font-medium transition-colors disabled:cursor-default ${
                 selected
                   ? "border-[#6A35FF] bg-[#F4F0FF] text-[#6A35FF]"
                   : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
@@ -233,6 +241,7 @@ function AnswerInput({ question, value, onChange }: AnswerInputProps) {
       <RadioGroup
         value={strValue}
         onValueChange={(v) => onChange(v)}
+        disabled={readOnly}
         className="bg-white rounded-xl overflow-hidden border border-gray-200 p-1.5"
       >
         {question.options?.map((opt) => (
@@ -279,6 +288,7 @@ function AnswerInput({ question, value, onChange }: AnswerInputProps) {
             <Checkbox
               id={`${question.id}-${opt}`}
               checked={checked}
+              disabled={readOnly}
               className="data-[state=checked]:bg-[#6A35FF] data-[state=checked]:border-[#6A35FF]"
               onCheckedChange={(c) => {
                 if (c) {
@@ -317,6 +327,7 @@ interface QuestionRowProps {
   /** When provided, render the hypothesis toggle (problems only). */
   isHypothesis?: boolean;
   onToggleHypothesis?: (isHypothesis: boolean) => void;
+  readOnly?: boolean;
 }
 
 function QuestionRow({
@@ -330,6 +341,7 @@ function QuestionRow({
   onConfidenceChange,
   isHypothesis,
   onToggleHypothesis,
+  readOnly = false,
 }: QuestionRowProps) {
   return (
     <div className="flex items-start gap-4 py-4 border-t border-gray-100 first:border-t-0">
@@ -339,13 +351,19 @@ function QuestionRow({
           <span className="text-[#6A35FF] mr-1.5">{index}.</span>
           {question.text}
         </p>
-        <AnswerInput question={question} value={value} onChange={onChange} />
+        <AnswerInput
+          question={question}
+          value={value}
+          onChange={onChange}
+          readOnly={readOnly}
+        />
       </div>
 
       {/* Hypothesis toggle */}
       {onToggleHypothesis && (
         <button
           type="button"
+          disabled={readOnly}
           onClick={() => onToggleHypothesis(!isHypothesis)}
           aria-pressed={isHypothesis}
           title={isHypothesis ? "Marked as hypothesis" : "Mark as hypothesis"}
@@ -362,7 +380,7 @@ function QuestionRow({
       {/* Source */}
       <div className="w-[180px] shrink-0 flex flex-col gap-1.5">
         <span className="text-xs text-gray-500 font-medium">Source:</span>
-        <Select value={source ?? ""} onValueChange={onSourceChange}>
+        <Select value={source ?? ""} onValueChange={onSourceChange} disabled={readOnly}>
           <SelectTrigger className="h-9 text-sm bg-white">
             <SelectValue placeholder="Select source" />
           </SelectTrigger>
@@ -382,7 +400,11 @@ function QuestionRow({
           Your confidence:
         </span>
         <div className="h-9 flex items-center">
-          <StarRating value={confidence ?? 0} onChange={onConfidenceChange} />
+          <StarRating
+            value={confidence ?? 0}
+            onChange={onConfidenceChange}
+            readOnly={readOnly}
+          />
         </div>
       </div>
     </div>
@@ -456,6 +478,7 @@ function BankOfQuestions({
 // ─── Main sheet ───────────────────────────────────────────────────────────────
 
 export function ActionNodeSheet({
+  readOnly = false,
   open,
   onOpenChange,
   nodeId,
@@ -674,6 +697,7 @@ export function ActionNodeSheet({
                     rows={3}
                     placeholder="Describe your problem..."
                     value={problemDraft}
+                    readOnly={readOnly}
                     onChange={(e) => setProblemDraft(e.target.value)}
                   />
                   <div className="flex flex-col gap-3 w-[250px] shrink-0">
@@ -684,6 +708,7 @@ export function ActionNodeSheet({
                       <Select
                         value={problemType}
                         onValueChange={setProblemType}
+                        disabled={readOnly}
                       >
                         <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
                           <SelectValue placeholder="Select" />
@@ -706,6 +731,7 @@ export function ActionNodeSheet({
                         onValueChange={(v) =>
                           setProblemPainGain(v as PainOrGain)
                         }
+                        disabled={readOnly}
                       >
                         <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
                           <SelectValue />
@@ -758,16 +784,19 @@ export function ActionNodeSheet({
                     onToggleHypothesis={(val) =>
                       setQuestionHypothesis((prev) => ({ ...prev, [qId]: val }))
                     }
+                    readOnly={readOnly}
                   />
                 );
               })}
 
-              <BankOfQuestions
-                questions={BANK_QUESTIONS}
-                activeQuestionIds={activeQuestionIds}
-                onAdd={handleAddBankQuestion}
-                title="Bank of market questions"
-              />
+              {!readOnly && (
+                <BankOfQuestions
+                  questions={BANK_QUESTIONS}
+                  activeQuestionIds={activeQuestionIds}
+                  onAdd={handleAddBankQuestion}
+                  title="Bank of market questions"
+                />
+              )}
             </div>
           </TabsContent>
 
@@ -790,6 +819,7 @@ export function ActionNodeSheet({
                     rows={3}
                     placeholder="Describe your solution..."
                     value={solutionDraft}
+                    readOnly={readOnly}
                     onChange={(e) => setSolutionDraft(e.target.value)}
                   />
                   <div className="flex flex-col gap-3 w-[250px] shrink-0">
@@ -800,6 +830,7 @@ export function ActionNodeSheet({
                       <Select
                         value={solutionType}
                         onValueChange={setSolutionType}
+                        disabled={readOnly}
                       >
                         <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
                           <SelectValue placeholder="Select" />
@@ -822,6 +853,7 @@ export function ActionNodeSheet({
                         onValueChange={(v) =>
                           setSolutionRelieverCreator(v as RelieverOrCreator)
                         }
+                        disabled={readOnly}
                       >
                         <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
                           <SelectValue />
@@ -879,37 +911,42 @@ export function ActionNodeSheet({
                         [qId]: val,
                       }))
                     }
+                    readOnly={readOnly}
                   />
                 );
               })}
 
-              <BankOfQuestions
-                questions={SOLUTION_BANK_QUESTIONS}
-                activeQuestionIds={activeSolutionQuestionIds}
-                onAdd={handleAddSolutionBankQuestion}
-                title="Bank of market questions"
-              />
+              {!readOnly && (
+                <BankOfQuestions
+                  questions={SOLUTION_BANK_QUESTIONS}
+                  activeQuestionIds={activeSolutionQuestionIds}
+                  onAdd={handleAddSolutionBankQuestion}
+                  title="Bank of market questions"
+                />
+              )}
             </div>
           </TabsContent>
           </div>
 
-          <div className="shrink-0 border-t p-2">
-            {activeTab === "problem" ? (
-              <Button
-                onClick={handleSaveProblem}
-                className="w-full text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors rounded-full"
-              >
-                ✓ Save problem
-              </Button>
-            ) : (
-              <Button
-                onClick={handleSaveSolution}
-                className="w-full text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors rounded-full"
-              >
-                ✓ Save solution
-              </Button>
-            )}
-          </div>
+          {!readOnly && (
+            <div className="shrink-0 border-t p-2">
+              {activeTab === "problem" ? (
+                <Button
+                  onClick={handleSaveProblem}
+                  className="w-full text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors rounded-full"
+                >
+                  ✓ Save problem
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSaveSolution}
+                  className="w-full text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors rounded-full"
+                >
+                  ✓ Save solution
+                </Button>
+              )}
+            </div>
+          )}
         </Tabs>
       </SheetContent>
     </Sheet>

@@ -9,12 +9,14 @@ interface HypothesisRowProps {
   hypothesis: Hypothesis;
   onQuestionChange: (patch: Partial<InterviewQuestion>) => void;
   onQuestionCommit: (patch?: Partial<InterviewQuestion>) => void;
+  readOnly?: boolean;
 }
 
 export function HypothesisRow({
   hypothesis,
   onQuestionChange,
   onQuestionCommit,
+  readOnly = false,
 }: HypothesisRowProps) {
   return (
     <div className="relative grid grid-cols-2">
@@ -53,6 +55,7 @@ export function HypothesisRow({
           question={hypothesis.question}
           onChange={onQuestionChange}
           onCommit={onQuestionCommit}
+          readOnly={readOnly}
         />
       </div>
 

@@ -10,6 +10,7 @@ import {
   setItemReviewed,
   type GetStartedCardWithData,
 } from "@/services/getStarted";
+import { getExampleGetStartedCards } from "@/services/examples";
 import { useMilestoneSelection } from "../../MilestoneSelectionContext";
 import { GetStartedCard } from "./GetStartedCard";
 
@@ -18,7 +19,12 @@ import { GetStartedCard } from "./GetStartedCard";
 const TRANSITION = { duration: 0.28, ease: [0.4, 0, 0.2, 1] } as const;
 const INSTANT = { duration: 0 } as const;
 
-export function GetStarted() {
+interface GetStartedProps {
+  readOnly?: boolean;
+  exampleNumber?: number;
+}
+
+export function GetStarted({ readOnly = false, exampleNumber }: GetStartedProps) {
   const { selectedMilestone } = useMilestoneSelection();
   const milestone = selectedMilestone + 1;
   const prefersReducedMotion = useReducedMotion();
@@ -33,7 +39,12 @@ export function GetStarted() {
     let active = true;
     setLoading(true);
 
-    getGetStartedCards(milestone).then((result) => {
+    const load =
+      exampleNumber != null
+        ? getExampleGetStartedCards(milestone, exampleNumber)
+        : getGetStartedCards(milestone);
+
+    load.then((result) => {
       if (!active) return;
 
       const cardMap: Record<number, boolean> = {};
@@ -58,9 +69,10 @@ export function GetStarted() {
     return () => {
       active = false;
     };
-  }, [milestone]);
+  }, [milestone, exampleNumber]);
 
   const toggleCard = (cardId: number, next: boolean) => {
+    if (readOnly) return;
     setCardReviewedState((prev) => ({ ...prev, [cardId]: next })); // optimistic
     setCardReviewed(cardId, next).catch(() =>
       setCardReviewedState((prev) => ({ ...prev, [cardId]: !next })),
@@ -68,6 +80,7 @@ export function GetStarted() {
   };
 
   const toggleItem = (itemId: number, next: boolean) => {
+    if (readOnly) return;
     setItemReviewedState((prev) => ({ ...prev, [itemId]: next })); // optimistic
     setItemReviewed(itemId, next).catch(() =>
       setItemReviewedState((prev) => ({ ...prev, [itemId]: !next })),
@@ -118,6 +131,7 @@ export function GetStarted() {
                 itemReviewed={itemReviewed}
                 onToggleCard={toggleCard}
                 onToggleItem={toggleItem}
+                readOnly={readOnly}
               />
             ))}
           </div>

@@ -22,6 +22,7 @@ interface AnswerInputProps {
    * state hasn't re-rendered yet, so the argument is the only fresh copy.
    */
   onCommit: (value?: string) => void;
+  readOnly?: boolean;
 }
 
 export function AnswerInput({
@@ -29,6 +30,7 @@ export function AnswerInput({
   value,
   onChange,
   onCommit,
+  readOnly = false,
 }: AnswerInputProps) {
   if (question.responseType === "scale") {
     // 0 when unanswered, so no point reads as selected.
@@ -41,12 +43,13 @@ export function AnswerInput({
             <button
               key={n}
               type="button"
+              disabled={readOnly}
               onClick={() => {
                 const next = selected ? "" : String(n);
                 onChange(next);
                 onCommit(next);
               }}
-              className={`h-9 w-9 rounded-lg border text-sm font-medium transition-colors ${
+              className={`h-9 w-9 rounded-lg border text-sm font-medium transition-colors disabled:cursor-default ${
                 selected
                   ? "border-[#6A35FF] bg-[#F4F0FF] text-[#6A35FF]"
                   : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
@@ -64,6 +67,7 @@ export function AnswerInput({
     return (
       <Select
         value={value || undefined}
+        disabled={readOnly}
         onValueChange={(next) => {
           onChange(next);
           onCommit(next);
@@ -86,6 +90,7 @@ export function AnswerInput({
   return (
     <Input
       value={value}
+      readOnly={readOnly}
       onChange={(e) => onChange(e.target.value)}
       onBlur={() => onCommit()}
       placeholder="Type user's answer"

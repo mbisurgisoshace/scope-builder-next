@@ -5,13 +5,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader } from "@/components/ui/loader";
 import {
   getInterviewPrepData,
+  getExampleInterviewPrepData,
   upsertProblemInterviewQuestion,
 } from "@/services/interviewPrep";
 
 import { ProblemCard } from "./ProblemCard";
 import type { InterviewQuestion, ProblemBlock } from "./types";
 
-export function InterviewPrep() {
+interface InterviewPrepProps {
+  readOnly?: boolean;
+  exampleNumber?: number;
+}
+
+export function InterviewPrep({ readOnly = false, exampleNumber }: InterviewPrepProps) {
   const [blocks, setBlocks] = useState<ProblemBlock[] | null>(null);
 
   // Mirrors `blocks` so a commit always persists the latest value rather than whatever
@@ -22,13 +28,17 @@ export function InterviewPrep() {
   // Problems come from the journey-map canvas, which is org-wide, so load once on mount.
   useEffect(() => {
     let active = true;
-    getInterviewPrepData().then((result) => {
+    const load =
+      exampleNumber != null
+        ? getExampleInterviewPrepData(exampleNumber)
+        : getInterviewPrepData();
+    load.then((result) => {
       if (active) setBlocks(result);
     });
     return () => {
       active = false;
     };
-  }, []);
+  }, [exampleNumber]);
 
   const handleQuestionChange = useCallback(
     (blockId: string, hypothesisId: string, patch: Partial<InterviewQuestion>) => {
@@ -56,6 +66,7 @@ export function InterviewPrep() {
       hypothesisId: string,
       patch?: Partial<InterviewQuestion>,
     ) => {
+      if (readOnly) return;
       const block = blocksRef.current?.find((b) => b.id === blockId);
       const hypothesis = block?.hypotheses.find((h) => h.id === hypothesisId);
       if (!block || !hypothesis) return;
@@ -73,7 +84,7 @@ export function InterviewPrep() {
         options: question.options,
       });
     },
-    [],
+    [readOnly],
   );
 
   if (!blocks) {
@@ -114,6 +125,7 @@ export function InterviewPrep() {
             <ProblemCard
               key={block.id}
               block={block}
+              readOnly={readOnly}
               onQuestionChange={(hypothesisId, patch) =>
                 handleQuestionChange(block.id, hypothesisId, patch)
               }

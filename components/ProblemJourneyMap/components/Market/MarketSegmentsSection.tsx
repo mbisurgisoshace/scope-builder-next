@@ -25,6 +25,7 @@ import { BeachheadChart } from "./BeachheadChart";
 interface MarketSegmentsSectionProps {
   segments: MarketSegment[];
   note: string;
+  readOnly?: boolean;
 }
 
 // Row currently in the table. `id` is null for blank spreadsheet rows that
@@ -65,6 +66,7 @@ const normalize = (rows: EditableSegment[]): EditableSegment[] => {
 export function MarketSegmentsSection({
   segments,
   note,
+  readOnly = false,
 }: MarketSegmentsSectionProps) {
   const [rows, setRowsState] = useState<EditableSegment[]>(() =>
     normalize(
@@ -96,6 +98,7 @@ export function MarketSegmentsSection({
   };
 
   const commitRow = (localKey: string) => {
+    if (readOnly) return;
     const row = rowsRef.current.find((r) => r.localKey === localKey);
     if (!row) return;
 
@@ -144,12 +147,14 @@ export function MarketSegmentsSection({
   };
 
   const toggleBeachhead = (localKey: string, next: boolean) => {
+    if (readOnly) return;
     patchRow(localKey, { beachhead: next });
     // Commit immediately after the state (and ref) are updated.
     setTimeout(() => commitRow(localKey), 0);
   };
 
   const commitNote = () => {
+    if (readOnly) return;
     startTransition(() => {
       upsertMarketSegmentNote(noteValue.trim());
     });
@@ -187,6 +192,7 @@ export function MarketSegmentsSection({
                   <TableCell className="border-b border-r border-[#D5D8E2] p-0">
                     <Input
                       value={row.name}
+                      readOnly={readOnly}
                       onChange={(e) =>
                         patchRow(row.localKey, { name: e.target.value })
                       }
@@ -197,6 +203,7 @@ export function MarketSegmentsSection({
                   <TableCell className="border-b border-r border-[#D5D8E2] p-0">
                     <Input
                       value={row.notes}
+                      readOnly={readOnly}
                       onChange={(e) =>
                         patchRow(row.localKey, { notes: e.target.value })
                       }
@@ -207,6 +214,7 @@ export function MarketSegmentsSection({
                   <TableCell className="border-b border-[#D5D8E2] text-center">
                     <Checkbox
                       checked={row.beachhead}
+                      disabled={readOnly}
                       onCheckedChange={(v) =>
                         toggleBeachhead(row.localKey, v === true)
                       }
@@ -236,6 +244,7 @@ export function MarketSegmentsSection({
             <p className="mb-1.5 text-sm font-medium text-[#1F2430]">Notes</p>
             <Textarea
               value={noteValue}
+              readOnly={readOnly}
               onChange={(e) => setNoteValue(e.target.value)}
               onBlur={commitNote}
               placeholder="Type here"

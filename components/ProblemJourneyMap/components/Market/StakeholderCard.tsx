@@ -15,6 +15,7 @@ import type { StakeholderDefinition } from "./constants";
 interface StakeholderCardProps {
   definition: StakeholderDefinition;
   initialRows: StakeholderRow[];
+  readOnly?: boolean;
 }
 
 // A row being edited. `id` is null until it's been persisted to the DB.
@@ -30,6 +31,7 @@ const nextLocalKey = () => `row-${localKeySeq++}`;
 export function StakeholderCard({
   definition,
   initialRows,
+  readOnly = false,
 }: StakeholderCardProps) {
   const [rows, setRows] = useState<EditableRow[]>(() =>
     initialRows.map((r) => ({
@@ -65,6 +67,7 @@ export function StakeholderCard({
 
   // Persist a row when its input loses focus.
   const commitRow = (localKey: string) => {
+    if (readOnly) return;
     const row = rows.find((r) => r.localKey === localKey);
     if (!row) return;
 
@@ -144,14 +147,16 @@ export function StakeholderCard({
       </p>
 
       {/* Always visible — sits above the list and outside the scroll area. */}
-      <button
-        type="button"
-        onClick={addRow}
-        className="mb-3 flex w-fit items-center gap-1 text-xs font-semibold text-[#6A35FF] hover:opacity-80"
-      >
-        <Plus className="size-3.5" />
-        Row
-      </button>
+      {!readOnly && (
+        <button
+          type="button"
+          onClick={addRow}
+          className="mb-3 flex w-fit items-center gap-1 text-xs font-semibold text-[#6A35FF] hover:opacity-80"
+        >
+          <Plus className="size-3.5" />
+          Row
+        </button>
+      )}
 
       {/* Rows scroll when the list grows too long. */}
       <div className="relative">
@@ -164,7 +169,8 @@ export function StakeholderCard({
             <div key={row.localKey} className="flex items-center gap-1">
               <Input
                 value={row.value}
-                autoFocus={row.id === null && row.value === ""}
+                readOnly={readOnly}
+                autoFocus={!readOnly && row.id === null && row.value === ""}
                 onChange={(e) => setRowValue(row.localKey, e.target.value)}
                 onBlur={() => commitRow(row.localKey)}
                 onKeyDown={(e) => {
@@ -172,14 +178,16 @@ export function StakeholderCard({
                 }}
                 className="h-8 border-[#E3E5EC] text-sm focus-visible:border-[#6A35FF] focus-visible:ring-0"
               />
-              <button
-                type="button"
-                onClick={() => removeRow(row.localKey)}
-                className="flex size-6 shrink-0 items-center justify-center rounded text-[#9AA1B2] hover:text-[#6A35FF]"
-                aria-label="Remove row"
-              >
-                <X className="size-4" />
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => removeRow(row.localKey)}
+                  className="flex size-6 shrink-0 items-center justify-center rounded text-[#9AA1B2] hover:text-[#6A35FF]"
+                  aria-label="Remove row"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
             </div>
           ))}
         </div>

@@ -52,19 +52,22 @@ model Participant {
   tags                   String?
   status                 ParticipantStatus   @default(need_to_schedule)
   scheduled_date         DateTime?
+  example_number         Int? // NULL = real data, N = example set N
   created_at             DateTime            @default(now())
   ParticipantRoom        ParticipantRoom?
   interview_responses    InterviewResponse[]
 
   problem_interview_answers ProblemInterviewAnswer[]
 
+  @@index([example_number])
   @@map("participants")
 }
 
 model ParticipantTag {
-  id     Int    @id @default(autoincrement())
-  name   String
-  org_id String
+  id             Int    @id @default(autoincrement())
+  name           String
+  org_id         String
+  example_number Int? // NULL = real data, N = example set N
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -73,10 +76,11 @@ model ParticipantTag {
 }
 
 model StakeholderJobTitles {
-  id     Int     @id @default(autoincrement())
-  name   String
-  role   String?
-  org_id String
+  id             Int     @id @default(autoincrement())
+  name           String
+  role           String?
+  org_id         String
+  example_number Int? // NULL = real data, N = example set N
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -331,11 +335,12 @@ model GetStartedItem {
 }
 
 model GetStartedReview {
-  id       Int     @id @default(autoincrement())
-  org_id   String
-  card_id  Int? // set for text cards (whole-card review)
-  item_id  Int? // set for link/video subitems
-  reviewed Boolean @default(false)
+  id             Int     @id @default(autoincrement())
+  org_id         String
+  card_id        Int? // set for text cards (whole-card review)
+  item_id        Int? // set for link/video subitems
+  reviewed       Boolean @default(false)
+  example_number Int? // NULL = real data, N = example set N
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -431,6 +436,7 @@ model InterviewMilestone {
   title           String
   date            DateTime
   documented_goal Int
+  example_number  Int? // NULL = real data, N = example set N
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -487,6 +493,7 @@ model StakeholderRow {
   stakeholder_type String // "end_user" | "buyer_decision_maker" | "payer" | "influencer" | "recommender" | "saboteur"
   value            String
   order            Int    @default(0)
+  example_number   Int? // NULL = real data, N = example set N
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -495,12 +502,13 @@ model StakeholderRow {
 }
 
 model MarketSegment {
-  id        Int     @id @default(autoincrement())
-  org_id    String
-  name      String  @default("")
-  notes     String  @default("") // the per-row "Notes" column
-  beachhead Boolean @default(false)
-  order     Int     @default(0)
+  id             Int     @id @default(autoincrement())
+  org_id         String
+  name           String  @default("")
+  notes          String  @default("") // the per-row "Notes" column
+  beachhead      Boolean @default(false)
+  order          Int     @default(0)
+  example_number Int? // NULL = real data, N = example set N
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -509,9 +517,10 @@ model MarketSegment {
 }
 
 model MarketSegmentNote {
-  id      Int    @id @default(autoincrement())
-  org_id  String @unique // one section-level note per startup
-  content String @default("")
+  id             Int    @id @default(autoincrement())
+  org_id         String @unique // one section-level note per startup (sentinel org for examples keeps this unique)
+  content        String @default("")
+  example_number Int? // NULL = real data, N = example set N
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -537,6 +546,7 @@ model ProblemInterviewQuestion {
   title            String                @default("")
   response_type    InterviewResponseType @default(text)
   options          Json[] // [{ id, label }], only meaningful for response_type=dropdown
+  example_number   Int? // NULL = real data, N = example set N
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -545,6 +555,7 @@ model ProblemInterviewQuestion {
 
   @@unique([org_id, node_id, problem_id, bank_question_id])
   @@index([org_id])
+  @@index([example_number])
   @@map("problem_interview_questions")
 }
 
@@ -560,7 +571,8 @@ model ProblemInterviewAnswer {
   // The answer, serialized: text -> the text; scale -> "1".."5"; dropdown -> the
   // option id. A value that no longer fits the question's response_type (because the
   // type was changed after answering) is kept but renders as unanswered.
-  value String @default("")
+  value          String @default("")
+  example_number Int? // NULL = real data, N = example set N
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -571,5 +583,6 @@ model ProblemInterviewAnswer {
   @@unique([question_id, participant_id])
   @@index([org_id])
   @@index([participant_id])
+  @@index([example_number])
   @@map("problem_interview_answers")
 }

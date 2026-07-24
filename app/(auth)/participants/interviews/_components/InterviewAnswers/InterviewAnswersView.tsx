@@ -9,6 +9,7 @@ import { Loader } from "@/components/ui/loader";
 import type { Participant } from "@/lib/generated/prisma";
 import {
   getInterviewAnswersData,
+  getExampleInterviewAnswersData,
   upsertProblemInterviewAnswer,
 } from "@/services/interviewPrep";
 
@@ -19,16 +20,20 @@ interface InterviewAnswersViewProps {
   participant: Participant;
   onBack: () => void;
   onSaved: () => void;
+  readOnly?: boolean;
+  exampleNumber?: number;
 }
 
 function InterviewHeader({
   participant,
   onBack,
   onSave,
+  readOnly = false,
 }: {
   participant: Participant;
   onBack: () => void;
   onSave: () => void;
+  readOnly?: boolean;
 }) {
   const roles =
     participant.role
@@ -77,12 +82,14 @@ function InterviewHeader({
         </div>
       </div>
 
-      <Button
-        onClick={onSave}
-        className="rounded-lg bg-[#111827] px-8 text-white hover:bg-[#374151]"
-      >
-        Save
-      </Button>
+      {!readOnly && (
+        <Button
+          onClick={onSave}
+          className="rounded-lg bg-[#111827] px-8 text-white hover:bg-[#374151]"
+        >
+          Save
+        </Button>
+      )}
     </div>
   );
 }
@@ -91,6 +98,8 @@ export function InterviewAnswersView({
   participant,
   onBack,
   onSaved,
+  readOnly = false,
+  exampleNumber,
 }: InterviewAnswersViewProps) {
   const [problems, setProblems] = useState<AnswerableProblem[] | null>(null);
 
@@ -101,13 +110,17 @@ export function InterviewAnswersView({
 
   useEffect(() => {
     let active = true;
-    getInterviewAnswersData(participant.id).then((result) => {
+    const load =
+      exampleNumber != null
+        ? getExampleInterviewAnswersData(exampleNumber, participant.id)
+        : getInterviewAnswersData(participant.id);
+    load.then((result) => {
       if (active) setProblems(result);
     });
     return () => {
       active = false;
     };
-  }, [participant.id]);
+  }, [participant.id, exampleNumber]);
 
   const handleAnswerChange = useCallback(
     (problemId: string, questionId: string, value: string) => {
@@ -131,6 +144,7 @@ export function InterviewAnswersView({
 
   const handleAnswerCommit = useCallback(
     (problemId: string, questionId: string, value?: string) => {
+      if (readOnly) return;
       const problem = problemsRef.current?.find((p) => p.id === problemId);
       const question = problem?.questions.find(
         (q) => q.questionId === questionId,
@@ -145,7 +159,7 @@ export function InterviewAnswersView({
         value: value ?? question.answer,
       });
     },
-    [participant.id],
+    [participant.id, readOnly],
   );
 
   // Answers already persist on blur, and clicking Save blurs the focused input first, so
@@ -164,6 +178,7 @@ export function InterviewAnswersView({
           participant={participant}
           onBack={onBack}
           onSave={handleSave}
+          readOnly={readOnly}
         />
       </div>
 
@@ -190,6 +205,7 @@ export function InterviewAnswersView({
               <ProblemAnswerColumn
                 key={problem.id}
                 problem={problem}
+                readOnly={readOnly}
                 onAnswerChange={(questionId, value) =>
                   handleAnswerChange(problem.id, questionId, value)
                 }

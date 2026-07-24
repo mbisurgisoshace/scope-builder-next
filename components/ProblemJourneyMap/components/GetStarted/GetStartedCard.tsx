@@ -16,6 +16,8 @@ interface GetStartedCardProps {
   itemReviewed: Record<number, boolean>;
   onToggleCard: (cardId: number, next: boolean) => void;
   onToggleItem: (itemId: number, next: boolean) => void;
+  /** Reviewed toggles are shown but disabled (Examples pages). */
+  readOnly?: boolean;
 }
 
 export function GetStartedCard({
@@ -24,6 +26,7 @@ export function GetStartedCard({
   itemReviewed,
   onToggleCard,
   onToggleItem,
+  readOnly = false,
 }: GetStartedCardProps) {
   return (
     <div className="flex flex-col rounded-2xl bg-white p-5 shadow-sm">
@@ -41,6 +44,7 @@ export function GetStartedCard({
             <ReviewedToggle
               reviewed={cardReviewed}
               onToggle={(next) => onToggleCard(card.id, next)}
+              readOnly={readOnly}
             />
           </div>
         </>
@@ -65,6 +69,7 @@ export function GetStartedCard({
               <ReviewedToggle
                 reviewed={!!itemReviewed[item.id]}
                 onToggle={(next) => onToggleItem(item.id, next)}
+                readOnly={readOnly}
               />
             </li>
           ))}
@@ -88,6 +93,7 @@ export function GetStartedCard({
                 <ReviewedToggle
                   reviewed={!!itemReviewed[item.id]}
                   onToggle={(next) => onToggleItem(item.id, next)}
+                  readOnly={readOnly}
                 />
               </div>
             </li>

@@ -7,18 +7,21 @@ import { cn } from "@/lib/utils";
 interface ReviewedToggleProps {
   reviewed: boolean;
   onToggle: (next: boolean) => void;
+  /** Show the reviewed state but don't allow toggling (Examples pages). */
+  readOnly?: boolean;
 }
 
 /**
  * The "Reviewed" affordance used across Get Started cards — a green check pill
  * when reviewed, a hollow circle otherwise. Toggles both ways.
  */
-export function ReviewedToggle({ reviewed, onToggle }: ReviewedToggleProps) {
+export function ReviewedToggle({ reviewed, onToggle, readOnly = false }: ReviewedToggleProps) {
   return (
     <button
       type="button"
+      disabled={readOnly}
       onClick={() => onToggle(!reviewed)}
-      className="flex shrink-0 items-center gap-1.5 text-xs font-medium"
+      className="flex shrink-0 items-center gap-1.5 text-xs font-medium disabled:cursor-default"
     >
       <span
         className={cn(

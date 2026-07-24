@@ -99,7 +99,7 @@ function ProblemCard({
 
 function ActionNodeInner({ id, data }: NodeProps) {
   const nodeData = data as unknown as JourneyNodeData;
-  const { addChildNode, updateNodeData, openProblem, addEmptyProblem } =
+  const { readOnly, addChildNode, updateNodeData, openProblem, addEmptyProblem } =
     useJourneyContext();
   const selected = useSelectedNode();
   const isNodeSelected = selected?.nodeId === id;
@@ -163,6 +163,7 @@ function ActionNodeInner({ id, data }: NodeProps) {
         className="nodrag nopan w-full text-sm text-gray-700 bg-transparent resize-none placeholder-gray-400 focus:outline-none leading-snug"
         placeholder="Type your action..."
         value={nodeData.content ?? ""}
+        readOnly={readOnly}
         onChange={(e) => updateNodeData(id, { content: e.target.value })}
         onClick={(e) => e.stopPropagation()}
       />
@@ -173,17 +174,19 @@ function ActionNodeInner({ id, data }: NodeProps) {
           nodeId={id}
           problem={problem}
           isSelected={selected?.problemId === problem.id}
-          canDelete={problems.length > 1}
+          canDelete={!readOnly && problems.length > 1}
         />
       ))}
 
-      <button
-        onClick={handleAddProblem}
-        className="nodrag nopan mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-gray-300 text-sm font-medium text-gray-500 hover:border-[#6A35FF] hover:text-[#6A35FF] transition-colors"
-      >
-        <PlusIcon className="w-3.5 h-3.5" />
-        Add a problem
-      </button>
+      {!readOnly && (
+        <button
+          onClick={handleAddProblem}
+          className="nodrag nopan mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-gray-300 text-sm font-medium text-gray-500 hover:border-[#6A35FF] hover:text-[#6A35FF] transition-colors"
+        >
+          <PlusIcon className="w-3.5 h-3.5" />
+          Add a problem
+        </button>
+      )}
 
       <Handle
         id="right"
@@ -192,22 +195,24 @@ function ActionNodeInner({ id, data }: NodeProps) {
         className="!opacity-0 !pointer-events-none"
       />
 
-      <div className="nopan nodrag absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-3">
-        <button
-          ref={buttonRef}
-          className="nodrag nopan w-[30px] h-[30px] rounded-full bg-[#A198BA] text-white flex items-center justify-center shadow hover:bg-[#9486bb] transition-colors"
-          onClick={handleToggleMenu}
-        >
-          <PlusIcon className="w-3.5 h-3.5" />
-        </button>
-        {anchorRect && (
-          <NodeTypeMenu
-            anchorRect={anchorRect}
-            onSelect={handleSelect}
-            onClose={handleClose}
-          />
-        )}
-      </div>
+      {!readOnly && (
+        <div className="nopan nodrag absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-3">
+          <button
+            ref={buttonRef}
+            className="nodrag nopan w-[30px] h-[30px] rounded-full bg-[#A198BA] text-white flex items-center justify-center shadow hover:bg-[#9486bb] transition-colors"
+            onClick={handleToggleMenu}
+          >
+            <PlusIcon className="w-3.5 h-3.5" />
+          </button>
+          {anchorRect && (
+            <NodeTypeMenu
+              anchorRect={anchorRect}
+              onSelect={handleSelect}
+              onClose={handleClose}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

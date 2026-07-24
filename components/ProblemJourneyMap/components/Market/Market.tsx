@@ -4,22 +4,32 @@ import { useEffect, useState } from "react";
 
 import { Loader } from "@/components/ui/loader";
 import { getMarketData, type MarketData } from "@/services/market";
+import { getExampleMarketData } from "@/services/examples";
 import { StakeholdersSection } from "./StakeholdersSection";
 import { MarketSegmentsSection } from "./MarketSegmentsSection";
 
-export function Market() {
+interface MarketProps {
+  readOnly?: boolean;
+  exampleNumber?: number;
+}
+
+export function Market({ readOnly = false, exampleNumber }: MarketProps) {
   const [data, setData] = useState<MarketData | null>(null);
 
   // Market data is org-wide (not per-milestone), so load once on mount.
   useEffect(() => {
     let active = true;
-    getMarketData().then((result) => {
+    const load =
+      exampleNumber != null
+        ? getExampleMarketData(exampleNumber)
+        : getMarketData();
+    load.then((result) => {
       if (active) setData(result);
     });
     return () => {
       active = false;
     };
-  }, []);
+  }, [exampleNumber]);
 
   if (!data) {
     return (
@@ -33,7 +43,7 @@ export function Market() {
     <div className="flex h-full flex-col overflow-y-auto bg-white p-6">
       {/* Stakeholders grows to fill, pushing Market Segments to the bottom. */}
       <div className="flex-1">
-        <StakeholdersSection rows={data.stakeholderRows} />
+        <StakeholdersSection rows={data.stakeholderRows} readOnly={readOnly} />
       </div>
 
       {/* Gray divider separating the two parts (matches the design). */}
@@ -42,6 +52,7 @@ export function Market() {
       <MarketSegmentsSection
         segments={data.segments}
         note={data.note?.content ?? ""}
+        readOnly={readOnly}
       />
     </div>
   );
