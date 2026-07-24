@@ -21,7 +21,7 @@ const HORIZONTAL_GAP = 200; // px between the right edge of a node and its child
 const VERTICAL_GAP = 40; // px gap between siblings (top ↔ bottom)
 const TREE_GAP = 80; // px gap between separate trigger chains
 const ANIMATION_DURATION = 300;
-const INITIAL_ZOOM = 0.75; // fixed comfortable zoom instead of fitting the whole tree
+const INITIAL_ZOOM = 0.85; // fixed comfortable zoom instead of fitting the whole tree
 
 function nodeHeight(n: Node): number {
   return n.measured?.height ?? 120;
