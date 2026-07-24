@@ -195,11 +195,11 @@ function SubStepCell({
   return (
     <div className="relative flex flex-col items-center justify-center gap-1.5 px-3 py-2 lg:px-5 lg:py-3 xl:px-8">
       <div className="flex items-center gap-1.5">
-        <span className="whitespace-nowrap text-xs font-medium text-gray-700 xl:text-sm">
+        <span className="line-clamp-2 max-w-[180px] text-center text-xs font-medium text-gray-700 xl:text-sm">
           {subStep.label}
         </span>
         {subStep.status !== "done" && Icon && (
-          <Icon size={14} className="text-gray-400" />
+          <Icon size={14} className="shrink-0 text-gray-400" />
         )}
       </div>
 
@@ -322,7 +322,9 @@ export function MilestoneHeader({
                   <motion.span
                     transition={transition}
                     animate={{ color: isExpanded ? "#ffffff" : GRAY_TEXT }}
-                    className="text-xs font-semibold leading-none "
+                    className={`text-xs font-semibold leading-none ${
+                      isExpanded ? "" : "text-center"
+                    }`}
                   >
                     {milestone.label}
                   </motion.span>
@@ -347,7 +349,7 @@ export function MilestoneHeader({
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -8 }}
                       transition={transition}
-                      className="flex items-center"
+                      className="flex items-stretch"
                     >
                       {milestone.subSteps.map((subStep, i) => (
                         <SubStepCell
