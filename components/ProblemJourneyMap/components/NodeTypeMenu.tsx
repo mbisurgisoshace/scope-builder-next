@@ -20,7 +20,7 @@ const OPTIONS: {
 }[] = [
   {
     type: "trigger",
-    label: "Trigger",
+    label: "Trigger / Motivation",
     description: "Starts the journey",
     icon: <ZapIcon className="w-4 h-4 text-indigo-500" />,
   },
@@ -32,7 +32,7 @@ const OPTIONS: {
   },
   {
     type: "split_route",
-    label: "Choice",
+    label: "Scenario",
     description: "Create independent branches",
     icon: <GitForkIcon className="w-4 h-4 text-orange-500" />,
   },

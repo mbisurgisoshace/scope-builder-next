@@ -13,7 +13,7 @@ import {
   type JourneyNodeData,
 } from "../JourneyContext";
 import type { StakeholderRow } from "@/services/market";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 // Resolve the node's selected stakeholder ids to rows, grouped by category in
 // `STAKEHOLDER_DEFINITIONS` order. Ids with no matching row (deleted on the
@@ -82,7 +82,7 @@ function TriggerNodeInner({ id, data }: NodeProps) {
             <ZapIcon className="w-3.5 h-3.5 text-[#6A35FF]" />
           </div>
           <span className="text-lg font-semibold text-[#111827] tracking-wide">
-            Trigger
+            Trigger / Motivation
           </span>
         </div>
         {!readOnly && (
@@ -92,9 +92,7 @@ function TriggerNodeInner({ id, data }: NodeProps) {
               className="nodrag nopan text-sm font-medium text-[#6A35FF] hover:underline"
               onClick={() => setShowPicker(true)}
             >
-              {selectedIds.length > 0
-                ? "Edit stakeholders"
-                : "Choose stakeholders"}
+              Stakeholders
             </button>
             <StakeholderPickerModal
               open={showPicker}
@@ -123,7 +121,7 @@ function TriggerNodeInner({ id, data }: NodeProps) {
         readOnly && <p className="mb-3 text-xs text-gray-400">—</p>
       )}
 
-      <Input
+      <Textarea
         value={nodeData.content ?? ""}
         placeholder="Type your trigger..."
         readOnly={readOnly}
