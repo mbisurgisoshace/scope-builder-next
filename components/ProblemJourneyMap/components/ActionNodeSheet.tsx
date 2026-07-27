@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { PlusIcon, CircleHelpIcon, StarIcon, CheckIcon } from "lucide-react";
+import { PlusIcon, CircleHelpIcon, StarIcon, CheckIcon, LockIcon } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -103,6 +103,11 @@ const SOURCE_OPTIONS = [
 /** Which editor the sheet is showing. Controlled by the canvas so a click on the
  * card can decide which one to land on. */
 export type ActionSheetTab = "problem" | "solution";
+
+/** The Solution tab ships visible but read-only until the feature is unlocked —
+ * the tab is still reachable, it just can't be edited. Flip this (or swap it for a
+ * prop/flag source) when Solutions goes live. */
+const SOLUTION_TAB_LOCKED: boolean = true;
 
 interface ActionNodeSheetProps {
   /** Pure viewer: inputs disabled, Save hidden, bank-of-questions hidden. */
@@ -496,6 +501,10 @@ export function ActionNodeSheet({
   solution,
   onSaveSolution,
 }: ActionNodeSheetProps) {
+  // The Solution tab is read-only whenever the whole sheet is (Examples pages) or
+  // while the Solutions feature is still locked.
+  const solutionReadOnly = readOnly || SOLUTION_TAB_LOCKED;
+
   // ── Problem editor state (single problem, inline) ──
   const [problemDraft, setProblemDraft] = useState("");
   const [problemType, setProblemType] = useState("");
@@ -672,9 +681,15 @@ export function ActionNodeSheet({
               <TabsTrigger
                 key={value}
                 value={value}
-                className="text-xs rounded-sm"
+                className="group text-xs rounded-sm"
               >
-                {label}
+                <span className="flex items-center gap-1.5">
+                  {value === "solution" && SOLUTION_TAB_LOCKED && (
+                    // Purple on the light inactive tab, white on the purple active one.
+                    <LockIcon className="w-3 h-3 text-[#6A35FF] group-data-[state=active]:text-white" />
+                  )}
+                  {label}
+                </span>
               </TabsTrigger>
             ))}
           </TabsList>
@@ -823,7 +838,7 @@ export function ActionNodeSheet({
                     rows={3}
                     placeholder="Describe your solution..."
                     value={solutionDraft}
-                    readOnly={readOnly}
+                    readOnly={solutionReadOnly}
                     onChange={(e) => setSolutionDraft(e.target.value)}
                   />
                   <div className="flex flex-col gap-3 w-[250px] shrink-0">
@@ -834,7 +849,7 @@ export function ActionNodeSheet({
                       <Select
                         value={solutionType}
                         onValueChange={setSolutionType}
-                        disabled={readOnly}
+                        disabled={solutionReadOnly}
                       >
                         <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
                           <SelectValue placeholder="Select" />
@@ -857,7 +872,7 @@ export function ActionNodeSheet({
                         onValueChange={(v) =>
                           setSolutionRelieverCreator(v as RelieverOrCreator)
                         }
-                        disabled={readOnly}
+                        disabled={solutionReadOnly}
                       >
                         <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
                           <SelectValue />
@@ -915,12 +930,12 @@ export function ActionNodeSheet({
                         [qId]: val,
                       }))
                     }
-                    readOnly={readOnly}
+                    readOnly={solutionReadOnly}
                   />
                 );
               })}
 
-              {!readOnly && (
+              {!solutionReadOnly && (
                 <BankOfQuestions
                   questions={SOLUTION_BANK_QUESTIONS}
                   activeQuestionIds={activeSolutionQuestionIds}
@@ -932,7 +947,7 @@ export function ActionNodeSheet({
           </TabsContent>
           </div>
 
-          {!readOnly && (
+          {!readOnly && !(activeTab === "solution" && SOLUTION_TAB_LOCKED) && (
             <div className="shrink-0 border-t p-2">
               {activeTab === "problem" ? (
                 <Button
