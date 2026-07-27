@@ -13,7 +13,7 @@ const STORAGE_KEY = "pjm-active-tab";
 type TabValue = "get-started" | "canvas" | "market" | "interview-prep";
 
 const TABS: { value: TabValue; label: string }[] = [
-  { value: "get-started", label: "Get Started" },
+  { value: "get-started", label: "Instructions" },
   { value: "canvas", label: "Canvas" },
   { value: "market", label: "Market" },
   { value: "interview-prep", label: "Interview Prep." },
