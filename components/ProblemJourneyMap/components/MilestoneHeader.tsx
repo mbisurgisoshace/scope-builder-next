@@ -236,8 +236,25 @@ export function MilestoneHeader({
   // sub-steps overlap the neighbouring blocks for the length of the exit.
   const [exitingIndex, setExitingIndex] = useState<number | null>(null);
 
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const blockRefs = useRef<(HTMLDivElement | null)[]>([]);
   const prevIndexRef = useRef(expandedIndex);
+
+  // Trailing scroll room so ANY milestone can be pinned to the left edge. Without
+  // it the last milestones don't have enough content to their right, so the
+  // browser clamps the scroll and they stop mid-strip. Sized to the visible
+  // width of the strip (the worst case), kept in sync on resize.
+  const [spacerWidth, setSpacerWidth] = useState(0);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const update = () => setSpacerWidth(container.clientWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     const prev = prevIndexRef.current;
@@ -245,28 +262,47 @@ export function MilestoneHeader({
     if (prev !== expandedIndex) setExitingIndex(prev);
   }, [expandedIndex]);
 
-  // Bring the selected milestone into view when the strip is scrolled. Wait for
-  // the grow animation to settle, otherwise this measures the pre-grow box and
-  // under-scrolls.
+  // Align the selected milestone to the start of the strip so it's always seen
+  // from its beginning (its sub-steps extend to the right). Scroll the strip
+  // container itself by the measured gap between the block's left edge and the
+  // container's left edge — `scrollIntoView` gets interrupted by the ongoing
+  // flexGrow animation and lands the block mid-strip. Wait for the grow
+  // animation to settle, otherwise this measures the pre-grow box.
   useEffect(() => {
-    const scroll = () =>
-      blockRefs.current[expandedIndex]?.scrollIntoView({
-        inline: "nearest",
-        block: "nearest",
+    const scroll = () => {
+      const container = scrollRef.current;
+      const block = blockRefs.current[expandedIndex];
+      if (!container || !block) return;
+      const delta =
+        block.getBoundingClientRect().left -
+        container.getBoundingClientRect().left;
+      container.scrollBy({
+        left: delta,
         behavior: reduceMotion ? "auto" : "smooth",
       });
+    };
 
     if (reduceMotion) {
       scroll();
       return;
     }
-    const id = window.setTimeout(scroll, TRANSITION.duration * 1000);
-    return () => window.clearTimeout(id);
+    // Add margin past the transition so the previous milestone has fully
+    // collapsed before we measure — otherwise its late collapse shifts the
+    // selected block and the alignment lands off. rAF ensures the final layout
+    // is flushed before measuring.
+    let raf = 0;
+    const id = window.setTimeout(() => {
+      raf = window.requestAnimationFrame(scroll);
+    }, TRANSITION.duration * 1000 + 80);
+    return () => {
+      window.clearTimeout(id);
+      window.cancelAnimationFrame(raf);
+    };
   }, [expandedIndex, reduceMotion]);
 
   return (
     <div className="flex w-full items-stretch border-b border-[#E4E5ED] bg-white">
-      <div className="no-scrollbar min-w-0 flex-1 overflow-x-auto">
+      <div ref={scrollRef} className="no-scrollbar min-w-0 flex-1 overflow-x-auto">
         <div className="flex w-full min-w-max items-stretch [--ms-basis:90px] lg:[--ms-basis:110px] xl:[--ms-basis:130px]">
           {milestones.map((milestone, index) => {
             const isExpanded = index === expandedIndex;
@@ -373,6 +409,13 @@ export function MilestoneHeader({
               </motion.div>
             );
           })}
+
+          {/* Trailing scroll room so the later milestones can reach the left edge. */}
+          <div
+            aria-hidden
+            className="shrink-0"
+            style={{ width: spacerWidth }}
+          />
         </div>
       </div>
 
