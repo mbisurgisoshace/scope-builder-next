@@ -12,7 +12,7 @@ import {
 } from "../JourneyContext";
 import { useSelectedNode } from "../SelectedNodeContext";
 import { useNodeProblems } from "../NodeProblemsContext";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import type { Problem } from "../components/ActionNodeSheet";
 
 // A single problem (+ its solution preview) as it appears stacked on the card.
@@ -159,7 +159,7 @@ function ActionNodeInner({ id, data }: NodeProps) {
         </span>
       </div>
 
-      <Input
+      <Textarea
         className="nodrag nopan w-full text-sm text-gray-700 bg-transparent resize-none placeholder-gray-400 focus:outline-none leading-snug"
         placeholder="Type your action..."
         value={nodeData.content ?? ""}

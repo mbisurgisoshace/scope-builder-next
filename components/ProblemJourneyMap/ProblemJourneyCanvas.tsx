@@ -17,7 +17,10 @@ import { journeyEdgeTypes } from "./edges/edgeTypes";
 import { useJourneyDataBridge } from "./hooks/useJourneyDataBridge";
 import { useLayout } from "./hooks/useLayout";
 import { JourneyContext } from "./JourneyContext";
-import { SelectedNodeContext, type SelectedProblem } from "./SelectedNodeContext";
+import {
+  SelectedNodeContext,
+  type SelectedProblem,
+} from "./SelectedNodeContext";
 import { NodeProblemsContext } from "./NodeProblemsContext";
 import { NodeSolutionsContext } from "./NodeSolutionsContext";
 import { NodeConclusionsContext } from "./NodeConclusionsContext";
@@ -132,7 +135,7 @@ function CanvasInner({
                         className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#6A35FF] text-white text-sm font-medium shadow hover:bg-[#5a2de0] transition-colors"
                       >
                         <ZapIcon className="w-3.5 h-3.5" />
-                        Add Trigger
+                        Add Trigger / Motivation
                       </button>
                     </Panel>
                   )}
