@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext } from 'react';
-import type { Solution } from './components/ActionNodeSheet';
+import type { ActionSheetTab, Solution } from './components/ActionNodeSheet';
 import type { StakeholderRow } from '@/services/market';
 
 export type JourneyNodeType = 'trigger' | 'action' | 'split_route';
@@ -31,8 +31,9 @@ interface JourneyContextValue {
    * `stakeholder_type`. Loaded once server-side; edits on the Market tab appear
    * here after a reload. */
   stakeholderRows: StakeholderRow[];
-  /** Open the editor sheet scoped to a specific problem. */
-  openProblem: (nodeId: string, problemId: string) => void;
+  /** Open the editor sheet scoped to a specific problem, on the given tab
+   * (defaults to "problem"). The tab is forced on every open. */
+  openProblem: (nodeId: string, problemId: string, tab?: ActionSheetTab) => void;
   /** Append a blank problem to a node and return its id. */
   addEmptyProblem: (nodeId: string) => string;
   /** Remove a problem (and its solution) from a node. */

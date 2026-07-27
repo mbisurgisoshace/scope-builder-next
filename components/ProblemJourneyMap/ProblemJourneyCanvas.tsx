@@ -24,7 +24,10 @@ import {
 import { NodeProblemsContext } from "./NodeProblemsContext";
 import { NodeSolutionsContext } from "./NodeSolutionsContext";
 import { NodeConclusionsContext } from "./NodeConclusionsContext";
-import { ActionNodeSheet } from "./components/ActionNodeSheet";
+import {
+  ActionNodeSheet,
+  type ActionSheetTab,
+} from "./components/ActionNodeSheet";
 import type { StakeholderRow } from "@/services/market";
 
 interface ProblemJourneyCanvasProps {
@@ -66,10 +69,17 @@ function CanvasInner({
 
   const [selectedProblem, setSelectedProblem] =
     useState<SelectedProblem | null>(null);
+  // Controlled like `open` is, so a click on the card always lands on the right
+  // tab — even when the sheet is already open on that same problem.
+  const [sheetTab, setSheetTab] = useState<ActionSheetTab>("problem");
 
-  const openProblem = useCallback((nodeId: string, problemId: string) => {
-    setSelectedProblem({ nodeId, problemId });
-  }, []);
+  const openProblem = useCallback(
+    (nodeId: string, problemId: string, tab: ActionSheetTab = "problem") => {
+      setSelectedProblem({ nodeId, problemId });
+      setSheetTab(tab);
+    },
+    [],
+  );
 
   const onPaneClick = useCallback(() => {
     setSelectedProblem(null);
@@ -151,6 +161,8 @@ function CanvasInner({
                 onOpenChange={(open) => {
                   if (!open) setSelectedProblem(null);
                 }}
+                activeTab={sheetTab}
+                onActiveTabChange={setSheetTab}
                 nodeId={selectedProblem?.nodeId ?? null}
                 problemId={selectedProblem?.problemId ?? null}
                 problem={selectedProblemData}

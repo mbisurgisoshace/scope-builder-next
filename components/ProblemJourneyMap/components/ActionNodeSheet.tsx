@@ -100,11 +100,17 @@ const SOURCE_OPTIONS = [
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
+/** Which editor the sheet is showing. Controlled by the canvas so a click on the
+ * card can decide which one to land on. */
+export type ActionSheetTab = "problem" | "solution";
+
 interface ActionNodeSheetProps {
   /** Pure viewer: inputs disabled, Save hidden, bank-of-questions hidden. */
   readOnly?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  activeTab: ActionSheetTab;
+  onActiveTabChange: (tab: ActionSheetTab) => void;
   nodeId: string | null;
   problemId: string | null;
   problem: Problem | null;
@@ -123,10 +129,10 @@ interface ActionNodeSheetProps {
   ) => void;
 }
 
-const TABS = [
+const TABS: { value: ActionSheetTab; label: string }[] = [
   { value: "problem", label: "Problem" },
   { value: "solution", label: "Solution" },
-] as const;
+];
 
 // ─── Star rating ──────────────────────────────────────────────────────────────
 
@@ -481,6 +487,8 @@ export function ActionNodeSheet({
   readOnly = false,
   open,
   onOpenChange,
+  activeTab,
+  onActiveTabChange,
   nodeId,
   problemId,
   problem,
@@ -488,10 +496,6 @@ export function ActionNodeSheet({
   solution,
   onSaveSolution,
 }: ActionNodeSheetProps) {
-  const [activeTab, setActiveTab] = useState<"problem" | "solution">(
-    "problem",
-  );
-
   // ── Problem editor state (single problem, inline) ──
   const [problemDraft, setProblemDraft] = useState("");
   const [problemType, setProblemType] = useState("");
@@ -660,7 +664,7 @@ export function ActionNodeSheet({
       >
         <Tabs
           value={activeTab}
-          onValueChange={(v) => setActiveTab(v as "problem" | "solution")}
+          onValueChange={(v) => onActiveTabChange(v as ActionSheetTab)}
           className="w-full flex flex-col flex-1 min-h-0"
         >
           <TabsList className="w-80 bg-white border-1 rounded-lg">

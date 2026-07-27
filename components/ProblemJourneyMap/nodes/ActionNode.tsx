@@ -37,7 +37,17 @@ function ProblemCard({
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      openProblem(nodeId, problem.id);
+      openProblem(nodeId, problem.id, "problem");
+    },
+    [openProblem, nodeId, problem.id],
+  );
+
+  // The solution preview sits inside the clickable problem card, so it has to
+  // stop propagation or the outer handler would pull the sheet back to Problem.
+  const handleSolutionClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      openProblem(nodeId, problem.id, "solution");
     },
     [openProblem, nodeId, problem.id],
   );
@@ -81,7 +91,7 @@ function ProblemCard({
       </div>
 
       {solution?.description && (
-        <div className="mt-3">
+        <div className="mt-3" onClick={handleSolutionClick}>
           <p className="font-semibold text-[#111827] mb-2">Solution</p>
           <div className="bg-[#E8FAE9] rounded-lg p-3">
             <span className="text-xs font-semibold bg-[#70E38F] text-[#111827] rounded-full px-2 py-0.5">
