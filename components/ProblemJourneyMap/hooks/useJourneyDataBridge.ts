@@ -87,6 +87,12 @@ export function useJourneyDataBridge() {
 
   const initializedRef = useRef(false);
 
+  // Id of a node the user just created locally, so useLayout can center the
+  // viewport on it after the next relayout (instead of snapping back to root).
+  // Only local adds set this — remote/Liveblocks additions leave it null so a
+  // collaborator's edit never yanks this user's viewport.
+  const pendingFocusRef = useRef<string | null>(null);
+
   // Diff-based Liveblocks → React Flow sync (blink-free)
   useEffect(() => {
     if (lbNodes === null || lbEdges === null) return;
@@ -162,6 +168,7 @@ export function useJourneyDataBridge() {
 
   const addTriggerNode = useCallback(() => {
     const newId = crypto.randomUUID();
+    pendingFocusRef.current = newId;
     setNodes((current) => [
       ...current,
       {
@@ -183,6 +190,7 @@ export function useJourneyDataBridge() {
     (parentId: string, type: JourneyNodeType) => {
       const newId = crypto.randomUUID();
       const connId = crypto.randomUUID();
+      pendingFocusRef.current = newId;
 
       setNodes((current) => {
         const parent = current.find((n) => n.id === parentId);
@@ -402,6 +410,7 @@ export function useJourneyDataBridge() {
     nodes,
     edges,
     setNodes,
+    pendingFocusRef,
     onNodesChange,
     onEdgesChange,
     addTriggerNode,

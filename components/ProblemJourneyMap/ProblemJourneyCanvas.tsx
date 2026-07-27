@@ -45,6 +45,7 @@ function CanvasInner({
     nodes,
     edges,
     setNodes,
+    pendingFocusRef,
     onNodesChange,
     onEdgesChange,
     addTriggerNode,
@@ -60,7 +61,7 @@ function CanvasInner({
     nodeConclusions,
   } = useJourneyDataBridge();
 
-  useLayout(setNodes);
+  useLayout(setNodes, pendingFocusRef);
 
   const [selectedProblem, setSelectedProblem] =
     useState<SelectedProblem | null>(null);

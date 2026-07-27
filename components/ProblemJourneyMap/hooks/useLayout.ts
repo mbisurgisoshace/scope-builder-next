@@ -6,7 +6,7 @@
 // dimensions so nodes with dynamic content (problems / solutions) never overlap, and wider nodes
 // at any level naturally push their children further right.
 
-import { useEffect, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import {
   useReactFlow,
   useStore,
@@ -184,7 +184,13 @@ const totalWidthSelector = (state: ReactFlowState) =>
 // setNodesState: when ReactFlow is in controlled mode, pass the useNodesState setter here
 // so layout positions are written to the controlled state (not just the internal RF store,
 // which gets overwritten on every re-render in controlled mode).
-export function useLayout(setNodesState?: Dispatch<SetStateAction<Node[]>>) {
+export function useLayout(
+  setNodesState?: Dispatch<SetStateAction<Node[]>>,
+  // Id of a node the user just added; when set, the viewport centers on it after
+  // the relayout instead of snapping to the root. Plain ref shape to stay
+  // agnostic to the RefObject/MutableRefObject type across React versions.
+  pendingFocusRef?: { current: string | null },
+) {
   const nodeCount = useStore(nodeCountSelector);
   const edgeCount = useStore(edgeCountSelector);
   const totalHeight = useStore(totalHeightSelector);
@@ -198,6 +204,9 @@ export function useLayout(setNodesState?: Dispatch<SetStateAction<Node[]>>) {
   } = useReactFlow();
   const setNodes = (setNodesState ??
     setNodesInternal) as typeof setNodesInternal;
+
+  // Whether we've done the one-time center-on-root that happens on initial load.
+  const hasInitialCenteredRef = useRef(false);
 
   useEffect(() => {
     const nodes = getNodes();
@@ -240,12 +249,31 @@ export function useLayout(setNodesState?: Dispatch<SetStateAction<Node[]>>) {
         );
         t.stop();
 
-        const rootNode = targetNodes[0];
-        setCenter(
-          rootNode.position.x + nodeWidth(rootNode) / 2,
-          rootNode.position.y + nodeHeight(rootNode) / 2,
-          { zoom: INITIAL_ZOOM, duration: 200 },
-        );
+        const centerOn = (node: Node) =>
+          setCenter(
+            node.position.x + nodeWidth(node) / 2,
+            node.position.y + nodeHeight(node) / 2,
+            { zoom: INITIAL_ZOOM, duration: 200 },
+          );
+
+        const focusId = pendingFocusRef?.current ?? null;
+        if (focusId) {
+          // User just added a node locally → center on it.
+          const focusNode = targetNodes.find((n) => n.id === focusId);
+          if (focusNode) {
+            centerOn(focusNode);
+            if (pendingFocusRef) pendingFocusRef.current = null;
+            hasInitialCenteredRef.current = true;
+          }
+          // If the new node isn't in this layout pass yet (transient sync state),
+          // leave the ref set so a later tick centers on it.
+        } else if (!hasInitialCenteredRef.current) {
+          // First load → center on the root/first node (unchanged behavior).
+          centerOn(targetNodes[0]);
+          hasInitialCenteredRef.current = true;
+        }
+        // Otherwise this is a resize/content-edit or a remote add → leave the
+        // viewport where the user left it.
       }
     });
 
