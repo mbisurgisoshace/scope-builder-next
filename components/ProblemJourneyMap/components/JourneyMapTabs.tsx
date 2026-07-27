@@ -83,7 +83,7 @@ export function JourneyMapTabs({
               type="button"
               onClick={() => select(tab.value)}
               className={cn(
-                "flex flex-col items-center w-[105px] gap-1.5 rounded-t-lg pt-1 pb-2 text-[12px] font-semibold transition-colors",
+                "flex cursor-pointer flex-col items-center w-[105px] gap-1.5 rounded-t-lg pt-1 pb-2 text-[12px] font-semibold transition-colors",
                 active
                   ? "bg-[#EFF0F4] text-[#6A35FF] border border-[#CDCFDE] border-b-[#EFF0F4]"
                   : "text-[#697288] hover:text-[#4B4560]",
