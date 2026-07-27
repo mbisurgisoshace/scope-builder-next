@@ -237,24 +237,9 @@ export function MilestoneHeader({
   const [exitingIndex, setExitingIndex] = useState<number | null>(null);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const spacerRef = useRef<HTMLDivElement | null>(null);
   const blockRefs = useRef<(HTMLDivElement | null)[]>([]);
   const prevIndexRef = useRef(expandedIndex);
-
-  // Trailing scroll room so ANY milestone can be pinned to the left edge. Without
-  // it the last milestones don't have enough content to their right, so the
-  // browser clamps the scroll and they stop mid-strip. Sized to the visible
-  // width of the strip (the worst case), kept in sync on resize.
-  const [spacerWidth, setSpacerWidth] = useState(0);
-
-  useEffect(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-    const update = () => setSpacerWidth(container.clientWidth);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, []);
 
   useEffect(() => {
     const prev = prevIndexRef.current;
@@ -272,12 +257,21 @@ export function MilestoneHeader({
     const scroll = () => {
       const container = scrollRef.current;
       const block = blockRefs.current[expandedIndex];
-      if (!container || !block) return;
-      const delta =
-        block.getBoundingClientRect().left -
-        container.getBoundingClientRect().left;
+      const lastBlock = blockRefs.current[total - 1];
+      if (!container || !block || !lastBlock) return;
+
+      const containerLeft = container.getBoundingClientRect().left;
+      const blockLeft = block.getBoundingClientRect().left;
+      // Only reserve as much trailing room as this milestone actually needs to
+      // reach the left edge: the shortfall between the visible strip width and
+      // the real content from the selected block to the end. Middle milestones
+      // have enough following content, so this is 0 and no blank is added.
+      const trailingContent = lastBlock.getBoundingClientRect().right - blockLeft;
+      const needed = Math.max(0, container.clientWidth - trailingContent);
+      if (spacerRef.current) spacerRef.current.style.width = `${needed}px`;
+
       container.scrollBy({
-        left: delta,
+        left: blockLeft - containerLeft,
         behavior: reduceMotion ? "auto" : "smooth",
       });
     };
@@ -298,7 +292,7 @@ export function MilestoneHeader({
       window.clearTimeout(id);
       window.cancelAnimationFrame(raf);
     };
-  }, [expandedIndex, reduceMotion]);
+  }, [expandedIndex, reduceMotion, total]);
 
   return (
     <div className="flex w-full items-stretch border-b border-[#E4E5ED] bg-white">
@@ -410,12 +404,9 @@ export function MilestoneHeader({
             );
           })}
 
-          {/* Trailing scroll room so the later milestones can reach the left edge. */}
-          <div
-            aria-hidden
-            className="shrink-0"
-            style={{ width: spacerWidth }}
-          />
+          {/* Trailing scroll room so the later milestones can reach the left edge.
+              Width is set imperatively per selection to the minimum needed. */}
+          <div ref={spacerRef} aria-hidden className="shrink-0" />
         </div>
       </div>
 
