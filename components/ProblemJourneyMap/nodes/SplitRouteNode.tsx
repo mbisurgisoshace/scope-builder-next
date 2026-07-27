@@ -44,7 +44,7 @@ function SplitRouteNodeInner({ id }: NodeProps) {
       </div>
       <div>
         <div className="text-xs font-semibold text-orange-500 uppercase tracking-wide leading-tight">
-          Split route
+          Scenarios
         </div>
         <div className="text-xs text-gray-400 mt-0.5">Branches here</div>
       </div>
