@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { ChevronDown, Plus, User, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   createStakeholderRow,
   deleteStakeholderRow,
@@ -16,6 +17,15 @@ interface StakeholderCardProps {
   definition: StakeholderDefinition;
   initialRows: StakeholderRow[];
   readOnly?: boolean;
+  // Selection mode (used by the Trigger's "Choose stakeholders" picker). When
+  // `selectable` is true, each persisted row shows a checkbox driven by
+  // `selectedIds`/`onToggleSelect`. `onRowCreated`/`onRowDeleted` let the parent
+  // keep its selection in sync as rows are added/removed here.
+  selectable?: boolean;
+  selectedIds?: Set<number>;
+  onToggleSelect?: (id: number) => void;
+  onRowCreated?: (id: number) => void;
+  onRowDeleted?: (id: number) => void;
 }
 
 // A row being edited. `id` is null until it's been persisted to the DB.
@@ -32,6 +42,11 @@ export function StakeholderCard({
   definition,
   initialRows,
   readOnly = false,
+  selectable = false,
+  selectedIds,
+  onToggleSelect,
+  onRowCreated,
+  onRowDeleted,
 }: StakeholderCardProps) {
   const [rows, setRows] = useState<EditableRow[]>(() =>
     initialRows.map((r) => ({
@@ -86,6 +101,7 @@ export function StakeholderCard({
       startTransition(() => {
         deleteStakeholderRow(id);
       });
+      onRowDeleted?.(id);
       return;
     }
 
@@ -102,6 +118,7 @@ export function StakeholderCard({
             r.localKey === localKey ? { ...r, id: created.id, value } : r,
           ),
         );
+        onRowCreated?.(created.id);
       });
       return;
     }
@@ -121,6 +138,7 @@ export function StakeholderCard({
       startTransition(() => {
         deleteStakeholderRow(id);
       });
+      onRowDeleted?.(id);
     }
   };
 
@@ -167,6 +185,13 @@ export function StakeholderCard({
         >
           {rows.map((row) => (
             <div key={row.localKey} className="flex items-center gap-1">
+              {selectable && row.id !== null && (
+                <Checkbox
+                  className="shrink-0"
+                  checked={selectedIds?.has(row.id) ?? false}
+                  onCheckedChange={() => onToggleSelect?.(row.id as number)}
+                />
+              )}
               <Input
                 value={row.value}
                 readOnly={readOnly}

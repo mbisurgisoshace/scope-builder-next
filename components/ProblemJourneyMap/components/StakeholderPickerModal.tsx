@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { User } from "lucide-react";
 
 import type { StakeholderRow } from "@/services/market";
 import {
@@ -12,9 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { STAKEHOLDER_DEFINITIONS } from "./Market/constants";
+import { StakeholderCard } from "./Market/StakeholderCard";
 
 interface StakeholderPickerModalProps {
   open: boolean;
@@ -32,7 +31,8 @@ export function StakeholderPickerModal({
   onSave,
 }: StakeholderPickerModalProps) {
   // Draft selection, seeded from the current selection each time the modal opens
-  // so a Cancel discards in-modal changes.
+  // so a Cancel discards in-modal selection changes. Row add/edit/delete persist
+  // immediately to the org catalog and are NOT part of this draft.
   const [draft, setDraft] = useState<Set<number>>(new Set(selectedIds));
 
   useEffect(() => {
@@ -55,12 +55,23 @@ export function StakeholderPickerModal({
     });
   };
 
+  // Auto-select rows created here, and prune ids of rows deleted here.
+  const handleRowCreated = (id: number) => {
+    setDraft((prev) => new Set(prev).add(id));
+  };
+
+  const handleRowDeleted = (id: number) => {
+    setDraft((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  };
+
   const handleSave = () => {
     onSave([...draft]);
     onOpenChange(false);
   };
-
-  const hasAnyRows = stakeholderRows.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -68,62 +79,26 @@ export function StakeholderPickerModal({
         <DialogHeader className="border-b border-[#E5E7EB] p-6">
           <DialogTitle>Choose stakeholders</DialogTitle>
           <DialogDescription>
-            Select the stakeholders involved in this trigger. Manage the full
-            list on the Market tab.
+            Select the stakeholders involved in this trigger. Add, edit, or remove
+            rows here — changes sync with the Market tab.
           </DialogDescription>
         </DialogHeader>
 
         <div className="max-h-[55vh] overflow-y-auto bg-[#F7F8FA] p-6">
-          {!hasAnyRows ? (
-            <p className="text-sm text-[#697288]">
-              No stakeholders yet. Add them on the Market tab first, then come
-              back to pick them here.
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-              {STAKEHOLDER_DEFINITIONS.map((definition) => {
-                const rows = rowsByType.get(definition.key) ?? [];
-                return (
-                  <div
-                    key={definition.key}
-                    className="flex min-w-0 flex-col rounded-2xl border border-[#E3E5EC] bg-white p-5"
-                  >
-                    <div className="mb-2 flex items-center gap-2">
-                      <span className="flex size-6 items-center justify-center rounded-md bg-[#F1ECFF] text-[#6A35FF]">
-                        <User className="size-3.5" />
-                      </span>
-                      <h3 className="text-sm font-semibold leading-tight text-[#1F2430]">
-                        {definition.title}
-                      </h3>
-                    </div>
-
-                    <p className="mb-3 text-xs leading-relaxed text-[#697288]">
-                      {definition.description}
-                    </p>
-
-                    {rows.length === 0 ? (
-                      <p className="text-xs text-[#9AA1B2]">None added yet</p>
-                    ) : (
-                      <ul className="flex flex-col gap-2">
-                        {rows.map((row) => (
-                          <li key={row.id}>
-                            <label className="flex cursor-pointer items-start gap-2 text-sm text-[#374151]">
-                              <Checkbox
-                                className="mt-0.5"
-                                checked={draft.has(row.id)}
-                                onCheckedChange={() => toggle(row.id)}
-                              />
-                              <span className="leading-snug">{row.value}</span>
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            {STAKEHOLDER_DEFINITIONS.map((definition) => (
+              <StakeholderCard
+                key={definition.key}
+                definition={definition}
+                initialRows={rowsByType.get(definition.key) ?? []}
+                selectable
+                selectedIds={draft}
+                onToggleSelect={toggle}
+                onRowCreated={handleRowCreated}
+                onRowDeleted={handleRowDeleted}
+              />
+            ))}
+          </div>
         </div>
 
         <DialogFooter className="border-t border-[#E5E7EB] p-4">
