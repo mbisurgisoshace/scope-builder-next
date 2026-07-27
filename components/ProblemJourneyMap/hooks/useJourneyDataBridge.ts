@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNodesState, useEdgesState, type Node, type Edge } from '@xyflow/react';
 
-import type { JourneyNodeType, JourneyNodeData } from '../JourneyContext';
+import type { JourneyNodeType, JourneyNodeData, JourneyEdgeData } from '../JourneyContext';
 import type { Problem, Solution, ProblemQuestionAnswer, SolutionQuestionAnswer, NodeConclusion, ConclusionStatus, PainOrGain, RelieverOrCreator } from '../components/ActionNodeSheet';
 import { useRealtimeJourney, type JourneyNodeStorage, type JourneyEdgeStorage } from './useRealtimeJourney';
 
@@ -18,6 +18,12 @@ function sameIds(a: number[] | undefined, b: number[] | undefined): boolean {
   const sortedX = [...x].sort((m, n) => m - n);
   const sortedY = [...y].sort((m, n) => m - n);
   return sortedX.every((v, i) => v === sortedY[i]);
+}
+
+// Branch label of an RF edge, normalised so a missing label and a cleared one
+// compare equal against Liveblocks (both mean "fall back to Option n").
+function labelOf(edge: Edge): string {
+  return ((edge.data as unknown as JourneyEdgeData | undefined)?.label ?? '');
 }
 
 const INITIAL_TRIGGER_NODE: Node = {
@@ -65,6 +71,7 @@ function lbEdgeToRFEdge(lb: JourneyEdgeStorage): Edge {
     type: 'journey',
     sourceHandle: lb.sourceHandle,
     targetHandle: lb.targetHandle,
+    data: { label: lb.label } as unknown as Record<string, unknown>,
   };
 }
 
@@ -74,6 +81,7 @@ export function useJourneyDataBridge() {
     lbEdges,
     addJourneyNode,
     addJourneyEdge,
+    updateJourneyEdge,
     updateJourneyNode,
     addProblem: lbAddProblem,
     updateProblem: lbUpdateProblem,
@@ -157,7 +165,23 @@ export function useJourneyDataBridge() {
         currentEdges.filter((e) => !lbIds.has(e.id)).map((e) => e.id)
       );
 
-      if (remoteAdditions.length === 0 && removedIds.size === 0) return currentEdges;
+      if (remoteAdditions.length === 0 && removedIds.size === 0) {
+        // No structural change, so the only thing that can differ is the branch
+        // label. Return the same array reference when nothing changed — that
+        // identity is what keeps the canvas from blinking on every sync tick.
+        const hasDataChange = lbEdges.some((lb) => {
+          const rf = currentEdges.find((e) => e.id === lb.id);
+          if (!rf) return false;
+          return labelOf(rf) !== (lb.label ?? '');
+        });
+        if (!hasDataChange) return currentEdges;
+
+        return currentEdges.map((e) => {
+          const lb = lbEdges.find((lb) => lb.id === e.id);
+          if (!lb || labelOf(e) === (lb.label ?? '')) return e;
+          return { ...e, data: { ...e.data, label: lb.label } as unknown as Record<string, unknown> };
+        });
+      }
 
       let result = currentEdges.filter((e) => !removedIds.has(e.id));
       result = [...result, ...remoteAdditions];
@@ -244,6 +268,20 @@ export function useJourneyDataBridge() {
       updateJourneyNode(id, patch);
     },
     [setNodes, updateJourneyNode]
+  );
+
+  const updateEdgeLabel = useCallback(
+    (edgeId: string, label: string) => {
+      setEdges((current) =>
+        current.map((e) =>
+          e.id === edgeId
+            ? { ...e, data: { ...e.data, label } as unknown as Record<string, unknown> }
+            : e
+        )
+      );
+      updateJourneyEdge(edgeId, label);
+    },
+    [setEdges, updateJourneyEdge]
   );
 
   // Upsert a specific problem: update it when a target id is given, otherwise
@@ -416,6 +454,7 @@ export function useJourneyDataBridge() {
     addTriggerNode,
     addChildNode,
     updateNodeData,
+    updateEdgeLabel,
     saveProblem,
     addEmptyProblem,
     removeProblem,

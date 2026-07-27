@@ -48,6 +48,8 @@ export interface JourneyEdgeStorage {
   target: string;
   sourceHandle: string;
   targetHandle: string;
+  /** User-set branch label. Absent or empty falls back to the derived "Option n". */
+  label?: string;
 }
 
 // https://liveblocks.io/docs/api-reference/liveblocks-react#Typing-your-data

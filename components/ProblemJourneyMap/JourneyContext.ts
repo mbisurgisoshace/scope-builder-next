@@ -13,6 +13,11 @@ export interface JourneyNodeData extends Record<string, unknown> {
   stakeholderIds?: number[];
 }
 
+export interface JourneyEdgeData extends Record<string, unknown> {
+  /** User-set branch label. Absent or empty falls back to the derived "Option n". */
+  label?: string;
+}
+
 interface JourneyContextValue {
   /** When true the canvas is a pure viewer: all edit affordances are hidden and
    * every mutator is a no-op. Milestone/card navigation stays enabled. */
@@ -20,6 +25,8 @@ interface JourneyContextValue {
   addTriggerNode: () => void;
   addChildNode: (parentId: string, type: JourneyNodeType) => void;
   updateNodeData: (id: string, patch: Partial<Omit<JourneyNodeData, 'id' | 'type'>>) => void;
+  /** Rename a branch connection. An empty string clears it back to "Option n". */
+  updateEdgeLabel: (edgeId: string, label: string) => void;
   /** Org-wide stakeholder rows from the Market tab, grouped elsewhere by
    * `stakeholder_type`. Loaded once server-side; edits on the Market tab appear
    * here after a reload. */

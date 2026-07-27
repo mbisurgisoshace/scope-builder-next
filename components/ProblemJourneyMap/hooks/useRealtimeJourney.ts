@@ -23,6 +23,14 @@ export function useRealtimeJourney() {
     (storage.get('journeyEdges') as any).push(new LiveObject(edge as any));
   }, []);
 
+  // Rename a branch connection. An empty string clears the custom label so the
+  // edge falls back to the derived "Option n".
+  const updateJourneyEdge = useMutation(({ storage }, id: string, label: string) => {
+    const edges = (storage.get('journeyEdges') as any).toArray() as Array<any>;
+    const edge = edges.find((e: any) => e.get('id') === id);
+    if (edge) edge.update({ label });
+  }, []);
+
   const updateJourneyNode = useMutation(
     (
       { storage },
@@ -158,6 +166,7 @@ export function useRealtimeJourney() {
     lbEdges,
     addJourneyNode,
     addJourneyEdge,
+    updateJourneyEdge,
     updateJourneyNode,
     addProblem,
     updateProblem,
