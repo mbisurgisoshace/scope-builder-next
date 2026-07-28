@@ -35,9 +35,16 @@ const SEGMENTS = 3;
 const CHEVRON_W = 14;
 
 const INDIGO = "#6935FD";
-const CHEVRON_GRAY = "#E5E7EB";
+const CHEVRON_GRAY = "#C9CDD9"; // divider / tip outline on the gray blocks
+const CHEVRON_INDIGO = "#C3B0F5"; // divider outline between tinted sub-steps
+const CHEVRON_GREEN = "#A8D5B5"; // divider outline on completed sub-steps
 const GRAY_TEXT = "#9CA3AF";
-const INDIGO_LABEL = "#C7D2FE"; // indigo-200, used for the "Milestone" caption
+const INDIGO_LABEL = "#C7D2FE"; // indigo-200, used for the milestone title
+
+const INDIGO_TINT = "#F1ECFF"; // sub-step cells of the selected milestone
+const GREEN_TINT = "#E7F7EC"; // completed sub-step cells
+const BLOCK_GRAY = "#EFF0F4"; // unselected milestone blocks
+const GRAY_LABEL = "#697288"; // "#N" caption on unselected blocks
 
 // Shared transition for every animated property so resize, color and content
 // reveal all move together. easeInOut cubic-bezier, ~280ms.
@@ -176,7 +183,7 @@ function ProgressSegments({ filled }: { filled: number }) {
         <span
           key={i}
           className={`h-1.5 w-3 rounded-full lg:w-4 xl:w-5 ${
-            i < filled ? "bg-indigo-600" : "bg-gray-200"
+            i < filled ? "bg-[#6935FD]" : "bg-[#D9CCFF]"
           }`}
         />
       ))}
@@ -192,18 +199,26 @@ function SubStepCell({
   showDivider: boolean;
 }) {
   const Icon = subStep.icon;
+  // The cell's own tint. The divider chevron is filled with the same color so the
+  // arrow reads as an extension of this cell over its neighbour's left corner.
+  const isDone = subStep.status === "done";
+  const bg = isDone ? GREEN_TINT : INDIGO_TINT;
+  const chevronStroke = isDone ? CHEVRON_GREEN : CHEVRON_INDIGO;
   return (
-    <div className="relative flex flex-col items-center justify-center gap-1.5 px-3 py-2 lg:px-5 lg:py-3 xl:px-8">
+    <div
+      style={{ backgroundColor: bg }}
+      className="relative flex flex-col items-center justify-center gap-1.5 px-3 py-2 lg:px-5 lg:py-3 xl:px-8"
+    >
       <div className="flex items-center gap-1.5">
         <span className="line-clamp-2 max-w-[180px] text-center text-xs font-medium text-gray-700 xl:text-sm">
           {subStep.label}
         </span>
-        {subStep.status !== "done" && Icon && (
+        {!isDone && Icon && (
           <Icon size={14} className="shrink-0 text-gray-400" />
         )}
       </div>
 
-      {subStep.status === "done" ? (
+      {isDone ? (
         <div className="flex items-center gap-1">
           <CheckCircle2 size={13} className="text-green-500" />
           <span className="text-xs text-green-500">Done</span>
@@ -212,7 +227,7 @@ function SubStepCell({
         <ProgressSegments filled={subStep.filled} />
       )}
 
-      {showDivider && <Chevron fill="rgba(0,0,0,0)" stroke={CHEVRON_GRAY} />}
+      {showDivider && <Chevron fill={bg} stroke={chevronStroke} />}
     </div>
   );
 }
@@ -330,36 +345,37 @@ export function MilestoneHeader({
                   flexShrink: 0,
                   minWidth: sizeToContent ? "max-content" : 0,
                 }}
-                className="group relative flex cursor-pointer items-stretch border-y border-l"
+                className="relative flex cursor-pointer items-stretch border-y border-l"
               >
                 {/* Milestone label — arrow-shaped block. Purple when expanded. */}
                 <motion.div
                   transition={transition}
-                  animate={{ backgroundColor: isExpanded ? INDIGO : "#ffffff" }}
+                  animate={{ backgroundColor: isExpanded ? INDIGO : BLOCK_GRAY }}
+                  whileHover={isExpanded ? undefined : { backgroundColor: "#E4E5ED" }}
                   className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 lg:py-3 ${
-                    isExpanded
-                      ? "px-3 lg:px-5 xl:px-8"
-                      : "px-2 group-hover:bg-gray-50 lg:px-3 xl:px-4"
+                    isExpanded ? "px-3 lg:px-4 xl:px-5" : "px-2 lg:px-3 xl:px-4"
                   }`}
                 >
                   <motion.span
                     transition={transition}
-                    animate={{ color: isExpanded ? INDIGO_LABEL : GRAY_TEXT }}
-                    className="text-[10px] font-medium xl:text-xs"
+                    animate={{ color: isExpanded ? "#ffffff" : GRAY_LABEL }}
+                    className="text-xs font-bold leading-none xl:text-sm"
                   >
-                    Milestone {index + 1}
+                    #{index + 1}
                   </motion.span>
                   <motion.span
                     transition={transition}
-                    animate={{ color: isExpanded ? "#ffffff" : GRAY_TEXT }}
-                    className={`text-xs font-semibold leading-none ${
-                      isExpanded ? "" : "text-center"
+                    animate={{ color: isExpanded ? INDIGO_LABEL : GRAY_TEXT }}
+                    // Capped width so the label wraps onto a second line instead
+                    // of stretching the block wide on one.
+                    className={`max-w-[104px] text-center text-[10px] leading-tight xl:max-w-[120px] xl:text-xs ${
+                      isExpanded ? "font-bold" : "font-medium"
                     }`}
                   >
                     {milestone.label}
                   </motion.span>
                   <Chevron
-                    fill={isExpanded ? INDIGO : "#ffffff"}
+                    fill={isExpanded ? INDIGO : BLOCK_GRAY}
                     stroke={isExpanded ? undefined : CHEVRON_GRAY}
                     transition={transition}
                   />
@@ -392,10 +408,15 @@ export function MilestoneHeader({
                   )}
                 </AnimatePresence>
 
-                {/* Purple arrow tip terminating the expanded block. */}
+                {/* Arrow tip terminating the expanded block — tinted to match the
+                    last sub-step so the block ends in its own color. */}
                 {isExpanded && (
                   <Chevron
-                    fill="#ffffff"
+                    fill={
+                      milestone.subSteps.at(-1)?.status === "done"
+                        ? GREEN_TINT
+                        : INDIGO_TINT
+                    }
                     stroke={INDIGO}
                     transition={transition}
                   />
