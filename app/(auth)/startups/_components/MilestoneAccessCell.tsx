@@ -2,7 +2,7 @@
 
 import { Clock, CheckCircle2 } from "lucide-react";
 
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { ALWAYS_AVAILABLE_MILESTONE } from "@/lib/milestones";
 
 interface MilestoneAccessCellProps {
@@ -29,16 +29,15 @@ export default function MilestoneAccessCell({
       className="flex flex-row items-center justify-center gap-1.5"
       onClick={(e) => e.stopPropagation()}
     >
-      <Checkbox
+      <Switch
         checked={available}
         disabled={locked || disabled}
-        onCheckedChange={(value) => onToggle(value === true)}
+        onCheckedChange={onToggle}
         title={
           locked
             ? "Milestone 1 is always available"
             : `Milestone ${milestone} ${available ? "available" : "not available"}`
         }
-        className="data-[state=checked]:border-[#6A35FF] data-[state=checked]:bg-[#6A35FF] data-[state=checked]:text-white"
       />
       <MilestoneStatusIcon available={available} submittedAt={submittedAt} />
     </div>

@@ -17,7 +17,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import useStartups from "./useStartups";
-import { format } from "date-fns";
 import { useMemo } from "react";
 import { useOrganizationList } from "@clerk/nextjs";
 import { Badge } from "@/components/ui/badge";
@@ -198,19 +197,14 @@ const getColumns = (
       return true;
     },
   },
-  {
-    accessorKey: "createdAt",
-    header: "Created At",
-    cell: ({ row }) => {
-      const createdAt = format(row.getValue("createdAt"), "MMM d, k:mm");
-
-      return <div className="capitalize">{createdAt}</div>;
-    },
-  },
   ...MILESTONE_NUMBERS.map<ColumnDef<any>>((milestone) => ({
     id: `milestone-${milestone}`,
-    header: () => <span title={`Milestone ${milestone}`}>M{milestone}</span>,
-    size: 70,
+    header: () => (
+      <span className="block text-center" title={`Milestone ${milestone}`}>
+        M{milestone}
+      </span>
+    ),
+    size: 84,
     cell: ({ row }) => {
       const access: MilestoneAccessState[] =
         row.original.milestones ?? defaultMilestoneAccess();
