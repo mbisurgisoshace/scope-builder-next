@@ -8,7 +8,21 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 
 import { participantFormSchema } from "@/schemas/participant";
-import { ParticipantStatus } from "@/lib/generated/prisma";
+import {
+  ParticipantRelationship,
+  ParticipantStatus,
+} from "@/lib/generated/prisma";
+
+// Statuses owned by the interview flow (markParticipantAsComplete /
+// markParticipantAsDocumented). A scheduled date must not drag these back to
+// "scheduled" — that would bounce the card backwards on the kanban.
+const LOCKED_STATUSES: ParticipantStatus[] = ["complete", "documented"];
+
+// The form submits "" for an unselected relationship; Prisma rejects that for an
+// enum column, so it has to become null.
+function toRelationship(value?: string): ParticipantRelationship | null {
+  return value ? (value as ParticipantRelationship) : null;
+}
 
 export async function getParticipantTags() {
   const { orgId, userId } = await auth();
@@ -95,7 +109,11 @@ export async function createParticipant(
   const newParticipant = await prisma.participant.create({
     data: {
       ...values,
-      status: values.status as ParticipantStatus,
+      relationship: toRelationship(values.relationship),
+      // A brand-new participant can't be complete/documented, so no guard needed.
+      status: values.scheduled_date
+        ? "scheduled"
+        : (values.status as ParticipantStatus),
       org_id: orgId,
       id: participantId,
       ParticipantRoom: {
@@ -119,9 +137,26 @@ export async function updateParticipant(
 
   if (!orgId || !userId) return redirect("/sign-in");
 
-  const updatedParticipant = await prisma.participant.update({
+  // Read the live status rather than trusting the value the form round-tripped —
+  // the interview flow may have advanced it while the edit sheet was open.
+  const current = await prisma.participant.findFirst({
     where: { id: participantId, org_id: orgId },
-    data: { ...values, status: values.status as ParticipantStatus },
+    select: { status: true },
+  });
+
+  const status = current && LOCKED_STATUSES.includes(current.status)
+    ? current.status
+    : values.scheduled_date
+      ? "scheduled"
+      : (values.status as ParticipantStatus);
+
+  await prisma.participant.update({
+    where: { id: participantId, org_id: orgId },
+    data: {
+      ...values,
+      relationship: toRelationship(values.relationship),
+      status,
+    },
   });
 
   revalidatePath(`/participants`);

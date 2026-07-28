@@ -36,12 +36,21 @@ enum ParticipantStatus {
   documented
 }
 
+// Drives the columns of the Relationship board on /participants/interviews.
+enum ParticipantRelationship {
+  family_friends_colleagues
+  friend_of_friend
+  cold_connections
+  networking_event
+}
+
 model Participant {
-  id                     String              @id @default(uuid())
+  id                     String                   @id @default(uuid())
   name                   String
   job_title              String?
   org_id                 String
   role                   String?
+  relationship           ParticipantRelationship?
   market_segment         String?
   contact_info           String?
   rationale              String?
@@ -50,10 +59,10 @@ model Participant {
   learnings              String?
   notes                  String?
   tags                   String?
-  status                 ParticipantStatus   @default(need_to_schedule)
+  status                 ParticipantStatus        @default(need_to_schedule)
   scheduled_date         DateTime?
   example_number         Int? // NULL = real data, N = example set N
-  created_at             DateTime            @default(now())
+  created_at             DateTime                 @default(now())
   ParticipantRoom        ParticipantRoom?
   interview_responses    InterviewResponse[]
 

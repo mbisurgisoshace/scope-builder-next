@@ -18,6 +18,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { InterviewAnswersView } from "./InterviewAnswers/InterviewAnswersView";
+import {
+  RELATIONSHIP_OPTIONS,
+  relationshipLabel,
+} from "@/schemas/participant";
 
 const PROGRESS_COLUMNS = [
   { key: "need_to_schedule", label: "Interviewee" },
@@ -33,13 +37,11 @@ const PROGRESS_COLORS: Record<string, string> = {
   documented: "#F0FDF4",
 };
 
-// TODO: replace with real relationship field from Participant once added to schema
-const RELATIONSHIP_COLUMNS = [
-  { key: "family_friends_colleagues", label: "Family, Friends, Colleagues" },
-  { key: "friend_of_friend", label: "Friend of Family/Friend/Colleague" },
-  { key: "cold_connections", label: "Cold connections" },
-  { key: "networking_event", label: "Networking Event" },
-];
+// Derived from the shared options so the board and the participant sheets can't drift.
+const RELATIONSHIP_COLUMNS = RELATIONSHIP_OPTIONS.map(({ value, label }) => ({
+  key: value,
+  label,
+}));
 
 const RELATIONSHIP_COLORS: Record<string, string> = {
   family_friends_colleagues: "#F5F5F8",
@@ -47,11 +49,6 @@ const RELATIONSHIP_COLORS: Record<string, string> = {
   cold_connections: "#F4F0FF",
   networking_event: "#F0FDF4",
 };
-
-function assignRelationship(participant: Participant): string {
-  const buckets = RELATIONSHIP_COLUMNS.map((c) => c.key);
-  return buckets[participant.id.charCodeAt(0) % buckets.length];
-}
 
 function ParticipantCard({
   participant,
@@ -67,10 +64,10 @@ function ParticipantCard({
   return (
     <div
       onClick={onCardClick}
-      className="bg-white rounded-lg w-[250px] border border-[#C9CAD4] p-3 hover:shadow-md transition-shadow cursor-pointer space-y-2"
+      className="bg-white rounded-lg w-full border border-[#C9CAD4] p-3 hover:shadow-md transition-shadow cursor-pointer space-y-2"
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="font-semibold text-[16px] text-[#111827]">
+        <p className="font-semibold text-[16px] text-[#111827] min-w-0 break-words">
           {participant.name}
         </p>
         {onEditClick && (
@@ -88,21 +85,25 @@ function ParticipantCard({
           </button>
         )}
       </div>
-      {!hideRelationship && (
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold">Relationship:</span>
-          <Badge className="bg-[#EEEFF5] text-[#111827]">Family</Badge>
+      {!hideRelationship && participant.relationship && (
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-xs font-semibold shrink-0">Relationship:</span>
+          {/* The base Badge is `whitespace-nowrap shrink-0`, which pushes long
+              labels past the card edge — let this one wrap and shrink instead. */}
+          <Badge className="bg-[#EEEFF5] text-[#111827] min-w-0 shrink whitespace-normal text-right leading-snug">
+            {relationshipLabel(participant.relationship)}
+          </Badge>
         </div>
       )}
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold">Stakeholder:</span>
-        <span className="text-xs font-semibold text-[#70747D]">
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-xs font-semibold shrink-0">Stakeholder:</span>
+        <span className="text-xs font-semibold text-[#70747D] min-w-0 text-right break-words">
           {participant.role}
         </span>
       </div>
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold">Title:</span>
-        <span className="text-xs font-semibold text-[#70747D]">
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-xs font-semibold shrink-0">Title:</span>
+        <span className="text-xs font-semibold text-[#70747D] min-w-0 text-right break-words">
           {participant.job_title}
         </span>
       </div>
@@ -239,7 +240,7 @@ export default function ParticipantsKanbanView({
   const groupedByRelationship = RELATIONSHIP_COLUMNS.reduce<
     Record<string, Participant[]>
   >((acc, { key }) => {
-    acc[key] = participants.filter((p) => assignRelationship(p) === key);
+    acc[key] = participants.filter((p) => p.relationship === key);
     return acc;
   }, {});
 

@@ -126,6 +126,7 @@ async function copyDatabase(sourceOrgId: string, exampleNumber: number) {
           name: p.name,
           job_title: p.job_title,
           role: p.role,
+          relationship: p.relationship,
           market_segment: p.market_segment,
           contact_info: p.contact_info,
           rationale: p.rationale,

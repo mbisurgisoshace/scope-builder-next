@@ -32,25 +32,30 @@ import { Calendar } from "@/components/ui/calendar";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
 } from "@/components/ui/select";
 import { SelectValue } from "@radix-ui/react-select";
-import { EditorState, convertFromRaw } from "draft-js";
-import { participantFormSchema } from "@/schemas/participant";
+import {
+  participantFormSchema,
+  ROLE_OPTIONS,
+  RELATIONSHIP_OPTIONS,
+} from "@/schemas/participant";
 import {
   createParticipant,
   createParticipantTag,
 } from "@/services/participants";
 import { createJobTitle } from "@/services/jobTitles";
+import {
+  createMarketSegment,
+  getMarketSegments,
+  type MarketSegment,
+} from "@/services/market";
 import { MultiSelect } from "@/components/ui/multiselect";
 import { Combobox } from "@/components/ui/combobox";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface AddParticipantProps {
-  //marketSegments: any[];
   tags: string[];
   jobTitles: string[];
   open?: boolean;
@@ -58,21 +63,7 @@ interface AddParticipantProps {
   onSuccess?: () => void;
 }
 
-const ROLE_OPTIONS = [
-  //{ value: "Customer", label: "Customer" },
-  { value: "End-User", label: "End-User" },
-  //{ value: "Both Customer & End-User", label: "Both Customer & End-User" },
-  { value: "Buyer-Decision-Maker", label: "Buyer/Decision Maker" },
-  { value: "Payer", label: "Payer" },
-  { value: "Influencer", label: "Influencer" },
-  { value: "Recommender", label: "Recommender" },
-  { value: "Saboteur", label: "Saboteur" },
-  //{ value: "Additional Decision Maker", label: "Additional Decision Maker" },
-  //{ value: "Additional Stakeholder", label: "Additional Stakeholder" },
-];
-
 export default function AddParticipant({
-  //marketSegments,
   tags,
   jobTitles,
   open: controlledOpen,
@@ -83,16 +74,14 @@ export default function AddParticipant({
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? controlledOnOpenChange! : setInternalOpen;
-  // const marketSegmentOptions = marketSegments
-  //   ?.filter((s: any) => s.draftRaw)
-  //   .map((segment: any) => {
-  //     const draftRaw = segment.draftRaw;
-  //     const raw = JSON.parse(draftRaw);
-  //     const editor = EditorState.createWithContent(convertFromRaw(raw));
-  //     const text = editor.getCurrentContent().getPlainText();
 
-  //     return text;
-  //   });
+  // Market segments are the same org-wide rows edited on the Market tab of the
+  // User Journey page.
+  const [marketSegments, setMarketSegments] = useState<MarketSegment[]>([]);
+
+  useEffect(() => {
+    getMarketSegments().then(setMarketSegments);
+  }, []);
 
   const form = useForm<z.infer<typeof participantFormSchema>>({
     resolver: zodResolver(participantFormSchema),
@@ -100,6 +89,7 @@ export default function AddParticipant({
       name: "",
       job_title: "",
       role: "",
+      relationship: "",
       contact_info: "",
       rationale: "",
       blocking_issues: "",
@@ -126,6 +116,14 @@ export default function AddParticipant({
 
   async function onCreateJobTitleOption(opt: string) {
     await createJobTitle(opt);
+  }
+
+  async function onCreateMarketSegmentOption(name: string) {
+    const created = await createMarketSegment({
+      name,
+      order: marketSegments.length,
+    });
+    setMarketSegments((prev) => [...prev, created]);
   }
 
   return (
@@ -195,14 +193,14 @@ export default function AddParticipant({
                 name="role"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Role</FormLabel>
+                    <FormLabel>Stakeholder</FormLabel>
                     <FormControl>
                       <MultiSelect
                         creatable={false}
                         options={ROLE_OPTIONS}
                         value={field.value}
                         onChange={field.onChange}
-                        placeholder="Select a role"
+                        placeholder="Select a stakeholder"
                       />
                     </FormControl>
                     <FormMessage />
@@ -212,27 +210,22 @@ export default function AddParticipant({
 
               <FormField
                 control={form.control}
-                name="status"
+                name="relationship"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Status</FormLabel>
+                    <FormLabel>Relationship</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a status" />
+                          <SelectValue placeholder="Select a relationship" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="need_to_schedule">
-                          Need to Schedule
-                        </SelectItem>
-                        <SelectItem value="scheduled">Scheduled</SelectItem>
-                        {/* <SelectItem value="incomplete">Incomplete</SelectItem> */}
-                        <SelectItem value="complete">Complete</SelectItem>
-                        {/* <SelectItem value="interviewed">Interviewed</SelectItem> */}
-                        <SelectItem value="not_available">
-                          Not Available
-                        </SelectItem>
+                        {RELATIONSHIP_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -240,47 +233,32 @@ export default function AddParticipant({
                 )}
               />
 
-              {/* <FormField
+              <FormField
                 control={form.control}
                 name="market_segment"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Market Segment</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a market segment" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {marketSegments.length === 0 ? (
-                          <div className="py-2 px-3 text-sm text-gray-500">
-                            No segments available
-                          </div>
-                        ) : (
-                          marketSegments.map((segment) => {
-                            return (
-                              <SelectGroup key={segment.title}>
-                                <SelectLabel>{segment.title}</SelectLabel>
-                                {segment.data
-                                  .filter(
-                                    (s: any) => s.cardTitle?.trim().length > 0,
-                                  )
-                                  .map((s: any) => (
-                                    <SelectItem key={s.id} value={s.cardTitle}>
-                                      {s.cardTitle}
-                                    </SelectItem>
-                                  ))}
-                              </SelectGroup>
-                            );
-                          })
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Combobox
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={marketSegments
+                          .filter((segment) => segment.name.trim().length > 0)
+                          .map((segment) => ({
+                            value: segment.name,
+                            label: segment.name,
+                          }))}
+                        placeholder="Select or create a market segment"
+                        onCreateOption={(opt) =>
+                          onCreateMarketSegmentOption(opt.value)
+                        }
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
-              /> */}
+              />
 
               <FormField
                 control={form.control}

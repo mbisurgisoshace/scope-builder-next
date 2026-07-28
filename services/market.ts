@@ -105,6 +105,17 @@ export async function deleteStakeholderRow(id: number) {
 
 // --- Market segments --------------------------------------------------------
 
+// Leaner than getMarketData() for callers that only need the segment list —
+// e.g. the market segment picker on the Add/Edit Participant sheets.
+export async function getMarketSegments(): Promise<MarketSegment[]> {
+  const orgId = await requireOrg();
+
+  return prisma.marketSegment.findMany({
+    where: { org_id: orgId },
+    orderBy: { order: "asc" },
+  });
+}
+
 export async function createMarketSegment(
   data: MarketSegmentInput,
 ): Promise<MarketSegment> {

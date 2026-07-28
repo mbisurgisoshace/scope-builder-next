@@ -3,11 +3,9 @@ import ParticipantsTable from "./_components/ParticipantsTable";
 import AddParticipant from "./_components/AddParticipant";
 import { getParticipants, getParticipantTags } from "@/services/participants";
 import { getJobTitles } from "@/services/jobTitles";
-import { getSegments } from "@/services/segments";
 import ParticipantsKanbanView from "./interviews/_components/ParticipantsKanbanView";
 
 export default async function ParticipantsPage() {
-  // const marketSegments = await getSegments();
   const tags = await getParticipantTags();
   const jobTitles = await getJobTitles();
   const participants = await getParticipants();
