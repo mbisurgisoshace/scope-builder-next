@@ -2,6 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 
+import { StarRating } from "../StarRating";
 import { QuestionEditor } from "./QuestionEditor";
 import type { Hypothesis, InterviewQuestion } from "./types";
 
@@ -21,7 +22,7 @@ export function HypothesisRow({
   return (
     <div className="relative grid grid-cols-2">
       {/* Left: the hypothesis (read-only). */}
-      <div className="flex gap-3 border-r border-[#E5E7EF] px-6 py-6 pr-10">
+      <div className="flex gap-3 border-r border-[#E5E7EF] px-6 py-6">
         <span className="text-sm font-bold text-[#1F2430]">
           {hypothesis.index}.
         </span>
@@ -32,18 +33,18 @@ export function HypothesisRow({
               {hypothesis.answer}
             </p>
           </div>
-          <div className="flex flex-col gap-1 text-xs text-[#697288]">
+          {/* Source and confidence share one line — nowrap plus the smaller star
+              size keeps them there in the narrow hypothesis column. */}
+          <div className="flex flex-nowrap items-center gap-x-4 whitespace-nowrap text-[11px] text-[#697288]">
             <span>
               Source:{" "}
               <span className="font-semibold text-[#4B4560]">
                 {hypothesis.source}
               </span>
             </span>
-            <span>
-              Your confidence:{" "}
-              <span className="font-semibold text-[#4B4560]">
-                {hypothesis.confidence}/5
-              </span>
+            <span className="flex items-center gap-1.5">
+              Your confidence:
+              <StarRating value={hypothesis.confidence} size="sm" />
             </span>
           </div>
         </div>

@@ -41,11 +41,13 @@ export function ProblemCard({
           </span>
           <p className="text-sm text-[#1F2430]">{block.description}</p>
           {block.tags.length > 0 && (
-            <ul className="flex flex-col gap-1 text-xs text-[#4B4560]">
+            <ul className="flex flex-wrap items-center gap-2">
               {block.tags.map((tag) => (
-                <li key={tag} className="flex items-center gap-2">
-                  <span className="h-1 w-1 rounded-full bg-[#4B4560]" />
-                  <span className="font-semibold">{tag}</span>
+                <li
+                  key={tag}
+                  className="rounded-full bg-[#F1ECFF] px-2.5 py-0.5 text-xs font-medium text-[#6A35FF]"
+                >
+                  {tag}
                 </li>
               ))}
             </ul>

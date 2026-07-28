@@ -2,13 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-  PlusIcon,
-  CircleHelpIcon,
-  StarIcon,
-  CheckIcon,
-  LockIcon,
-} from "lucide-react";
+import { PlusIcon, CircleHelpIcon, CheckIcon, LockIcon } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -25,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { StarRating } from "./StarRating";
 import {
   BANK_QUESTIONS,
   SOLUTION_BANK_QUESTIONS,
@@ -146,39 +141,6 @@ const TABS: { value: ActionSheetTab; label: string }[] = [
   { value: "problem", label: "Problem" },
   { value: "solution", label: "Solution" },
 ];
-
-// ─── Star rating ──────────────────────────────────────────────────────────────
-
-interface StarRatingProps {
-  value: number;
-  onChange: (value: number) => void;
-  readOnly?: boolean;
-}
-
-function StarRating({ value, onChange, readOnly = false }: StarRatingProps) {
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <button
-          key={i}
-          type="button"
-          disabled={readOnly}
-          onClick={() => onChange(i === value ? 0 : i)}
-          className="text-[#6A35FF] focus:outline-none disabled:cursor-default"
-          aria-label={`${i} star${i !== 1 ? "s" : ""}`}
-        >
-          <StarIcon
-            className={`w-4 h-4 ${
-              i <= value
-                ? "fill-[#6A35FF] text-[#6A35FF]"
-                : "fill-none text-gray-300"
-            }`}
-          />
-        </button>
-      ))}
-    </div>
-  );
-}
 
 // ─── Answer input ─────────────────────────────────────────────────────────────
 
