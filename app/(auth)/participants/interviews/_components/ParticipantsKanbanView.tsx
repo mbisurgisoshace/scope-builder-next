@@ -1,7 +1,10 @@
 "use client";
 
 import { Participant } from "@/lib/generated/prisma";
-import { getParticipants } from "@/services/participants";
+import {
+  completeInterviewReview,
+  getParticipants,
+} from "@/services/participants";
 import { getExampleParticipants } from "@/services/examples";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -55,11 +58,13 @@ function ParticipantCard({
   hideRelationship = false,
   onCardClick,
   onEditClick,
+  onReviewClick,
 }: {
   participant: Participant;
   hideRelationship?: boolean;
   onCardClick?: () => void;
   onEditClick?: () => void;
+  onReviewClick?: () => void;
 }) {
   return (
     <div
@@ -69,7 +74,23 @@ function ParticipantCard({
       {/* Pending review rides alongside the status rather than in it, so it gets a
           badge on the Conducted card instead of a column of its own. */}
       {participant.pending_review && (
-        <Badge className="bg-[#FFF3E6] text-[#9A3412]">Pending Review</Badge>
+        <div className="flex items-center justify-between gap-2">
+          <Badge className="bg-[#FFF3E6] text-[#9A3412]">Pending Review</Badge>
+          {/* Instructors only — opens the interview locked, with Complete Review. */}
+          {onReviewClick && (
+            <button
+              // Same reason as the edit button below: the card's own onClick sits on
+              // the wrapping div and would open the editable interview too.
+              onClick={(e) => {
+                e.stopPropagation();
+                onReviewClick();
+              }}
+              className="shrink-0 rounded-md bg-[#111827] px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-[#374151]"
+            >
+              Review
+            </button>
+          )}
+        </div>
       )}
       <div className="flex items-start justify-between gap-2">
         <p className="font-semibold text-[16px] text-[#111827] min-w-0 break-words">
@@ -135,6 +156,7 @@ function KanbanBoard({
   onAddClick,
   onCardClick,
   onEditClick,
+  onReviewClick,
 }: {
   columns: { key: string; label: string }[];
   getColumnCards: (key: string) => Participant[];
@@ -143,6 +165,7 @@ function KanbanBoard({
   onAddClick?: () => void;
   onCardClick?: (participant: Participant) => void;
   onEditClick?: (participant: Participant) => void;
+  onReviewClick?: (participant: Participant) => void;
 }) {
   return (
     <div className="flex flex-row gap-4 overflow-x-auto h-full">
@@ -180,6 +203,9 @@ function KanbanBoard({
                   onEditClick={
                     onEditClick ? () => onEditClick(participant) : undefined
                   }
+                  onReviewClick={
+                    onReviewClick ? () => onReviewClick(participant) : undefined
+                  }
                 />
               ))}
               {cards.length === 0 && (
@@ -199,11 +225,13 @@ export default function ParticipantsKanbanView({
   tags,
   jobTitles,
   readOnly = false,
+  canReview = false,
   exampleNumber,
 }: {
   tags: string[];
   jobTitles: string[];
   readOnly?: boolean;
+  canReview?: boolean;
   exampleNumber?: number;
 }) {
   const router = useRouter();
@@ -214,6 +242,9 @@ export default function ParticipantsKanbanView({
   );
   const [interviewParticipant, setInterviewParticipant] =
     useState<Participant | null>(null);
+  // Reviewing opens the same interview view as a card click, but locked and with
+  // Complete Review in place of Save.
+  const [reviewing, setReviewing] = useState(false);
   // Controlled so swapping to the interview view and back doesn't remount the tabs
   // and silently drop the user from Relationship back to Progress.
   const [boardTab, setBoardTab] = useState("progress");
@@ -234,6 +265,31 @@ export default function ParticipantsKanbanView({
   useEffect(() => {
     refetch();
   }, []);
+
+  const closeInterview = () => {
+    setInterviewParticipant(null);
+    setReviewing(false);
+  };
+
+  const openInterview = (participant: Participant) => {
+    setInterviewParticipant(participant);
+    setReviewing(false);
+  };
+
+  const openReview = (participant: Participant) => {
+    setInterviewParticipant(participant);
+    setReviewing(true);
+  };
+
+  const handleCompleteReview = async () => {
+    if (!interviewParticipant) return;
+    await completeInterviewReview(interviewParticipant.id);
+    closeInterview();
+    refetch();
+    // The milestone header's payer count is server-rendered off `documented`, so it
+    // goes stale the moment this review lands.
+    router.refresh();
+  };
 
   const groupedByStatus = PROGRESS_COLUMNS.reduce<
     Record<string, Participant[]>
@@ -293,11 +349,12 @@ export default function ParticipantsKanbanView({
       {interviewParticipant ? (
         <InterviewAnswersView
           participant={interviewParticipant}
-          readOnly={readOnly}
+          readOnly={readOnly || reviewing}
+          onCompleteReview={reviewing ? handleCompleteReview : undefined}
           exampleNumber={exampleNumber}
-          onBack={() => setInterviewParticipant(null)}
+          onBack={closeInterview}
           onSaved={() => {
-            setInterviewParticipant(null);
+            closeInterview();
             refetch();
             // The milestone header's payer count is server-rendered, so re-sync it here
             // rather than leaving a stale number behind after an interview session.
@@ -323,8 +380,9 @@ export default function ParticipantsKanbanView({
               getColumnCards={(key) => groupedByStatus[key] ?? []}
               getColumnColor={(key) => PROGRESS_COLORS[key] ?? "#F5F5F8"}
               onAddClick={readOnly ? undefined : () => setSheetOpen(true)}
-              onCardClick={setInterviewParticipant}
+              onCardClick={openInterview}
               onEditClick={readOnly ? undefined : setEditParticipant}
+              onReviewClick={canReview ? openReview : undefined}
             />
           </TabsContent>
           <TabsContent
@@ -337,8 +395,9 @@ export default function ParticipantsKanbanView({
               getColumnColor={(key) => RELATIONSHIP_COLORS[key] ?? "#F5F5F8"}
               hideRelationship
               onAddClick={readOnly ? undefined : () => setSheetOpen(true)}
-              onCardClick={setInterviewParticipant}
+              onCardClick={openInterview}
               onEditClick={readOnly ? undefined : setEditParticipant}
+              onReviewClick={canReview ? openReview : undefined}
             />
           </TabsContent>
         </Tabs>

@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 
+import { checkRole } from "@/lib/auth";
 import { participantFormSchema } from "@/schemas/participant";
 import {
   ParticipantRelationship,
@@ -229,6 +230,35 @@ export async function markParticipantAsDocumented(participantId: string) {
   await prisma.participant.update({
     where: { id: participantId, org_id: orgId },
     data: { status: "documented" },
+  });
+
+  // "layout" so the nested /participants/interviews is revalidated too — a bare
+  // revalidatePath("/participants") only busts that exact page, and this status
+  // change is what the interviews header's payer count is counting.
+  revalidatePath(`/participants`, "layout");
+}
+
+// The instructor-side counterpart to the founder's "Submit Interview Documentation for
+// Review" checkbox: clears the flag and advances the interview past "complete". Admins
+// reach a team's board through /switch-startup, so they carry a real orgId and the usual
+// scoping still applies.
+export async function completeInterviewReview(participantId: string) {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) redirect("/pick-startup");
+
+  // The UI only offers this to admins/mentors, but the action is callable directly.
+  const canReview = (await checkRole("admin")) || (await checkRole("mentor"));
+
+  if (!canReview) {
+    throw new Error("Only an admin or mentor can complete an interview review.");
+  }
+
+  await prisma.participant.update({
+    where: { id: participantId, org_id: orgId },
+    data: { status: "documented", pending_review: false },
   });
 
   // "layout" so the nested /participants/interviews is revalidated too — a bare

@@ -21,6 +21,9 @@ interface InterviewAnswersViewProps {
   onBack: () => void;
   onSaved: () => void;
   readOnly?: boolean;
+  // Set by the instructor review flow. Its presence is what puts the view in review
+  // mode; the caller pairs it with `readOnly` so nothing here is editable.
+  onCompleteReview?: () => void | Promise<void>;
   exampleNumber?: number;
 }
 
@@ -28,11 +31,15 @@ function InterviewHeader({
   participant,
   onBack,
   onSave,
+  onCompleteReview,
+  completingReview = false,
   readOnly = false,
 }: {
   participant: Participant;
   onBack: () => void;
   onSave: () => void;
+  onCompleteReview?: () => void;
+  completingReview?: boolean;
   readOnly?: boolean;
 }) {
   const roles =
@@ -82,13 +89,24 @@ function InterviewHeader({
         </div>
       </div>
 
-      {!readOnly && (
+      {/* A reviewer never gets Save — the two actions are mutually exclusive. */}
+      {onCompleteReview ? (
         <Button
-          onClick={onSave}
+          onClick={onCompleteReview}
+          disabled={completingReview}
           className="rounded-lg bg-[#111827] px-8 text-white hover:bg-[#374151]"
         >
-          Save
+          Complete Review
         </Button>
+      ) : (
+        !readOnly && (
+          <Button
+            onClick={onSave}
+            className="rounded-lg bg-[#111827] px-8 text-white hover:bg-[#374151]"
+          >
+            Save
+          </Button>
+        )
       )}
     </div>
   );
@@ -99,9 +117,11 @@ export function InterviewAnswersView({
   onBack,
   onSaved,
   readOnly = false,
+  onCompleteReview,
   exampleNumber,
 }: InterviewAnswersViewProps) {
   const [problems, setProblems] = useState<AnswerableProblem[] | null>(null);
+  const [completingReview, setCompletingReview] = useState(false);
 
   // Mirrors `problems` so a commit always persists the latest value rather than
   // whatever the handler closed over before the last keystroke.
@@ -169,6 +189,16 @@ export function InterviewAnswersView({
     onSaved();
   }, [onSaved]);
 
+  const handleCompleteReview = useCallback(() => {
+    if (!onCompleteReview || completingReview) return;
+    setCompletingReview(true);
+    // The caller unmounts this view on success, so only the failure path needs to
+    // re-enable the button.
+    void Promise.resolve(onCompleteReview()).catch(() =>
+      setCompletingReview(false),
+    );
+  }, [onCompleteReview, completingReview]);
+
   return (
     // Break out of the page's px-8/py-4 gutter so the white surface runs edge to edge,
     // matching the design; the +2rem height makes up for the cancelled vertical padding.
@@ -178,6 +208,8 @@ export function InterviewAnswersView({
           participant={participant}
           onBack={onBack}
           onSave={handleSave}
+          onCompleteReview={onCompleteReview ? handleCompleteReview : undefined}
+          completingReview={completingReview}
           readOnly={readOnly}
         />
       </div>
