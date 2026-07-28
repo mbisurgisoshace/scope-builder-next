@@ -1,12 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useOrganizationList } from "@clerk/nextjs";
 
 import StartupsTable from "./StartupsTable";
+import {
+  defaultMilestoneAccess,
+  type MilestoneAccessState,
+} from "@/lib/milestones";
+import {
+  getAllMilestoneAccess,
+  setMilestoneAvailability,
+} from "@/services/milestoneAccess";
 
 export default function Startups() {
   const [data, setData] = useState<any[]>([]);
+  const [accessByOrg, setAccessByOrg] = useState<
+    Record<string, MilestoneAccessState[]>
+  >({});
   const { userMemberships, setActive, isLoaded } = useOrganizationList({
     userMemberships: {
       infinite: true,
@@ -69,9 +80,50 @@ export default function Startups() {
     getData();
   }, [userMemberships.data?.length]);
 
+  useEffect(() => {
+    getAllMilestoneAccess().then(setAccessByOrg);
+  }, []);
+
+  // Startups with no rows yet fall back to "only milestone 1 unlocked".
+  const rows = useMemo(
+    () =>
+      data.map((startup) => ({
+        ...startup,
+        milestones: accessByOrg[startup.org_id] ?? defaultMilestoneAccess(),
+      })),
+    [data, accessByOrg],
+  );
+
+  const onToggleMilestone = useCallback(
+    (orgId: string, milestone: number, available: boolean) => {
+      // Optimistic: flip it locally, roll this startup's row back if the write fails.
+      let previous: MilestoneAccessState[] | undefined;
+
+      setAccessByOrg((current) => {
+        const access = current[orgId] ?? defaultMilestoneAccess();
+        previous = access;
+
+        return {
+          ...current,
+          [orgId]: access.map((entry) =>
+            entry.milestone === milestone ? { ...entry, available } : entry,
+          ),
+        };
+      });
+
+      setMilestoneAvailability(orgId, milestone, available).catch(() => {
+        setAccessByOrg((current) =>
+          previous ? { ...current, [orgId]: previous } : current,
+        );
+      });
+    },
+    [],
+  );
+
   return (
     <StartupsTable
-      data={data}
+      data={rows}
+      onToggleMilestone={onToggleMilestone}
       onSelectOrganization={(organization: any) => {
         if (setActive) {
           setActive({

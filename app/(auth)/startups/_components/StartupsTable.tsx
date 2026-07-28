@@ -18,17 +18,35 @@ import {
 } from "@/components/ui/table";
 import useStartups from "./useStartups";
 import { format } from "date-fns";
+import { useMemo } from "react";
 import { useOrganizationList } from "@clerk/nextjs";
 import { Badge } from "@/components/ui/badge";
 import { DataTableFacetedFilter } from "@/components/DataTableFacetedFilter";
+import MilestoneAccessCell from "./MilestoneAccessCell";
+import {
+  MILESTONE_NUMBERS,
+  defaultMilestoneAccess,
+  type MilestoneAccessState,
+} from "@/lib/milestones";
 
 export default function StartupsTable({
   data,
   onSelectOrganization,
+  onToggleMilestone,
 }: {
   data: any[];
   onSelectOrganization: (organization: any) => void;
+  onToggleMilestone: (
+    orgId: string,
+    milestone: number,
+    available: boolean,
+  ) => void;
 }) {
+  const columns = useMemo(
+    () => getColumns(onToggleMilestone),
+    [onToggleMilestone],
+  );
+
   const table = useReactTable({
     data,
     columns,
@@ -123,7 +141,13 @@ export default function StartupsTable({
   );
 }
 
-const columns: ColumnDef<any>[] = [
+const getColumns = (
+  onToggleMilestone: (
+    orgId: string,
+    milestone: number,
+    available: boolean,
+  ) => void,
+): ColumnDef<any>[] => [
   {
     accessorKey: "name",
     header: "Startup Name",
@@ -183,6 +207,27 @@ const columns: ColumnDef<any>[] = [
       return <div className="capitalize">{createdAt}</div>;
     },
   },
+  ...MILESTONE_NUMBERS.map<ColumnDef<any>>((milestone) => ({
+    id: `milestone-${milestone}`,
+    header: () => <span title={`Milestone ${milestone}`}>M{milestone}</span>,
+    size: 70,
+    cell: ({ row }) => {
+      const access: MilestoneAccessState[] =
+        row.original.milestones ?? defaultMilestoneAccess();
+      const state = access[milestone - 1];
+
+      return (
+        <MilestoneAccessCell
+          milestone={milestone}
+          available={state?.available ?? false}
+          submittedAt={state?.submittedAt ?? null}
+          onToggle={(available) =>
+            onToggleMilestone(row.original.org_id, milestone, available)
+          }
+        />
+      );
+    },
+  })),
   // {
   //   id: "actions",
   //   cell: ({ row }) => {

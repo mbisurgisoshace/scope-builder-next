@@ -301,6 +301,23 @@ model TopicProgress {
   @@map("topic_progress")
 }
 
+// Per-startup unlock flag for the 5 milestones. The milestones themselves stay
+// hardcoded in MilestoneHeader; this table only says which ones a startup can
+// reach, plus a slot for the (future) submission flow.
+model MilestoneAccess {
+  id           Int       @id @default(autoincrement())
+  org_id       String
+  milestone    Int // 1..5, matches MilestoneHeader index+1
+  available    Boolean   @default(false)
+  submitted_at DateTime? // NULL = not submitted yet
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([org_id, milestone])
+  @@map("milestone_access")
+}
+
 model GetStartedCard {
   id        Int     @id @default(autoincrement())
   milestone Int // 1..5, matches MilestoneHeader index+1
