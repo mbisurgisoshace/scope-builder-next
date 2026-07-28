@@ -24,6 +24,42 @@ function toRelationship(value?: string): ParticipantRelationship | null {
   return value ? (value as ParticipantRelationship) : null;
 }
 
+// `conducted` is the sheets' explicit signal, so it wins over the date-derived
+// status. When it's undefined (caller didn't render the checkbox) we fall back to
+// the old behaviour: a date means "scheduled", and complete/documented are locked.
+function resolveStatus(
+  values: z.infer<typeof participantFormSchema>,
+  currentStatus?: ParticipantStatus,
+): ParticipantStatus {
+  const { conducted, scheduled_date, status } = values;
+
+  // "documented" sits past "complete" in the interview flow — never drag it back.
+  if (currentStatus === "documented") return "documented";
+
+  if (scheduled_date && conducted !== undefined) {
+    return conducted ? "complete" : "scheduled";
+  }
+
+  if (currentStatus && LOCKED_STATUSES.includes(currentStatus)) {
+    return currentStatus;
+  }
+
+  return scheduled_date ? "scheduled" : (status as ParticipantStatus);
+}
+
+// The "Submit Interview Documentation for Review" checkbox only exists under a
+// checked "Conducted", so an interview that isn't conducted can't be waiting on a
+// review. `fallback` keeps an existing flag when the caller has no opinion.
+function resolvePendingReview(
+  pendingReview: boolean | undefined,
+  status: ParticipantStatus,
+  fallback = false,
+): boolean {
+  if (!LOCKED_STATUSES.includes(status)) return false;
+
+  return pendingReview ?? fallback;
+}
+
 export async function getParticipantTags() {
   const { orgId, userId } = await auth();
 
@@ -106,14 +142,18 @@ export async function createParticipant(
 
   if (!orgId) redirect("/pick-startup");
 
+  // `conducted` is derived into `status` below and isn't a column of its own.
+  const { conducted, ...data } = values;
+
+  // A brand-new participant has no current status to guard against.
+  const status = resolveStatus(values);
+
   const newParticipant = await prisma.participant.create({
     data: {
-      ...values,
+      ...data,
       relationship: toRelationship(values.relationship),
-      // A brand-new participant can't be complete/documented, so no guard needed.
-      status: values.scheduled_date
-        ? "scheduled"
-        : (values.status as ParticipantStatus),
+      status,
+      pending_review: resolvePendingReview(values.pending_review, status),
       org_id: orgId,
       id: participantId,
       ParticipantRoom: {
@@ -141,25 +181,31 @@ export async function updateParticipant(
   // the interview flow may have advanced it while the edit sheet was open.
   const current = await prisma.participant.findFirst({
     where: { id: participantId, org_id: orgId },
-    select: { status: true },
+    select: { status: true, pending_review: true },
   });
 
-  const status = current && LOCKED_STATUSES.includes(current.status)
-    ? current.status
-    : values.scheduled_date
-      ? "scheduled"
-      : (values.status as ParticipantStatus);
+  // `conducted` is derived into `status` below and isn't a column of its own.
+  const { conducted, ...data } = values;
+
+  const status = resolveStatus(values, current?.status);
 
   await prisma.participant.update({
     where: { id: participantId, org_id: orgId },
     data: {
-      ...values,
+      ...data,
       relationship: toRelationship(values.relationship),
       status,
+      pending_review: resolvePendingReview(
+        values.pending_review,
+        status,
+        current?.pending_review,
+      ),
     },
   });
 
-  revalidatePath(`/participants`);
+  // "layout" so the nested /participants/interviews board picks up a card that
+  // just moved into (or out of) the Conducted column.
+  revalidatePath(`/participants`, "layout");
 }
 
 export async function markParticipantAsComplete(participantId: string) {

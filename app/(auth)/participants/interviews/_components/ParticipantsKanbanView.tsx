@@ -66,6 +66,11 @@ function ParticipantCard({
       onClick={onCardClick}
       className="bg-white rounded-lg w-full border border-[#C9CAD4] p-3 hover:shadow-md transition-shadow cursor-pointer space-y-2"
     >
+      {/* Pending review rides alongside the status rather than in it, so it gets a
+          badge on the Conducted card instead of a column of its own. */}
+      {participant.pending_review && (
+        <Badge className="bg-[#FFF3E6] text-[#9A3412]">Pending Review</Badge>
+      )}
       <div className="flex items-start justify-between gap-2">
         <p className="font-semibold text-[16px] text-[#111827] min-w-0 break-words">
           {participant.name}

@@ -60,6 +60,9 @@ model Participant {
   notes                  String?
   tags                   String?
   status                 ParticipantStatus        @default(need_to_schedule)
+  // Orthogonal to `status`: a conducted interview whose documentation has been
+  // submitted for review. Surfaced as a badge on the Conducted card, not a column.
+  pending_review         Boolean                  @default(false)
   scheduled_date         DateTime?
   example_number         Int? // NULL = real data, N = example set N
   created_at             DateTime                 @default(now())

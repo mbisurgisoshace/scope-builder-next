@@ -136,6 +136,7 @@ async function copyDatabase(sourceOrgId: string, exampleNumber: number) {
           notes: p.notes,
           tags: p.tags,
           status: p.status,
+          pending_review: p.pending_review,
           scheduled_date: p.scheduled_date,
           org_id: exOrg,
           example_number: exampleNumber,

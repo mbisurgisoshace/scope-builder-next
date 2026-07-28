@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
   PopoverContent,
@@ -85,11 +86,22 @@ export default function EditParticipantForm({
       learnings: participant.learnings || "",
       status: participant.status || "need_to_schedule",
       scheduled_date: participant.scheduled_date || undefined,
+      // "documented" is past "complete" in the interview flow, so it counts as
+      // conducted too.
+      conducted:
+        participant.status === "complete" || participant.status === "documented",
+      pending_review: participant.pending_review,
       notes: participant.notes || "",
       tags: participant.tags || "",
       job_title: participant.job_title || "",
     },
   });
+
+  // Drives the "Conducted" checkbox, which only makes sense for a scheduled
+  // interview — watched so picking a date reveals it without a save.
+  const scheduledDate = form.watch("scheduled_date");
+  // Submitting documentation for review only makes sense once it's conducted.
+  const conducted = form.watch("conducted");
 
   async function onSubmit(values: z.infer<typeof participantFormSchema>) {
     await updateParticipant(participant.id, values);
@@ -119,6 +131,86 @@ export default function EditParticipantForm({
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-8 p-4"
         >
+          {/* Only offer "Conducted" once there's something to have conducted. */}
+          {scheduledDate && (
+            <FormField
+              control={form.control}
+              name="conducted"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center gap-2">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={(value) => field.onChange(value === true)}
+                    />
+                  </FormControl>
+                  <FormLabel className="font-normal">Conducted</FormLabel>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+
+          {scheduledDate && conducted && (
+            <FormField
+              control={form.control}
+              name="pending_review"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center gap-2">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={(value) => field.onChange(value === true)}
+                    />
+                  </FormControl>
+                  <FormLabel className="font-normal">
+                    Submit Interview Documentation for Review
+                  </FormLabel>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+
+          <FormField
+            control={form.control}
+            name="scheduled_date"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Scheduled Date</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground",
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="center">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      captionLayout="dropdown"
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name="name"
@@ -270,45 +362,6 @@ export default function EditParticipantForm({
                     onCreateOption={(opt) => onCreateTagOption(opt.value)}
                   />
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="scheduled_date"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Scheduled Date</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground",
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="center">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      captionLayout="dropdown"
-                    />
-                  </PopoverContent>
-                </Popover>
                 <FormMessage />
               </FormItem>
             )}

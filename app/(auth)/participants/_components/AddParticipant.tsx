@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent } from "@/components/ui/popover";
 import { PopoverTrigger } from "@radix-ui/react-popover";
 import { cn } from "@/lib/utils";
@@ -98,10 +99,18 @@ export default function AddParticipant({
       market_segment: "",
       status: "need_to_schedule",
       scheduled_date: undefined,
+      conducted: false,
+      pending_review: false,
       notes: "",
       tags: "",
     },
   });
+
+  // Drives the "Conducted" checkbox, which only makes sense for a scheduled
+  // interview — watched so picking a date reveals it right away.
+  const scheduledDate = form.watch("scheduled_date");
+  // Submitting documentation for review only makes sense once it's conducted.
+  const conducted = form.watch("conducted");
 
   async function onSubmit(values: z.infer<typeof participantFormSchema>) {
     await createParticipant(values);
@@ -147,6 +156,90 @@ export default function AddParticipant({
               onSubmit={form.handleSubmit(onSubmit)}
               className="space-y-8 p-4"
             >
+              {/* Only offer "Conducted" once there's something to have conducted. */}
+              {scheduledDate && (
+                <FormField
+                  control={form.control}
+                  name="conducted"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center gap-2">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(value) =>
+                            field.onChange(value === true)
+                          }
+                        />
+                      </FormControl>
+                      <FormLabel className="font-normal">Conducted</FormLabel>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {scheduledDate && conducted && (
+                <FormField
+                  control={form.control}
+                  name="pending_review"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center gap-2">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(value) =>
+                            field.onChange(value === true)
+                          }
+                        />
+                      </FormControl>
+                      <FormLabel className="font-normal">
+                        Submit Interview Documentation for Review
+                      </FormLabel>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <FormField
+                control={form.control}
+                name="scheduled_date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Scheduled Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground",
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="center">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          captionLayout="dropdown"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="name"
@@ -373,44 +466,6 @@ export default function AddParticipant({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="scheduled_date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Scheduled Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground",
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="center">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          captionLayout="dropdown"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <div className="flex ">
                 <Button
                   type="submit"

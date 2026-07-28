@@ -39,6 +39,13 @@ export const participantFormSchema = z.object({
   // services/participants.ts, but kept so the current value round-trips on edit.
   status: z.string(),
   scheduled_date: z.date().optional(),
+  // Not a column — the sheets surface it as the "Conducted" checkbox and
+  // services/participants.ts folds it into `status`. Only meaningful once a
+  // scheduled_date exists; `undefined` means "the caller has no opinion".
+  conducted: z.boolean().optional(),
+  // Only meaningful for a conducted interview — services/participants.ts clears
+  // it otherwise, so it can never outlive the checkbox that sets it.
+  pending_review: z.boolean().optional(),
   notes: z.string().optional(),
   tags: z.string().optional(),
 });
