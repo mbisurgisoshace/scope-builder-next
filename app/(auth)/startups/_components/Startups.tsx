@@ -18,7 +18,7 @@ export default function Startups() {
   const [accessByOrg, setAccessByOrg] = useState<
     Record<string, MilestoneAccessState[]>
   >({});
-  const { userMemberships, setActive, isLoaded } = useOrganizationList({
+  const { userMemberships, isLoaded } = useOrganizationList({
     userMemberships: {
       infinite: true,
       pageSize: 100,
@@ -125,12 +125,13 @@ export default function Startups() {
       data={rows}
       onToggleMilestone={onToggleMilestone}
       onSelectOrganization={(organization: any) => {
-        if (setActive) {
-          setActive({
-            redirectUrl: "/",
-            organization: organization.org_id,
-          });
-        }
+        // Open in a new tab so admins keep this list around while working
+        // through milestones. The interstitial sets the active org on arrival.
+        window.open(
+          `/switch-startup?org=${encodeURIComponent(organization.org_id)}`,
+          "_blank",
+          "noopener",
+        );
       }}
     />
   );
