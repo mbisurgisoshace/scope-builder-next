@@ -15,6 +15,7 @@ import { subStepKey } from "@/lib/milestones";
 import { useMilestoneSelection } from "../../MilestoneSelectionContext";
 import { useSubStepProgress } from "../../SubStepProgressContext";
 import { GetStartedCard } from "./GetStartedCard";
+import { MasonryGrid } from "./MasonryGrid";
 
 // Mirrors the shared transition used in MilestoneHeader.tsx so milestone
 // changes feel consistent across the header and its content.
@@ -146,7 +147,7 @@ export function GetStarted({ readOnly = false, exampleNumber }: GetStartedProps)
           transition={transition}
           className="h-full overflow-y-auto p-6"
         >
-          <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <MasonryGrid>
             {cards.map((card) => (
               <GetStartedCard
                 key={card.id}
@@ -158,7 +159,7 @@ export function GetStarted({ readOnly = false, exampleNumber }: GetStartedProps)
                 readOnly={readOnly}
               />
             ))}
-          </div>
+          </MasonryGrid>
         </motion.div>
       )}
     </AnimatePresence>
