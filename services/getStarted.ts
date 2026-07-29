@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma";
+import { subStepKey } from "@/lib/milestones";
 
 export type GetStartedCardWithData = Prisma.GetStartedCardGetPayload<{
   include: { items: { include: { reviews: true } }; reviews: true };
@@ -33,6 +34,38 @@ export async function getGetStartedCards(milestone: number) {
   });
 
   return cards;
+}
+
+/**
+ * Reviewed state of every sub-step item, keyed by sub-step key ("1.1", "1.2"…),
+ * for the active org. Covers all 5 milestones in one query so the milestone
+ * header can show progress for the blocks that aren't expanded.
+ */
+export async function getSubStepProgress(): Promise<Record<string, boolean>> {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) redirect("/pick-startup");
+
+  const items = await prisma.getStartedItem.findMany({
+    where: { sub_step: { not: null } },
+    select: {
+      sub_step: true,
+      card: { select: { milestone: true } },
+      reviews: { where: { org_id: orgId }, select: { reviewed: true } },
+    },
+  });
+
+  const progress: Record<string, boolean> = {};
+
+  for (const item of items) {
+    if (item.sub_step == null) continue;
+    progress[subStepKey(item.card.milestone, item.sub_step)] =
+      item.reviews.some((review) => review.reviewed);
+  }
+
+  return progress;
 }
 
 export async function setCardReviewed(cardId: number, reviewed: boolean) {

@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { CheckCircle2, Info, Calendar, type LucideIcon } from "lucide-react";
 
+import { MILESTONE_LABELS, SUB_STEPS } from "@/lib/milestones";
 import { useMilestoneSelection } from "../MilestoneSelectionContext";
+import { useSubStepProgress } from "../SubStepProgressContext";
 
 type SubStepStatus = "done" | "active" | "pending";
 
@@ -31,6 +33,11 @@ interface MilestoneHeaderProps {
 // Number of progress segments rendered under each sub-step.
 const SEGMENTS = 3;
 
+// Sub-step completion is binary today (one steps-card item per sub-step, Reviewed
+// or not), so the partial-progress segments are hidden. Kept behind this flag —
+// flip it back on if sub-steps ever gain sub-items to count.
+const SHOW_PROGRESS_SEGMENTS = false;
+
 // Width of the chevron arrow that terminates / separates each block.
 const CHEVRON_W = 14;
 
@@ -51,90 +58,15 @@ const GRAY_LABEL = "#697288"; // "#N" caption on unselected blocks
 const TRANSITION = { duration: 0.28, ease: [0.4, 0, 0.2, 1] } as const;
 const INSTANT = { duration: 0 } as const;
 
-const FIXED_SUB_STEPS: Pick<SubStep, "label" | "icon">[] = [
-  { label: "1.1 Visualize User Journey" },
-  { label: "1.2 Stakeholders", icon: Info },
-  { label: "1.3 Segments & Beachhead", icon: Calendar },
-  {
-    label: "1.4 Instructor Check-in / Review Journey & Market",
-    icon: Calendar,
-  },
-  { label: "1.5 Interviewee List", icon: Calendar },
-  { label: "2.1 Identify Jobs/Pains/Gains", icon: Calendar },
-  { label: "2.2 Expand on Pains/Gains", icon: Calendar },
-  { label: "2.3 Source & Confidence Score", icon: Calendar },
-  { label: "2.4 Instructor Check-in / Review Journey Details", icon: Calendar },
-  { label: "2.5 Schedule Interviews", icon: Calendar },
-  { label: "3.1 Hypotheses", icon: Calendar },
-  { label: "3.2 Interview Questions", icon: Calendar },
-  {
-    label: "3.3 Instructor Check-in / Review Hypotheses & Questions",
-    icon: Calendar,
-  },
-  { label: "3.4 Practice Interview", icon: Calendar },
-  { label: "4.1 Conduct & Document 5", icon: Calendar },
-  {
-    label: "4.2 Instructor Check-in / Review Interview Progress",
-    icon: Calendar,
-  },
-  { label: "4.3 Conduct & Document 5 more", icon: Calendar },
-  { label: "5.1 Conduct & Document 5+ more", icon: Calendar },
-  {
-    label: "5.2 Instructor Check-in / Review Interview Progress",
-    icon: Calendar,
-  },
-  { label: "5.3 Practice Presentation", icon: Calendar },
-  { label: "5.4 Final Presentation", icon: Calendar },
-];
-
-const DEFAULT_MILESTONES: Milestone[] = [
-  {
-    label: "User, their Journey & Market",
-    subSteps: [
-      { ...FIXED_SUB_STEPS[0], status: "done", filled: 3 },
-      { ...FIXED_SUB_STEPS[1], status: "active", filled: 1 },
-      { ...FIXED_SUB_STEPS[2], status: "active", filled: 1 },
-      { ...FIXED_SUB_STEPS[3], status: "active", filled: 1 },
-      { ...FIXED_SUB_STEPS[4], status: "active", filled: 1 },
-    ],
-  },
-  {
-    label: "Deep Dive into Journey",
-    subSteps: [
-      { ...FIXED_SUB_STEPS[5], status: "active", filled: 0 },
-      { ...FIXED_SUB_STEPS[6], status: "active", filled: 0 },
-      { ...FIXED_SUB_STEPS[7], status: "active", filled: 0 },
-      { ...FIXED_SUB_STEPS[8], status: "active", filled: 0 },
-      { ...FIXED_SUB_STEPS[9], status: "active", filled: 0 },
-    ],
-  },
-  {
-    label: "Interview Preparation",
-    subSteps: [
-      { ...FIXED_SUB_STEPS[10], status: "active", filled: 0 },
-      { ...FIXED_SUB_STEPS[11], status: "active", filled: 0 },
-      { ...FIXED_SUB_STEPS[12], status: "active", filled: 0 },
-      { ...FIXED_SUB_STEPS[13], status: "active", filled: 0 },
-    ],
-  },
-  {
-    label: "Conduct Interviews",
-    subSteps: [
-      { ...FIXED_SUB_STEPS[14], status: "active", filled: 0 },
-      { ...FIXED_SUB_STEPS[15], status: "active", filled: 0 },
-      { ...FIXED_SUB_STEPS[16], status: "active", filled: 0 },
-    ],
-  },
-  {
-    label: "Analyze & Present Findings",
-    subSteps: [
-      { ...FIXED_SUB_STEPS[17], status: "active", filled: 0 },
-      { ...FIXED_SUB_STEPS[18], status: "active", filled: 0 },
-      { ...FIXED_SUB_STEPS[19], status: "active", filled: 0 },
-      { ...FIXED_SUB_STEPS[20], status: "active", filled: 0 },
-    ],
-  },
-];
+/**
+ * Per-sub-step icon, keyed by sub-step key. Icons stay here rather than in
+ * `lib/milestones.ts` so that module (imported by "use server" code) keeps no
+ * React dependency. Unlisted keys fall back to `Calendar`; "1.1" has no icon.
+ */
+const SUB_STEP_ICONS: Record<string, LucideIcon | undefined> = {
+  "1.1": undefined,
+  "1.2": Info,
+};
 
 /**
  * The arrow tip / divider drawn on the right edge of a block. `fill` paints the
@@ -223,8 +155,12 @@ function SubStepCell({
           <CheckCircle2 size={13} className="text-green-500" />
           <span className="text-xs text-green-500">Done</span>
         </div>
-      ) : (
+      ) : SHOW_PROGRESS_SEGMENTS ? (
         <ProgressSegments filled={subStep.filled} />
+      ) : (
+        // Placeholder matching the height of the "Done" row / segments, so
+        // pending cells don't shrink and shift the strip.
+        <span aria-hidden className="h-[18px]" />
       )}
 
       {showDivider && <Chevron fill={bg} stroke={chevronStroke} />}
@@ -233,7 +169,7 @@ function SubStepCell({
 }
 
 export function MilestoneHeader({
-  milestones = DEFAULT_MILESTONES,
+  milestones: milestonesProp,
   payerInterviews = 8,
   currentNumber = 4,
 }: MilestoneHeaderProps) {
@@ -241,6 +177,31 @@ export function MilestoneHeader({
   // can react to it. `expandedIndex` here mirrors the selected milestone.
   const { selectedMilestone: expandedIndex, setSelectedMilestone } =
     useMilestoneSelection();
+  // A sub-step is Done when its item on the milestone's steps card (Instructions
+  // tab) is marked Reviewed. Toggling there updates this map optimistically, so
+  // the header reflects the change without a reload.
+  const { progress } = useSubStepProgress();
+
+  const derivedMilestones = useMemo<Milestone[]>(
+    () =>
+      MILESTONE_LABELS.map((label, index) => ({
+        label,
+        subSteps: SUB_STEPS.filter(
+          (subStep) => subStep.milestone === index + 1,
+        ).map((subStep) => ({
+          label: subStep.label,
+          icon:
+            subStep.key in SUB_STEP_ICONS
+              ? SUB_STEP_ICONS[subStep.key]
+              : Calendar,
+          status: progress[subStep.key] ? "done" : "active",
+          filled: progress[subStep.key] ? SEGMENTS : 0,
+        })),
+      })),
+    [progress],
+  );
+
+  const milestones = milestonesProp ?? derivedMilestones;
   const total = milestones.length;
 
   const reduceMotion = useReducedMotion();

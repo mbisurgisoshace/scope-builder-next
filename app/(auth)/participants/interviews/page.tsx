@@ -1,6 +1,7 @@
 import ParticipantsKanbanView from "./_components/ParticipantsKanbanView";
 import { MilestoneHeader } from "@/components/ProblemJourneyMap/components/MilestoneHeader";
 import { MilestoneSelectionProvider } from "@/components/ProblemJourneyMap/MilestoneSelectionContext";
+import { SubStepProgressProvider } from "@/components/ProblemJourneyMap/SubStepProgressContext";
 import {
   getParticipantTags,
   getInterviewMilestonesWithProgress,
@@ -23,23 +24,25 @@ export default async function ParticipantsInterviewPage() {
     // provider. Nothing else on this page consumes the selection — it only drives
     // which milestone the header expands.
     <MilestoneSelectionProvider>
-      <div className="flex flex-col h-full overflow-hidden">
-        {/* `milestones` is left to the component's defaults: per-milestone step
-            progress has no data source yet, so it stays mock for now. */}
-        <MilestoneHeader
-          payerInterviews={Number(
-            process.env.NEXT_PUBLIC_MIN_PAYER_INTERVIEWS ?? 8,
-          )}
-          currentNumber={payerDocumentedCount}
-        />
-        <div className="flex-1 min-h-0 px-8 py-4">
-          <ParticipantsKanbanView
-            tags={tags}
-            jobTitles={jobTitles}
-            canReview={isAdmin || isMentor}
+      {/* Sub-step progress is read-only here — the steps card that writes it
+          lives on the Instructions tab of /user-journey-map. */}
+      <SubStepProgressProvider>
+        <div className="flex flex-col h-full overflow-hidden">
+          <MilestoneHeader
+            payerInterviews={Number(
+              process.env.NEXT_PUBLIC_MIN_PAYER_INTERVIEWS ?? 8,
+            )}
+            currentNumber={payerDocumentedCount}
           />
+          <div className="flex-1 min-h-0 px-8 py-4">
+            <ParticipantsKanbanView
+              tags={tags}
+              jobTitles={jobTitles}
+              canReview={isAdmin || isMentor}
+            />
+          </div>
         </div>
-      </div>
+      </SubStepProgressProvider>
     </MilestoneSelectionProvider>
   );
 }

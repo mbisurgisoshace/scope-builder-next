@@ -2,6 +2,7 @@ import { ProblemJourneyCanvas } from "@/components/ProblemJourneyMap/ProblemJour
 import { MilestoneHeader } from "@/components/ProblemJourneyMap/components/MilestoneHeader";
 import { JourneyMapTabs } from "@/components/ProblemJourneyMap/components/JourneyMapTabs";
 import { MilestoneSelectionProvider } from "@/components/ProblemJourneyMap/MilestoneSelectionContext";
+import { SubStepProgressProvider } from "@/components/ProblemJourneyMap/SubStepProgressContext";
 import { Room } from "@/components/Room";
 import { generateExampleProblemJourneyRoom, getExampleMarketData } from "@/services/examples";
 import { exampleRoomId } from "@/lib/examples";
@@ -19,21 +20,23 @@ export default async function ExampleProblemJourneyPage() {
 
   return (
     <MilestoneSelectionProvider>
-      <div className="flex flex-col h-full">
-        <MilestoneHeader />
-        <JourneyMapTabs
-          readOnly
-          exampleNumber={EXAMPLE_NUMBER}
-          canvas={
-            <Room roomId={roomId}>
-              <ProblemJourneyCanvas
-                stakeholderRows={marketData.stakeholderRows}
-                readOnly
-              />
-            </Room>
-          }
-        />
-      </div>
+      <SubStepProgressProvider exampleNumber={EXAMPLE_NUMBER}>
+        <div className="flex flex-col h-full">
+          <MilestoneHeader />
+          <JourneyMapTabs
+            readOnly
+            exampleNumber={EXAMPLE_NUMBER}
+            canvas={
+              <Room roomId={roomId}>
+                <ProblemJourneyCanvas
+                  stakeholderRows={marketData.stakeholderRows}
+                  readOnly
+                />
+              </Room>
+            }
+          />
+        </div>
+      </SubStepProgressProvider>
     </MilestoneSelectionProvider>
   );
 }

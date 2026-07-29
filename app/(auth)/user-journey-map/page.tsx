@@ -3,6 +3,7 @@ import { ProblemJourneyCanvas } from "@/components/ProblemJourneyMap/ProblemJour
 import { MilestoneHeader } from "@/components/ProblemJourneyMap/components/MilestoneHeader";
 import { JourneyMapTabs } from "@/components/ProblemJourneyMap/components/JourneyMapTabs";
 import { MilestoneSelectionProvider } from "@/components/ProblemJourneyMap/MilestoneSelectionContext";
+import { SubStepProgressProvider } from "@/components/ProblemJourneyMap/SubStepProgressContext";
 import { Room } from "@/components/Room";
 import { generateProblemJourneyRoom } from "@/services/problemJourney";
 import { getMarketData } from "@/services/market";
@@ -17,18 +18,20 @@ export default async function ProblemJourneyMapPage() {
 
   return (
     <MilestoneSelectionProvider>
-      <div className="flex flex-col h-full">
-        <MilestoneHeader />
-        <JourneyMapTabs
-          canvas={
-            <Room roomId={roomId}>
-              <ProblemJourneyCanvas
-                stakeholderRows={marketData.stakeholderRows}
-              />
-            </Room>
-          }
-        />
-      </div>
+      <SubStepProgressProvider>
+        <div className="flex flex-col h-full">
+          <MilestoneHeader />
+          <JourneyMapTabs
+            canvas={
+              <Room roomId={roomId}>
+                <ProblemJourneyCanvas
+                  stakeholderRows={marketData.stakeholderRows}
+                />
+              </Room>
+            }
+          />
+        </div>
+      </SubStepProgressProvider>
     </MilestoneSelectionProvider>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, ExternalLink, PlayCircle } from "lucide-react";
+import { BookOpen, ExternalLink, ListChecks, PlayCircle } from "lucide-react";
 import { YouTubeEmbed } from "@next/third-parties/google";
 
 import { getYouTubeVideoId } from "@/lib/youtube";
@@ -50,6 +50,40 @@ export function GetStartedCard({
         </>
       )}
 
+      {card.type === "steps" && (
+        <ul className="flex flex-col divide-y divide-[#EEF0F4]">
+          {card.items.map((item) => (
+            <li
+              key={item.id}
+              className="flex items-center justify-between gap-3 py-3 first:pt-0"
+            >
+              {/* Text-only today; an item that gains a url renders as a link so
+                  the card can carry reading/video material later. */}
+              {item.url ? (
+                <Link
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-[#2E3545] hover:text-[#6A35FF]"
+                >
+                  <span className="truncate">{item.title}</span>
+                  <ExternalLink className="size-3.5 shrink-0 text-[#9AA1B2]" />
+                </Link>
+              ) : (
+                <span className="min-w-0 truncate text-sm font-medium text-[#2E3545]">
+                  {item.title}
+                </span>
+              )}
+              <ReviewedToggle
+                reviewed={!!itemReviewed[item.id]}
+                onToggle={(next) => onToggleItem(item.id, next)}
+                readOnly={readOnly}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+
       {card.type === "links" && (
         <ul className="flex flex-col divide-y divide-[#EEF0F4]">
           {card.items.map((item) => (
@@ -58,7 +92,7 @@ export function GetStartedCard({
               className="flex items-center justify-between gap-3 py-3 first:pt-0"
             >
               <Link
-                href={item.url}
+                href={item.url ?? "#"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-[#2E3545] hover:text-[#6A35FF]"
@@ -83,7 +117,7 @@ export function GetStartedCard({
               <div className="overflow-hidden rounded-xl bg-black">
                 <YouTubeEmbed
                   params="controls=1"
-                  videoid={getYouTubeVideoId(item.url)}
+                  videoid={getYouTubeVideoId(item.url ?? "")}
                 />
               </div>
               <div className="flex items-center justify-between gap-3">
@@ -105,7 +139,14 @@ export function GetStartedCard({
 }
 
 function CardIcon({ type }: { type: string }) {
-  const Icon = type === "videos" ? PlayCircle : type === "links" ? ExternalLink : BookOpen;
+  const Icon =
+    type === "videos"
+      ? PlayCircle
+      : type === "links"
+        ? ExternalLink
+        : type === "steps"
+          ? ListChecks
+          : BookOpen;
   return (
     <span className="flex size-6 items-center justify-center rounded-md bg-[#F1ECFF] text-[#6A35FF]">
       <Icon className="size-3.5" />

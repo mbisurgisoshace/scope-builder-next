@@ -1,12 +1,16 @@
 import { PrismaClient } from "../lib/generated/prisma";
+import { seedStepsCards } from "./seedSteps";
 
 const prisma = new PrismaClient();
 
 async function main() {
   // Get Started cards are global curriculum (same for every startup); the
   // per-org "reviewed" state lives in GetStartedReview and is created on toggle.
-  // Re-seed cleanly so this script is idempotent.
-  await prisma.getStartedCard.deleteMany({});
+  // Re-seed the content cards cleanly so this script is idempotent — but never
+  // the "steps" cards, whose reviews are milestone progress (see seedStepsCards).
+  await prisma.getStartedCard.deleteMany({ where: { type: { not: "steps" } } });
+
+  await seedStepsCards(prisma);
 
   // ---- Milestone 1 ----
   await prisma.getStartedCard.create({
@@ -14,7 +18,7 @@ async function main() {
       milestone: 1,
       type: "text",
       title: "How to talk to Humans",
-      order: 0,
+      order: 1,
       body:
         "A beachhead chart is a strategic tool used to visualize and prioritize " +
         "market opportunities for a product or service. It helps businesses " +
@@ -28,7 +32,7 @@ async function main() {
       milestone: 1,
       type: "links",
       title: "Recommended reading",
-      order: 1,
+      order: 2,
       items: {
         create: [
           { title: "Building journey maps in 3 minutes", url: "https://www.nngroup.com/articles/journey-mapping-101/", order: 0 },
@@ -44,7 +48,7 @@ async function main() {
       milestone: 1,
       type: "videos",
       title: "Watch & learn",
-      order: 2,
+      order: 3,
       items: {
         create: [
           { title: "The 3 steps to building a user journey map", url: "https://www.youtube.com/watch?v=mSxpVRo3BLg", order: 0 },
@@ -60,7 +64,7 @@ async function main() {
       milestone: 2,
       type: "text",
       title: "Defining your beachhead",
-      order: 0,
+      order: 1,
       body:
         "By mapping out potential customers, competitors, and key metrics, this " +
         "chart allows teams to focus their efforts on the most promising areas, " +
@@ -73,7 +77,7 @@ async function main() {
       milestone: 2,
       type: "links",
       title: "Deeper dives",
-      order: 1,
+      order: 2,
       items: {
         create: [
           { title: "Crossing the Chasm — summary", url: "https://en.wikipedia.org/wiki/Crossing_the_Chasm", order: 0 },
@@ -83,7 +87,9 @@ async function main() {
     },
   });
 
-  console.log("Seeded Get Started cards for milestones 1 and 2.");
+  console.log(
+    "Seeded steps cards for milestones 1-5 and Get Started content for milestones 1 and 2.",
+  );
 }
 
 main()

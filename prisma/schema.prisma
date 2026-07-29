@@ -333,7 +333,7 @@ model MilestoneAccess {
 model GetStartedCard {
   id        Int     @id @default(autoincrement())
   milestone Int // 1..5, matches MilestoneHeader index+1
-  type      String // "text" | "links" | "videos"
+  type      String // "steps" | "text" | "links" | "videos"
   title     String
   body      String? // used by text cards
   order     Int     @default(0)
@@ -348,11 +348,15 @@ model GetStartedCard {
 }
 
 model GetStartedItem {
-  id      Int    @id @default(autoincrement())
+  id      Int     @id @default(autoincrement())
   card_id Int
   title   String
-  url     String
-  order   Int    @default(0)
+  url     String? // NULL on text-only items (the "steps" card)
+  order   Int     @default(0)
+  // Set only on "steps" cards: 1-based position of the sub-step inside the
+  // card's milestone. `${card.milestone}.${sub_step}` is the sub-step key the
+  // MilestoneHeader matches on (see lib/milestones.ts).
+  sub_step Int?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt

@@ -11,7 +11,9 @@ import {
   type GetStartedCardWithData,
 } from "@/services/getStarted";
 import { getExampleGetStartedCards } from "@/services/examples";
+import { subStepKey } from "@/lib/milestones";
 import { useMilestoneSelection } from "../../MilestoneSelectionContext";
+import { useSubStepProgress } from "../../SubStepProgressContext";
 import { GetStartedCard } from "./GetStartedCard";
 
 // Mirrors the shared transition used in MilestoneHeader.tsx so milestone
@@ -27,6 +29,7 @@ interface GetStartedProps {
 export function GetStarted({ readOnly = false, exampleNumber }: GetStartedProps) {
   const { selectedMilestone } = useMilestoneSelection();
   const milestone = selectedMilestone + 1;
+  const { setSubStepReviewed, mergeSubStepProgress } = useSubStepProgress();
   const prefersReducedMotion = useReducedMotion();
   const transition = prefersReducedMotion ? INSTANT : TRANSITION;
 
@@ -49,6 +52,9 @@ export function GetStarted({ readOnly = false, exampleNumber }: GetStartedProps)
 
       const cardMap: Record<number, boolean> = {};
       const itemMap: Record<number, boolean> = {};
+      // Sub-step items of this milestone's steps card, so the header agrees with
+      // what was just loaded even if it was mounted before this fetch.
+      const subStepMap: Record<string, boolean> = {};
       for (const card of result) {
         for (const review of card.reviews) {
           if (review.card_id != null) cardMap[review.card_id] = review.reviewed;
@@ -57,19 +63,24 @@ export function GetStarted({ readOnly = false, exampleNumber }: GetStartedProps)
           for (const review of item.reviews) {
             itemMap[review.item_id!] = review.reviewed;
           }
+          if (item.sub_step != null) {
+            subStepMap[subStepKey(card.milestone, item.sub_step)] =
+              item.reviews.some((review) => review.reviewed);
+          }
         }
       }
 
       setCards(result);
       setCardReviewedState(cardMap);
       setItemReviewedState(itemMap);
+      mergeSubStepProgress(subStepMap);
       setLoading(false);
     });
 
     return () => {
       active = false;
     };
-  }, [milestone, exampleNumber]);
+  }, [milestone, exampleNumber, mergeSubStepProgress]);
 
   const toggleCard = (cardId: number, next: boolean) => {
     if (readOnly) return;
@@ -82,9 +93,22 @@ export function GetStarted({ readOnly = false, exampleNumber }: GetStartedProps)
   const toggleItem = (itemId: number, next: boolean) => {
     if (readOnly) return;
     setItemReviewedState((prev) => ({ ...prev, [itemId]: next })); // optimistic
-    setItemReviewed(itemId, next).catch(() =>
-      setItemReviewedState((prev) => ({ ...prev, [itemId]: !next })),
-    );
+
+    // Items on the steps card carry a sub_step: reviewing one marks the matching
+    // sub-step Done in the milestone header.
+    const item = cards
+      .flatMap((card) => card.items.map((cardItem) => ({ card, item: cardItem })))
+      .find((entry) => entry.item.id === itemId);
+    const key =
+      item && item.item.sub_step != null
+        ? subStepKey(item.card.milestone, item.item.sub_step)
+        : null;
+    if (key) setSubStepReviewed(key, next);
+
+    setItemReviewed(itemId, next).catch(() => {
+      setItemReviewedState((prev) => ({ ...prev, [itemId]: !next }));
+      if (key) setSubStepReviewed(key, !next);
+    });
   };
 
   return (

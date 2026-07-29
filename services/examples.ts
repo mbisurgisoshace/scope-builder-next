@@ -5,6 +5,7 @@ import { auth } from "@clerk/nextjs/server";
 
 import liveblocks from "@/lib/liveblocks";
 import { prisma } from "@/lib/prisma";
+import { subStepKey } from "@/lib/milestones";
 import type {
   StakeholderRow as PrismaStakeholderRow,
   MarketSegment as PrismaMarketSegment,
@@ -110,6 +111,35 @@ export async function getExampleGetStartedCards(
   });
 
   return cards;
+}
+
+/** Example-set mirror of `getSubStepProgress` (services/getStarted.ts). */
+export async function getExampleSubStepProgress(
+  exampleNumber: number,
+): Promise<Record<string, boolean>> {
+  await requireUser();
+
+  const items = await prisma.getStartedItem.findMany({
+    where: { sub_step: { not: null } },
+    select: {
+      sub_step: true,
+      card: { select: { milestone: true } },
+      reviews: {
+        where: { example_number: exampleNumber },
+        select: { reviewed: true },
+      },
+    },
+  });
+
+  const progress: Record<string, boolean> = {};
+
+  for (const item of items) {
+    if (item.sub_step == null) continue;
+    progress[subStepKey(item.card.milestone, item.sub_step)] =
+      item.reviews.some((review) => review.reviewed);
+  }
+
+  return progress;
 }
 
 export async function getExampleParticipantTags(
