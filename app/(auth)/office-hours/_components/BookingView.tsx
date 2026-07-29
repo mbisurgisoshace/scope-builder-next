@@ -74,6 +74,22 @@ export default function BookingView({
       .map((name) => ({ label: name, value: name }));
   }, [slots, visibleWeeks]);
 
+  // Most recently touched link across the user's own bookings, offered as a
+  // "use last meeting link" shortcut when booking a new slot.
+  const lastMeetingLink = useMemo(() => {
+    const mine = slots
+      .flatMap((s) => s.subSlots)
+      .map((sub) => sub.booking)
+      .filter(
+        (b): b is OfficeHourBooking =>
+          !!b && b.user_id === currentUserId && !!b.meeting_link?.trim(),
+      );
+    if (mine.length === 0) return null;
+    return mine.reduce((latest, b) =>
+      new Date(b.updated_at) > new Date(latest.updated_at) ? b : latest,
+    ).meeting_link;
+  }, [slots, currentUserId]);
+
   const filteredSlots = useMemo(
     () =>
       selectedInstructors.length === 0
@@ -338,6 +354,7 @@ export default function BookingView({
                                       mentorName={entry.mentorName}
                                       mode={isBookedByMe ? "manage" : "book"}
                                       currentLink={entry.booking?.meeting_link}
+                                      lastMeetingLink={lastMeetingLink}
                                       disabled={isBookedByOther}
                                       onBook={handleBook}
                                       onUpdateLink={handleUpdateLink}

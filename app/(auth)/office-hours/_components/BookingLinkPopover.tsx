@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import {
   bookingLinkFormSchema,
@@ -34,6 +35,7 @@ interface BookingLinkPopoverProps {
   mentorName: string;
   mode: "book" | "manage";
   currentLink?: string | null;
+  lastMeetingLink?: string | null;
   disabled?: boolean;
   onBook: (subSlotId: string, meetingLink: string) => Promise<void>;
   onUpdateLink: (subSlotId: string, meetingLink: string) => Promise<void>;
@@ -45,6 +47,7 @@ export default function BookingLinkPopover({
   mentorName,
   mode,
   currentLink,
+  lastMeetingLink,
   disabled,
   onBook,
   onUpdateLink,
@@ -54,19 +57,34 @@ export default function BookingLinkPopover({
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [useLastLink, setUseLastLink] = useState(false);
+
+  const canReuseLastLink = mode === "book" && !!lastMeetingLink?.trim();
 
   const form = useForm<BookingLinkFormValues>({
     resolver: zodResolver(bookingLinkFormSchema),
     mode: "onChange",
-    defaultValues: { meetingLink: currentLink ?? "" },
+    defaultValues: { meetingLink: "" },
+    // Keeps the field in sync with the saved booking link, so reopening the
+    // popover always shows the current value without a manual reset.
+    values: { meetingLink: currentLink ?? "" },
+    resetOptions: { keepDirtyValues: true },
   });
 
   useEffect(() => {
     if (open) {
-      form.reset({ meetingLink: currentLink ?? "" });
       setError(null);
+      setUseLastLink(false);
     }
-  }, [open, currentLink, form]);
+  }, [open]);
+
+  function handleUseLastLinkChange(checked: boolean) {
+    setUseLastLink(checked);
+    form.setValue("meetingLink", checked ? (lastMeetingLink ?? "") : "", {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+  }
 
   const avatarClassName = `w-9 h-9 rounded-full border-2 text-xs font-bold flex items-center justify-center transition-colors ${
     disabled
@@ -106,6 +124,7 @@ export default function BookingLinkPopover({
     setError(null);
     try {
       await onCancel(subSlotId);
+      form.reset({ meetingLink: "" });
       setOpen(false);
     } catch {
       setError("Something went wrong. Please try again.");
@@ -132,15 +151,42 @@ export default function BookingLinkPopover({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
             <p className="text-sm font-semibold text-gray-700">
-              Submit a meeting link to the instructor
+              {mode === "manage"
+                ? "Update your meeting link"
+                : "Submit a meeting link to the instructor"}
             </p>
+            {canReuseLastLink && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id={`use-last-link-${subSlotId}`}
+                  checked={useLastLink}
+                  onCheckedChange={(checked) =>
+                    handleUseLastLinkChange(checked === true)
+                  }
+                />
+                <label
+                  htmlFor={`use-last-link-${subSlotId}`}
+                  className="text-sm text-gray-600 cursor-pointer"
+                >
+                  Use last meeting link
+                </label>
+              </div>
+            )}
+
             <FormField
               control={form.control}
               name="meetingLink"
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Input placeholder="Paste link" {...field} />
+                    <Input
+                      placeholder="Paste link"
+                      {...field}
+                      onChange={(e) => {
+                        setUseLastLink(false);
+                        field.onChange(e);
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
