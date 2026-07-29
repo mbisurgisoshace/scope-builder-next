@@ -8,13 +8,15 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "db:copy-example": "npx tsx scripts/copyExample.ts"
+    "db:copy-example": "npx tsx scripts/copyExample.ts",
+    "email:test": "npx tsx --env-file=.env scripts/testOfficeHourEmail.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.31.5",
+    "@date-fns/tz": "^1.5.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",

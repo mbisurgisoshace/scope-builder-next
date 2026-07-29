@@ -506,9 +506,11 @@ model OfficeHourBooking {
   id           String            @id @default(uuid())
   sub_slot_id  String            @unique
   user_id      String
+  org_id       String? // Clerk org (startup) active at booking time; drives who gets the invite
   user_name    String?
   user_email   String?
   meeting_link String?
+  ics_sequence Int               @default(0) // iCalendar SEQUENCE, bumped so updates replace the event
   created_at   DateTime          @default(now())
   updated_at   DateTime          @updatedAt
   subSlot      OfficeHourSubSlot @relation(fields: [sub_slot_id], references: [id], onDelete: Cascade)

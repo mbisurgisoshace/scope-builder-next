@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useUser } from "@clerk/nextjs";
+import { CalendarCheck } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -192,6 +193,11 @@ export default function BookingLinkPopover({
                 </FormItem>
               )}
             />
+
+            <p className="flex items-start gap-1.5 text-xs text-gray-500">
+              <CalendarCheck className="mt-px size-3.5 shrink-0" />
+              Calendar invites sent to the instructor and all startup member(s).
+            </p>
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 

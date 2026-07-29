@@ -1,6 +1,7 @@
 "use server";
 
 import { v4 as uuidv4 } from "uuid";
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -8,6 +9,12 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { split30MinIntervals } from "@/lib/officeHoursUtils";
 import { bookingLinkFormSchema } from "@/schemas/officeHours";
 import { OfficeHourBooking } from "@/lib/generated/prisma";
+import {
+  getBookingEmailSnapshot,
+  sendBookingCancellation,
+  sendBookingInvite,
+  sendBookingUpdate,
+} from "@/services/officeHoursEmails";
 
 async function getCurrentUserDisplayInfo() {
   const user = await currentUser();
@@ -136,7 +143,7 @@ export async function bookSlot(
   subSlotId: string,
   meetingLink: string,
 ): Promise<BookSlotResult> {
-  const { userId } = await auth();
+  const { userId, orgId } = await auth();
   if (!userId) redirect("/sign-in");
 
   const { meetingLink: validatedLink } = bookingLinkFormSchema.parse({
@@ -150,6 +157,9 @@ export async function bookSlot(
         id: uuidv4(),
         sub_slot_id: subSlotId,
         user_id: userId,
+        // Pinned now so later update/cancel emails reach the same startup even if
+        // the booker switches their active org.
+        org_id: orgId ?? null,
         user_name: name,
         user_email: email,
         meeting_link: validatedLink,
@@ -157,6 +167,8 @@ export async function bookSlot(
     });
 
     revalidatePath("/office-hours");
+    // Deferred so the Mailjet round trip never delays or fails the booking.
+    after(() => sendBookingInvite(booking.id));
     return { status: "booked", booking };
   } catch (err) {
     const code = (err as { code?: unknown } | null)?.code;
@@ -180,10 +192,12 @@ export async function updateBookingLink(subSlotId: string, meetingLink: string) 
 
   const booking = await prisma.officeHourBooking.update({
     where: { sub_slot_id: subSlotId, user_id: userId },
-    data: { meeting_link: validatedLink },
+    // Bumped so the new invite replaces the calendar event instead of duplicating it.
+    data: { meeting_link: validatedLink, ics_sequence: { increment: 1 } },
   });
 
   revalidatePath("/office-hours");
+  after(() => sendBookingUpdate(booking.id));
   return booking;
 }
 
@@ -191,9 +205,20 @@ export async function cancelBooking(subSlotId: string) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
+  const existing = await prisma.officeHourBooking.findUnique({
+    where: { sub_slot_id: subSlotId, user_id: userId },
+    select: { id: true },
+  });
+
+  // Snapshot before deleting — the cancellation email needs the row's data.
+  const snapshot = existing ? await getBookingEmailSnapshot(existing.id) : null;
+
   await prisma.officeHourBooking.delete({
     where: { sub_slot_id: subSlotId, user_id: userId },
   });
 
   revalidatePath("/office-hours");
+  if (snapshot) {
+    after(() => sendBookingCancellation(snapshot));
+  }
 }
