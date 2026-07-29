@@ -12,7 +12,7 @@ export default async function HomePage() {
     return redirect("/startups");
   }
 
-  return redirect("/problem-journey-map");
+  return redirect("/user-journey-map");
 
   return null;
 }

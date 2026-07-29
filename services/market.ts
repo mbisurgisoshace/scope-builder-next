@@ -77,7 +77,7 @@ export async function createStakeholderRow(
     },
   });
 
-  revalidatePath("/problem-journey-map");
+  revalidatePath("/user-journey-map");
 
   return row;
 }
@@ -90,7 +90,7 @@ export async function updateStakeholderRow(id: number, value: string) {
     data: { value },
   });
 
-  revalidatePath("/problem-journey-map");
+  revalidatePath("/user-journey-map");
 }
 
 export async function deleteStakeholderRow(id: number) {
@@ -100,7 +100,7 @@ export async function deleteStakeholderRow(id: number) {
     where: { id, org_id: orgId },
   });
 
-  revalidatePath("/problem-journey-map");
+  revalidatePath("/user-journey-map");
 }
 
 // --- Market segments --------------------------------------------------------
@@ -131,7 +131,7 @@ export async function createMarketSegment(
     },
   });
 
-  revalidatePath("/problem-journey-map");
+  revalidatePath("/user-journey-map");
 
   return segment;
 }
@@ -149,7 +149,7 @@ export async function updateMarketSegment(id: number, data: MarketSegmentInput) 
     },
   });
 
-  revalidatePath("/problem-journey-map");
+  revalidatePath("/user-journey-map");
 }
 
 export async function deleteMarketSegment(id: number) {
@@ -159,7 +159,7 @@ export async function deleteMarketSegment(id: number) {
     where: { id, org_id: orgId },
   });
 
-  revalidatePath("/problem-journey-map");
+  revalidatePath("/user-journey-map");
 }
 
 // --- Section-level note -----------------------------------------------------
@@ -173,5 +173,5 @@ export async function upsertMarketSegmentNote(content: string) {
     update: { content },
   });
 
-  revalidatePath("/problem-journey-map");
+  revalidatePath("/user-journey-map");
 }

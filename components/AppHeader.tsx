@@ -56,8 +56,7 @@ export default function AppHeader() {
     if (pathname.includes("/teams-dashboard")) title = "Leaderboard";
     if (pathname.includes("/exercises/exercise-1")) title = "Exercise 1";
     if (pathname.includes("/exercises/exercise-2")) title = "Exercise 2";
-    // Matches both /problem-journey-map and the /examples/problem-journey mirror.
-    if (pathname.includes("/problem-journey-map")) title = "Milestones";
+    if (pathname.includes("/user-journey-map")) title = "Milestones";
 
     // if (
     //   pathname.includes("/participants/") ||

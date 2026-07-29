@@ -62,7 +62,7 @@ const data = {
     // },
     {
       name: "User Journey",
-      url: "/problem-journey-map",
+      url: "/user-journey-map",
       conditionalMenu: false,
     },
     // {
@@ -138,7 +138,7 @@ const data = {
       items: [
         {
           title: "User Journey",
-          url: "/examples/problem-journey",
+          url: "/examples/user-journey",
         },
         {
           title: "Interviews",

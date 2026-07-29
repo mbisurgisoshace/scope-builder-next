@@ -23,7 +23,7 @@ export default clerkMiddleware(async (auth, req) => {
       !!metadata?.founderOfMultipleStartups;
 
     return NextResponse.redirect(
-      new URL(canAccessStartups ? "/startups" : "/problem-journey-map", req.url)
+      new URL(canAccessStartups ? "/startups" : "/user-journey-map", req.url)
     );
   }
 });

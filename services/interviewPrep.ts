@@ -230,7 +230,7 @@ export async function getInterviewPrepData(): Promise<ProblemBlock[]> {
   return loadProblemBlocksFrom(`problem-journey-${orgId}`, { org_id: orgId });
 }
 
-// Global read-only variant for the /examples/problem-journey page: reads the
+// Global read-only variant for the /examples/user-journey page: reads the
 // example journey-map room and example-scoped questions. No org guard — example
 // data is shared across every org.
 export async function getExampleInterviewPrepData(

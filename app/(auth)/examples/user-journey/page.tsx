@@ -6,7 +6,7 @@ import { Room } from "@/components/Room";
 import { generateExampleProblemJourneyRoom, getExampleMarketData } from "@/services/examples";
 import { exampleRoomId } from "@/lib/examples";
 
-// Read-only showcase mirror of /problem-journey-map. Everything is identical to the
+// Read-only showcase mirror of /user-journey-map. Everything is identical to the
 // real page except the data is example set N (global) and no control can edit it.
 const EXAMPLE_NUMBER = 1;
 

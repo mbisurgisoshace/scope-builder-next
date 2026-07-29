@@ -59,7 +59,7 @@ export async function setCardReviewed(cardId: number, reviewed: boolean) {
     },
   });
 
-  revalidatePath("/problem-journey-map");
+  revalidatePath("/user-journey-map");
 }
 
 export async function setItemReviewed(itemId: number, reviewed: boolean) {
@@ -86,5 +86,5 @@ export async function setItemReviewed(itemId: number, reviewed: boolean) {
     },
   });
 
-  revalidatePath("/problem-journey-map");
+  revalidatePath("/user-journey-map");
 }
