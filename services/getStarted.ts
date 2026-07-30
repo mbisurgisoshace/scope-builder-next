@@ -7,6 +7,10 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/lib/generated/prisma";
 import { subStepKey } from "@/lib/milestones";
+import {
+  MEDIA_CARD_TYPES,
+  type GetStartedCardFormValues,
+} from "@/schemas/getStarted";
 
 export type GetStartedCardWithData = Prisma.GetStartedCardGetPayload<{
   include: { items: { include: { reviews: true } }; reviews: true };
@@ -92,6 +96,88 @@ export async function setCardReviewed(cardId: number, reviewed: boolean) {
     },
   });
 
+  revalidatePath("/user-journey-map");
+}
+
+/* -------------------------------------------------------------------------- */
+/* Admin panel authoring                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Every card across every milestone, for the admin table. Cards are global
+ * curriculum, so this is not org-scoped and skips the per-org `reviews` include.
+ */
+export async function getAllGetStartedCards() {
+  const { userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  return prisma.getStartedCard.findMany({
+    orderBy: [{ milestone: "asc" }, { order: "asc" }],
+  });
+}
+
+export async function createGetStartedCard(values: GetStartedCardFormValues) {
+  const { userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  await prisma.getStartedCard.create({
+    data: {
+      milestone: values.milestone,
+      type: values.type,
+      title: values.title,
+      body: values.body?.trim() || null,
+      url: MEDIA_CARD_TYPES.includes(values.type)
+        ? (values.url?.trim() ?? null)
+        : null,
+      order: values.order,
+    },
+  });
+
+  revalidatePath("/admin-panel");
+  revalidatePath("/user-journey-map");
+}
+
+export async function updateGetStartedCard(
+  cardId: number,
+  values: GetStartedCardFormValues,
+) {
+  const { userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  const card = await prisma.getStartedCard.findUnique({
+    where: { id: cardId },
+    select: { type: true },
+  });
+
+  if (!card) throw new Error(`Get Started card ${cardId} not found.`);
+
+  // "steps" cards are owned by prisma/seedSteps.ts — their items carry the
+  // sub_step positions that drive milestone progress. The admin table hides the
+  // edit action for them; this is the backstop.
+  if (card.type === "steps") {
+    throw new Error(
+      "The Milestone Steps card is managed by the seed and cannot be edited here.",
+    );
+  }
+
+  await prisma.getStartedCard.update({
+    where: { id: cardId },
+    data: {
+      milestone: values.milestone,
+      type: values.type,
+      title: values.title,
+      body: values.body?.trim() || null,
+      url: MEDIA_CARD_TYPES.includes(values.type)
+        ? (values.url?.trim() ?? null)
+        : null,
+      order: values.order,
+    },
+  });
+
+  revalidatePath("/admin-panel");
   revalidatePath("/user-journey-map");
 }
 

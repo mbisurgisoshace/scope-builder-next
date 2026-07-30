@@ -333,9 +333,12 @@ model MilestoneAccess {
 model GetStartedCard {
   id        Int     @id @default(autoincrement())
   milestone Int // 1..5, matches MilestoneHeader index+1
-  type      String // "steps" | "text" | "links" | "videos"
+  type      String // "steps" | "paragraph" | "image" | "video"
   title     String
-  body      String? // used by text cards
+  body      String? // extra text shown on every non-"steps" card
+  // Image src or video url (youtube/vimeo/direct file, detected at render time
+  // by lib/video.ts). NULL on "paragraph" and "steps" cards.
+  url       String?
   order     Int     @default(0)
 
   created_at DateTime @default(now())

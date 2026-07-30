@@ -12,17 +12,21 @@ async function main() {
 
   await seedStepsCards(prisma);
 
+  // Every card below is one payload with a single card-level Reviewed mark:
+  // "paragraph" (body only), "image" and "video" (url + optional body). Admins
+  // author these in /admin-panel; this seed just gives milestones 1-2 content.
+
   // ---- Milestone 1 ----
   await prisma.getStartedCard.create({
     data: {
       milestone: 1,
-      type: "text",
+      type: "paragraph",
       title: "How to talk to Humans",
       order: 1,
       body:
         "A beachhead chart is a strategic tool used to visualize and prioritize " +
         "market opportunities for a product or service. It helps businesses " +
-        "identify their initial target market segment, or \"beachhead,\" where " +
+        'identify their initial target market segment, or "beachhead," where ' +
         "they can gain traction before expanding further.",
     },
   });
@@ -30,31 +34,22 @@ async function main() {
   await prisma.getStartedCard.create({
     data: {
       milestone: 1,
-      type: "links",
-      title: "Recommended reading",
+      type: "video",
+      title: "The 3 steps to building a user journey map",
       order: 2,
-      items: {
-        create: [
-          { title: "Building journey maps in 3 minutes", url: "https://www.nngroup.com/articles/journey-mapping-101/", order: 0 },
-          { title: "The 3 steps to building a user journey map", url: "https://www.atlassian.com/agile/product-management/user-journey-maps", order: 1 },
-          { title: "Become an expert in CJM", url: "https://www.interaction-design.org/literature/topics/customer-journey-map", order: 2 },
-        ],
-      },
+      url: "https://www.youtube.com/watch?v=mSxpVRo3BLg",
+      body: "A short walkthrough of the mapping process end to end.",
     },
   });
 
   await prisma.getStartedCard.create({
     data: {
       milestone: 1,
-      type: "videos",
-      title: "Watch & learn",
+      type: "video",
+      title: "Building journey maps in 3 minutes",
       order: 3,
-      items: {
-        create: [
-          { title: "The 3 steps to building a user journey map", url: "https://www.youtube.com/watch?v=mSxpVRo3BLg", order: 0 },
-          { title: "Building journey maps in 3 minutes", url: "https://www.youtube.com/watch?v=W2xLPcmXaSE", order: 1 },
-        ],
-      },
+      url: "https://www.youtube.com/watch?v=W2xLPcmXaSE",
+      body: "The condensed version, if you only have a few minutes.",
     },
   });
 
@@ -62,28 +57,13 @@ async function main() {
   await prisma.getStartedCard.create({
     data: {
       milestone: 2,
-      type: "text",
+      type: "paragraph",
       title: "Defining your beachhead",
       order: 1,
       body:
         "By mapping out potential customers, competitors, and key metrics, this " +
         "chart allows teams to focus their efforts on the most promising areas, " +
         "ensuring a more effective and efficient approach to market entry.",
-    },
-  });
-
-  await prisma.getStartedCard.create({
-    data: {
-      milestone: 2,
-      type: "links",
-      title: "Deeper dives",
-      order: 2,
-      items: {
-        create: [
-          { title: "Crossing the Chasm — summary", url: "https://en.wikipedia.org/wiki/Crossing_the_Chasm", order: 0 },
-          { title: "Beachhead market strategy", url: "https://www.disciplinedentrepreneurship.com/", order: 1 },
-        ],
-      },
     },
   });
 
