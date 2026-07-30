@@ -11,6 +11,7 @@ import {
 import { YouTubeEmbed } from "@next/third-parties/google";
 
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { getYouTubeVideoId } from "@/lib/youtube";
 import { detectVideoSource, getVimeoVideoId } from "@/lib/video";
 import type { GetStartedCardWithData } from "@/services/getStarted";
@@ -24,6 +25,10 @@ interface GetStartedCardProps {
   itemReviewed: Record<number, boolean>;
   onToggleCard: (cardId: number, next: boolean) => void;
   onToggleItem: (itemId: number, next: boolean) => void;
+  /** When this startup submitted the milestone; null while unsubmitted. */
+  milestoneSubmittedAt?: Date | null;
+  /** Submits the milestone for review — only the `steps` card calls this. */
+  onSubmitMilestone?: () => void;
   /** Reviewed toggles are shown but disabled (Examples pages). */
   readOnly?: boolean;
 }
@@ -34,6 +39,8 @@ export function GetStartedCard({
   itemReviewed,
   onToggleCard,
   onToggleItem,
+  milestoneSubmittedAt = null,
+  onSubmitMilestone,
   readOnly = false,
 }: GetStartedCardProps) {
   /**
@@ -152,10 +159,32 @@ export function GetStartedCard({
               </li>
             ))}
           </ul>
+
+          {/* Submitting is one-way: it puts the milestone in the instructor's
+              Pending Review queue on /startups. Not gated on the checklist. */}
+          <Button
+            type="button"
+            className="mt-5 w-full cursor-pointer bg-[#6A35FF] hover:bg-[#5A2BE0]"
+            disabled={readOnly || !!milestoneSubmittedAt}
+            onClick={onSubmitMilestone}
+          >
+            {milestoneSubmittedAt
+              ? `Submitted ${formatSubmittedAt(milestoneSubmittedAt)}`
+              : "Submit"}
+          </Button>
         </>
       )}
     </div>
   );
+}
+
+/** "Submitted Jul 30, 2026" — short enough to sit inside the button. */
+function formatSubmittedAt(date: Date) {
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 /** Picks the player from the url shape — see lib/video.ts. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, CheckCircle2 } from "lucide-react";
+import { Clock } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";
 import { ALWAYS_AVAILABLE_MILESTONE } from "@/lib/milestones";
@@ -39,29 +39,23 @@ export default function MilestoneAccessCell({
             : `Milestone ${milestone} ${available ? "available" : "not available"}`
         }
       />
-      <MilestoneStatusIcon available={available} submittedAt={submittedAt} />
+      <MilestoneStatusIcon submittedAt={submittedAt} />
     </div>
   );
 }
 
-function MilestoneStatusIcon({
-  available,
-  submittedAt,
-}: {
-  available: boolean;
-  submittedAt: Date | null;
-}) {
+/**
+ * Only a submitted milestone gets an icon. Making one available says nothing
+ * about progress, so the switch alone covers that state and the instructor's eye
+ * goes to the rows actually waiting on them.
+ *
+ * There is no "reviewed" state yet — when the approve flow lands it gets its own
+ * colour here, and this clock stops being the end of the line.
+ */
+function MilestoneStatusIcon({ submittedAt }: { submittedAt: Date | null }) {
   if (submittedAt) {
     return (
-      <span title="Submitted" className="flex">
-        <CheckCircle2 className="size-4 text-[#16A34A]" />
-      </span>
-    );
-  }
-
-  if (available) {
-    return (
-      <span title="Pending submission" className="flex">
+      <span title="Pending Review" className="flex">
         <Clock className="size-4 text-[#CA8A04]" />
       </span>
     );

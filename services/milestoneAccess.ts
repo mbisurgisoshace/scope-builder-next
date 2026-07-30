@@ -56,6 +56,74 @@ export async function getAllMilestoneAccess(): Promise<
   return byOrg;
 }
 
+/**
+ * When the active startup submitted this milestone, or null if it hasn't.
+ *
+ * Unlike the rest of this module these two actions are the startup acting on its
+ * *own* milestone from the Instructions tab, so they read the active org from
+ * `auth()` rather than taking an explicit `orgId`.
+ */
+export async function getMilestoneSubmission(
+  milestone: number,
+): Promise<Date | null> {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) redirect("/pick-startup");
+
+  const row = await prisma.milestoneAccess.findUnique({
+    where: { org_id_milestone: { org_id: orgId, milestone } },
+    select: { submitted_at: true },
+  });
+
+  return row?.submitted_at ?? null;
+}
+
+/**
+ * Mark this milestone submitted for the active startup. Submitting is one-way —
+ * the Instructions card disables the button afterwards — so an existing
+ * `submitted_at` is left alone rather than being bumped to now.
+ */
+export async function submitMilestone(milestone: number): Promise<Date> {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) redirect("/pick-startup");
+
+  if (milestone < 1 || milestone > MILESTONE_COUNT) {
+    throw new Error(`Invalid milestone: ${milestone}`);
+  }
+
+  const existing = await prisma.milestoneAccess.findUnique({
+    where: { org_id_milestone: { org_id: orgId, milestone } },
+    select: { submitted_at: true },
+  });
+
+  if (existing?.submitted_at) return existing.submitted_at;
+
+  const submittedAt = new Date();
+
+  await prisma.milestoneAccess.upsert({
+    where: { org_id_milestone: { org_id: orgId, milestone } },
+    // Milestone 1 has no row until now for most startups; `available` is forced
+    // true for it on read (see getAllMilestoneAccess), so false here is fine.
+    create: {
+      org_id: orgId,
+      milestone,
+      available: milestone === ALWAYS_AVAILABLE_MILESTONE,
+      submitted_at: submittedAt,
+    },
+    update: { submitted_at: submittedAt },
+  });
+
+  revalidatePath("/startups");
+  revalidatePath("/user-journey-map");
+
+  return submittedAt;
+}
+
 export async function setMilestoneAvailability(
   orgId: string,
   milestone: number,

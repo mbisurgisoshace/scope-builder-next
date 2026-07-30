@@ -11,6 +11,10 @@ import {
   type GetStartedCardWithData,
 } from "@/services/getStarted";
 import { getExampleGetStartedCards } from "@/services/examples";
+import {
+  getMilestoneSubmission,
+  submitMilestone,
+} from "@/services/milestoneAccess";
 import { subStepKey } from "@/lib/milestones";
 import { useMilestoneSelection } from "../../MilestoneSelectionContext";
 import { useSubStepProgress } from "../../SubStepProgressContext";
@@ -38,10 +42,21 @@ export function GetStarted({ readOnly = false, exampleNumber }: GetStartedProps)
   const [loading, setLoading] = useState(true);
   const [cardReviewed, setCardReviewedState] = useState<Record<number, boolean>>({});
   const [itemReviewed, setItemReviewedState] = useState<Record<number, boolean>>({});
+  const [submittedAt, setSubmittedAt] = useState<Date | null>(null);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
+
+    // Submission is per-org and has no example-set mirror, so the Examples
+    // pages just show the button disabled and unsubmitted.
+    if (exampleNumber != null) {
+      setSubmittedAt(null);
+    } else {
+      getMilestoneSubmission(milestone).then((result) => {
+        if (active) setSubmittedAt(result);
+      });
+    }
 
     const load =
       exampleNumber != null
@@ -112,6 +127,14 @@ export function GetStarted({ readOnly = false, exampleNumber }: GetStartedProps)
     });
   };
 
+  const submit = () => {
+    if (readOnly || submittedAt) return;
+    setSubmittedAt(new Date()); // optimistic; the server timestamp wins below
+    submitMilestone(milestone)
+      .then(setSubmittedAt)
+      .catch(() => setSubmittedAt(null));
+  };
+
   return (
     <AnimatePresence mode="wait">
       {loading ? (
@@ -156,6 +179,8 @@ export function GetStarted({ readOnly = false, exampleNumber }: GetStartedProps)
                 itemReviewed={itemReviewed}
                 onToggleCard={toggleCard}
                 onToggleItem={toggleItem}
+                milestoneSubmittedAt={submittedAt}
+                onSubmitMilestone={submit}
                 readOnly={readOnly}
               />
             ))}
