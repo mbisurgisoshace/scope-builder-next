@@ -322,6 +322,7 @@ model MilestoneAccess {
   milestone    Int // 1..5, matches MilestoneHeader index+1
   available    Boolean   @default(false)
   submitted_at DateTime? // NULL = not submitted yet
+  reviewed_at  DateTime? // NULL = no instructor sign-off yet. One-way, never cleared.
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt

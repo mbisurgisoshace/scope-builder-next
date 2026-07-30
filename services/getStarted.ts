@@ -73,6 +73,49 @@ export async function getSubStepProgress(): Promise<Record<string, boolean>> {
   return progress;
 }
 
+/**
+ * The cross-org twin of `getSubStepProgress`, for the instructor-facing leaderboard:
+ * every startup's sub-step progress in one query, keyed org id → sub-step key.
+ *
+ * Orgs with nothing reviewed are absent from the map; callers fall back to `{}`.
+ */
+export async function getAllSubStepProgress(): Promise<
+  Record<string, Record<string, boolean>>
+> {
+  const { userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  const items = await prisma.getStartedItem.findMany({
+    where: { sub_step: { not: null } },
+    select: {
+      sub_step: true,
+      card: { select: { milestone: true } },
+      // `example_number: null` matters here — the /examples sets write their rows
+      // into this same table and would otherwise count as real progress.
+      reviews: {
+        where: { example_number: null, reviewed: true },
+        select: { org_id: true },
+      },
+    },
+  });
+
+  const byOrg: Record<string, Record<string, boolean>> = {};
+
+  for (const item of items) {
+    if (item.sub_step == null) continue;
+
+    const key = subStepKey(item.card.milestone, item.sub_step);
+
+    for (const review of item.reviews) {
+      if (!byOrg[review.org_id]) byOrg[review.org_id] = {};
+      byOrg[review.org_id][key] = true;
+    }
+  }
+
+  return byOrg;
+}
+
 export async function setCardReviewed(cardId: number, reviewed: boolean) {
   const { orgId, userId } = await auth();
 

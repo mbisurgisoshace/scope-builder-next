@@ -24,6 +24,8 @@ export type MilestoneAccessState = {
   milestone: number;
   available: boolean;
   submittedAt: Date | null;
+  /** When an instructor signed the milestone off. One-way — never cleared. */
+  reviewedAt: Date | null;
 };
 
 /** Access for a startup with no rows yet: milestone 1 on, the rest off. */
@@ -32,6 +34,7 @@ export function defaultMilestoneAccess(): MilestoneAccessState[] {
     milestone,
     available: milestone === ALWAYS_AVAILABLE_MILESTONE,
     submittedAt: null,
+    reviewedAt: null,
   }));
 }
 

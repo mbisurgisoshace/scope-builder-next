@@ -5,6 +5,7 @@ import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
+import { checkRole } from "@/lib/auth";
 import {
   MILESTONE_COUNT,
   MILESTONE_NUMBERS,
@@ -41,6 +42,7 @@ export async function getAllMilestoneAccess(): Promise<
         milestone,
         available: milestone === ALWAYS_AVAILABLE_MILESTONE,
         submittedAt: null,
+        reviewedAt: null,
       }));
     }
 
@@ -51,6 +53,7 @@ export async function getAllMilestoneAccess(): Promise<
     slot.available =
       row.milestone === ALWAYS_AVAILABLE_MILESTONE ? true : row.available;
     slot.submittedAt = row.submitted_at;
+    slot.reviewedAt = row.reviewed_at;
   }
 
   return byOrg;
@@ -148,6 +151,60 @@ export async function submitMilestone(milestone: number): Promise<Date> {
   revalidatePath("/user-journey-map");
 
   return submittedAt;
+}
+
+/**
+ * The instructor-side counterpart to `submitMilestone`: signs a startup's milestone
+ * off. Cross-org like `setMilestoneAvailability`, so it takes an explicit `orgId`
+ * rather than reading the caller's active org.
+ *
+ * One-way, same as submitting — an existing `reviewed_at` is returned untouched
+ * instead of being bumped to now.
+ */
+export async function reviewMilestone(
+  orgId: string,
+  milestone: number,
+): Promise<Date> {
+  const { userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (milestone < 1 || milestone > MILESTONE_COUNT) {
+    throw new Error(`Invalid milestone: ${milestone}`);
+  }
+
+  const canReview = (await checkRole("admin")) || (await checkRole("mentor"));
+
+  if (!canReview) {
+    throw new Error("Only an admin or mentor can review a milestone.");
+  }
+
+  const existing = await prisma.milestoneAccess.findUnique({
+    where: { org_id_milestone: { org_id: orgId, milestone } },
+    select: { reviewed_at: true },
+  });
+
+  if (existing?.reviewed_at) return existing.reviewed_at;
+
+  const reviewedAt = new Date();
+
+  await prisma.milestoneAccess.upsert({
+    where: { org_id_milestone: { org_id: orgId, milestone } },
+    // Same reasoning as submitMilestone: `available` is forced true for milestone 1
+    // on read, so seeding it false here is fine.
+    create: {
+      org_id: orgId,
+      milestone,
+      available: milestone === ALWAYS_AVAILABLE_MILESTONE,
+      reviewed_at: reviewedAt,
+    },
+    update: { reviewed_at: reviewedAt },
+  });
+
+  revalidatePath("/startups");
+  revalidatePath("/teams-dashboard");
+
+  return reviewedAt;
 }
 
 export async function setMilestoneAvailability(
