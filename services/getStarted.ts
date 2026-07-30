@@ -10,6 +10,7 @@ import { subStepKey } from "@/lib/milestones";
 import {
   MEDIA_CARD_TYPES,
   type GetStartedCardFormValues,
+  type StepsCardFormValues,
 } from "@/schemas/getStarted";
 
 export type GetStartedCardWithData = Prisma.GetStartedCardGetPayload<{
@@ -174,6 +175,45 @@ export async function updateGetStartedCard(
         ? (values.url?.trim() ?? null)
         : null,
       order: values.order,
+    },
+  });
+
+  revalidatePath("/admin-panel");
+  revalidatePath("/user-journey-map");
+}
+
+/**
+ * Partial edit of a seeded "steps" card: only the intro text and the optional
+ * video shown above the sub-step checklist. Milestone, title, order and the
+ * items themselves stay owned by prisma/seedSteps.ts — that sync only writes
+ * `title` and `order`, so what's set here survives a re-seed.
+ */
+export async function updateStepsCard(
+  cardId: number,
+  values: StepsCardFormValues,
+) {
+  const { userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  const card = await prisma.getStartedCard.findUnique({
+    where: { id: cardId },
+    select: { type: true },
+  });
+
+  if (!card) throw new Error(`Get Started card ${cardId} not found.`);
+
+  if (card.type !== "steps") {
+    throw new Error(
+      `Card ${cardId} is not a steps card — use updateGetStartedCard instead.`,
+    );
+  }
+
+  await prisma.getStartedCard.update({
+    where: { id: cardId },
+    data: {
+      body: values.body?.trim() || null,
+      url: values.url?.trim() || null,
     },
   });
 

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { YouTubeEmbed } from "@next/third-parties/google";
 
+import { cn } from "@/lib/utils";
 import { getYouTubeVideoId } from "@/lib/youtube";
 import { detectVideoSource, getVimeoVideoId } from "@/lib/video";
 import type { GetStartedCardWithData } from "@/services/getStarted";
@@ -35,6 +36,12 @@ export function GetStartedCard({
   onToggleItem,
   readOnly = false,
 }: GetStartedCardProps) {
+  /**
+   * A steps card can carry an authored intro (text and/or a video) above its
+   * checklist; when it does the first row keeps its padding and gets a divider.
+   */
+  const hasStepsIntro = !!(card.body || card.url);
+
   /**
    * Shared tail for the authored card types: the optional body text plus the one
    * whole-card Reviewed checkmark. `steps` is the only card with per-item marks.
@@ -91,37 +98,61 @@ export function GetStartedCard({
       )}
 
       {card.type === "steps" && (
-        <ul className="flex flex-col divide-y divide-[#EEF0F4]">
-          {card.items.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center justify-between gap-3 py-3 first:pt-0"
-            >
-              {/* Text-only today; an item that gains a url renders as a link so
-                  the card can carry reading/video material later. */}
-              {item.url ? (
-                <Link
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-[#2E3545] hover:text-[#6A35FF]"
-                >
-                  <span className="truncate">{item.title}</span>
-                  <ExternalLink className="size-3.5 shrink-0 text-[#9AA1B2]" />
-                </Link>
-              ) : (
-                <span className="min-w-0 truncate text-sm font-medium text-[#2E3545]">
-                  {item.title}
-                </span>
-              )}
-              <ReviewedToggle
-                reviewed={!!itemReviewed[item.id]}
-                onToggle={(next) => onToggleItem(item.id, next)}
-                readOnly={readOnly}
-              />
-            </li>
-          ))}
-        </ul>
+        <>
+          {/* Optional intro authored in /admin-panel — text, then a video, then
+              the checklist. The sub-steps themselves come from the seed. */}
+          {card.body && (
+            <p className="mb-4 whitespace-pre-line text-sm leading-relaxed text-[#697288]">
+              {card.body}
+            </p>
+          )}
+
+          {card.url && (
+            <div className="mb-4 overflow-hidden rounded-xl bg-black">
+              <VideoPlayer url={card.url} title={card.title} />
+            </div>
+          )}
+
+          <ul
+            className={cn(
+              "flex flex-col divide-y divide-[#EEF0F4]",
+              hasStepsIntro && "border-t border-[#EEF0F4]",
+            )}
+          >
+            {card.items.map((item) => (
+              <li
+                key={item.id}
+                className={cn(
+                  "flex items-center justify-between gap-3 py-3",
+                  !hasStepsIntro && "first:pt-0",
+                )}
+              >
+                {/* Text-only today; an item that gains a url renders as a link
+                    so the card can carry reading/video material later. */}
+                {item.url ? (
+                  <Link
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-[#2E3545] hover:text-[#6A35FF]"
+                  >
+                    <span className="truncate">{item.title}</span>
+                    <ExternalLink className="size-3.5 shrink-0 text-[#9AA1B2]" />
+                  </Link>
+                ) : (
+                  <span className="min-w-0 truncate text-sm font-medium text-[#2E3545]">
+                    {item.title}
+                  </span>
+                )}
+                <ReviewedToggle
+                  reviewed={!!itemReviewed[item.id]}
+                  onToggle={(next) => onToggleItem(item.id, next)}
+                  readOnly={readOnly}
+                />
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );
@@ -132,7 +163,9 @@ function VideoPlayer({ url, title }: { url: string; title: string }) {
   const source = detectVideoSource(url);
 
   if (source === "youtube") {
-    return <YouTubeEmbed params="controls=1" videoid={getYouTubeVideoId(url)} />;
+    return (
+      <YouTubeEmbed params="controls=1" videoid={getYouTubeVideoId(url)} />
+    );
   }
 
   if (source === "vimeo") {

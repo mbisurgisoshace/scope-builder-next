@@ -56,6 +56,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MILESTONE_LABELS, MILESTONE_NUMBERS } from "@/lib/milestones";
 import {
   getStartedCardFormSchema,
+  stepsCardFormSchema,
   GET_STARTED_CARD_TYPES,
   GET_STARTED_CARD_TYPE_LABELS,
   type GetStartedCardType,
@@ -63,9 +64,11 @@ import {
 import {
   createGetStartedCard,
   updateGetStartedCard,
+  updateStepsCard,
 } from "@/services/getStarted";
 
 type FormValues = z.infer<typeof getStartedCardFormSchema>;
+type StepsFormValues = z.infer<typeof stepsCardFormSchema>;
 
 const columns: ColumnDef<GetStartedCard>[] = [
   { accessorKey: "id", header: "Id" },
@@ -83,9 +86,7 @@ const columns: ColumnDef<GetStartedCard>[] = [
     cell: ({ row }) => {
       const type = row.original.type;
       if (type === "steps") return "Steps (seeded)";
-      return (
-        GET_STARTED_CARD_TYPE_LABELS[type as GetStartedCardType] ?? type
-      );
+      return GET_STARTED_CARD_TYPE_LABELS[type as GetStartedCardType] ?? type;
     },
   },
   { accessorKey: "title", header: "Title" },
@@ -117,6 +118,7 @@ export default function GetStartedCardsTable({
 }) {
   const [open, setOpen] = useState(false);
   const [openEditCard, setOpenEditCard] = useState(false);
+  const [openEditSteps, setOpenEditSteps] = useState(false);
   const [selectedCard, setSelectedCard] = useState<GetStartedCard | null>(null);
 
   const table = useReactTable({
@@ -151,6 +153,21 @@ export default function GetStartedCardsTable({
       await updateGetStartedCard(selectedCard.id, values);
       setSelectedCard(null);
       setOpenEditCard(false);
+    }
+  }
+
+  // A "steps" card is seeded: only its intro text and video are editable, so it
+  // gets its own two-field form rather than the full card form.
+  const stepsForm = useForm<StepsFormValues>({
+    resolver: zodResolver(stepsCardFormSchema),
+    defaultValues: { body: "", url: "" },
+  });
+
+  async function onSubmitUpdateSteps(values: StepsFormValues) {
+    if (selectedCard) {
+      await updateStepsCard(selectedCard.id, values);
+      setSelectedCard(null);
+      setOpenEditSteps(false);
     }
   }
 
@@ -239,7 +256,9 @@ export default function GetStartedCardsTable({
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{type === "image" ? "Image URL" : "Video URL"}</FormLabel>
+              <FormLabel>
+                {type === "image" ? "Image URL" : "Video URL"}
+              </FormLabel>
               <FormControl>
                 <Input {...field} value={field.value ?? ""} />
               </FormControl>
@@ -389,8 +408,17 @@ export default function GetStartedCardsTable({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start">
                           {isSeeded ? (
-                            <DropdownMenuItem disabled>
-                              Managed by seed
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setOpenEditSteps(true);
+                                setSelectedCard(row.original);
+                                stepsForm.reset({
+                                  body: row.original.body || "",
+                                  url: row.original.url || "",
+                                });
+                              }}
+                            >
+                              Edit Text &amp; Video
                             </DropdownMenuItem>
                           ) : (
                             <DropdownMenuItem
@@ -399,8 +427,7 @@ export default function GetStartedCardsTable({
                                 setSelectedCard(row.original);
                                 form.reset({
                                   milestone: row.original.milestone,
-                                  type: row.original
-                                    .type as GetStartedCardType,
+                                  type: row.original.type as GetStartedCardType,
                                   title: row.original.title,
                                   body: row.original.body || "",
                                   url: row.original.url || "",
@@ -430,6 +457,82 @@ export default function GetStartedCardsTable({
           </TableBody>
         </Table>
       </div>
+
+      <Sheet
+        open={openEditSteps}
+        onOpenChange={(open) => {
+          setOpenEditSteps(open);
+          if (!open) setSelectedCard(null);
+        }}
+      >
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>
+              Edit Milestone Steps
+              {selectedCard ? ` — Milestone ${selectedCard.milestone}` : ""}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="h-full flex flex-col gap-8 overflow-auto">
+            <Form {...stepsForm}>
+              <form
+                className="space-y-8 p-4"
+                onSubmit={stepsForm.handleSubmit(onSubmitUpdateSteps)}
+              >
+                <FormField
+                  name="body"
+                  control={stepsForm.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Text</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={6}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Shown under the card title, above the sub-step list.
+                        Leave empty to hide it.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  name="url"
+                  control={stepsForm.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Video URL</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ""} />
+                      </FormControl>
+                      <FormDescription>
+                        Optional. YouTube, Vimeo or a direct video file link —
+                        the player is picked automatically from the URL.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <p className="text-sm text-[#697288]">
+                  The milestone, title and sub-steps of this card come from the
+                  curriculum seed and can&apos;t be edited here.
+                </p>
+
+                <div className="flex ">
+                  <Button type="submit" className="cursor-pointer ml-auto">
+                    Update
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Sheet
         open={openEditCard}
