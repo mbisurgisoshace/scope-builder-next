@@ -38,6 +38,7 @@ export async function seedStepsCards(prisma: PrismaClient) {
           items: {
             create: subSteps.map((subStep, index) => ({
               title: subStep.label,
+              description: subStep.description,
               sub_step: subStep.position,
               order: index,
             })),
@@ -60,13 +61,18 @@ export async function seedStepsCards(prisma: PrismaClient) {
       if (item) {
         await prisma.getStartedItem.update({
           where: { id: item.id },
-          data: { title: subStep.label, order: index },
+          data: {
+            title: subStep.label,
+            description: subStep.description,
+            order: index,
+          },
         });
       } else {
         await prisma.getStartedItem.create({
           data: {
             card_id: existing.id,
             title: subStep.label,
+            description: subStep.description,
             sub_step: subStep.position,
             order: index,
           },

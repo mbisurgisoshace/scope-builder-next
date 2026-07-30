@@ -355,7 +355,10 @@ model GetStartedItem {
   card_id Int
   title   String
   url     String? // NULL on text-only items (the "steps" card)
-  order   Int     @default(0)
+  // Shown when a sub-step is expanded on the steps card. Seeded from
+  // lib/milestones.ts by prisma/seedSteps.ts — edit it there, not here.
+  description String?
+  order       Int     @default(0)
   // Set only on "steps" cards: 1-based position of the sub-step inside the
   // card's milestone. `${card.milestone}.${sub_step}` is the sub-step key the
   // MilestoneHeader matches on (see lib/milestones.ts).

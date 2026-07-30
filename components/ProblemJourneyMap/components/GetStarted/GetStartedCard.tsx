@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   BookOpen,
+  ChevronDown,
   ExternalLink,
   ImageIcon,
   ListChecks,
@@ -12,6 +13,12 @@ import { YouTubeEmbed } from "@next/third-parties/google";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import * as AccordionPrimitive from "@radix-ui/react-accordion";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionContent,
+} from "@/components/ui/accordion";
 import { getYouTubeVideoId } from "@/lib/youtube";
 import { detectVideoSource, getVimeoVideoId } from "@/lib/video";
 import type { GetStartedCardWithData } from "@/services/getStarted";
@@ -120,45 +127,75 @@ export function GetStartedCard({
             </div>
           )}
 
-          <ul
+          {/* One sub-step open at a time — the card lives in a masonry grid
+              that re-measures on every height change. */}
+          <Accordion
+            type="single"
+            collapsible
             className={cn(
               "flex flex-col divide-y divide-[#EEF0F4]",
               hasStepsIntro && "border-t border-[#EEF0F4]",
             )}
           >
-            {card.items.map((item) => (
-              <li
+            {card.items.map((item, index) => (
+              <AccordionItem
                 key={item.id}
-                className={cn(
-                  "flex items-center justify-between gap-3 py-3",
-                  !hasStepsIntro && "first:pt-0",
-                )}
+                value={String(item.id)}
+                className="border-b-0"
               >
-                {/* Text-only today; an item that gains a url renders as a link
-                    so the card can carry reading/video material later. */}
-                {item.url ? (
-                  <Link
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-[#2E3545] hover:text-[#6A35FF]"
-                  >
-                    <span className="truncate">{item.title}</span>
-                    <ExternalLink className="size-3.5 shrink-0 text-[#9AA1B2]" />
-                  </Link>
-                ) : (
-                  <span className="min-w-0 truncate text-sm font-medium text-[#2E3545]">
-                    {item.title}
-                  </span>
+                <div
+                  className={cn(
+                    "flex items-start justify-between gap-3 py-3",
+                    // Without an intro above it the first row hugs the header.
+                    !hasStepsIntro && index === 0 && "pt-0",
+                  )}
+                >
+                  {/* Composed from the primitives rather than <AccordionTrigger>
+                      so the chevron sits on the left and the Header itself can
+                      shrink — shadcn's wrapper Header has no min-w-0, which lets
+                      long labels push the Reviewed toggle out of the card. */}
+                  <AccordionPrimitive.Header className="flex min-w-0 flex-1">
+                    <AccordionPrimitive.Trigger className="group flex min-w-0 flex-1 cursor-pointer items-start gap-2 text-left outline-none">
+                      <ChevronDown className="mt-0.5 size-4 shrink-0 text-[#9AA1B2] transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                      <span className="min-w-0 text-sm font-medium text-[#2E3545]">
+                        {item.title}
+                      </span>
+                    </AccordionPrimitive.Trigger>
+                  </AccordionPrimitive.Header>
+
+                  {/* Text-only today; an item that gains a url shows a link out
+                      beside the toggle, so the card can carry reading material
+                      later without nesting an <a> inside the trigger button. */}
+                  {item.url && (
+                    <Link
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-0.5 shrink-0 text-[#9AA1B2] hover:text-[#6A35FF]"
+                    >
+                      <ExternalLink className="size-3.5" />
+                    </Link>
+                  )}
+
+                  {/* Outside the trigger so ticking a step off doesn't expand it. */}
+                  <ReviewedToggle
+                    reviewed={!!itemReviewed[item.id]}
+                    onToggle={(next) => onToggleItem(item.id, next)}
+                    readOnly={readOnly}
+                  />
+                </div>
+
+                {item.description && (
+                  <AccordionContent className="pt-0 pb-3">
+                    {/* pl-6 lines the text up under the label, past the chevron. */}
+                    <p className="whitespace-pre-line pl-6 text-sm leading-relaxed text-[#697288]">
+                      {item.description}
+                    </p>
+                  </AccordionContent>
                 )}
-                <ReviewedToggle
-                  reviewed={!!itemReviewed[item.id]}
-                  onToggle={(next) => onToggleItem(item.id, next)}
-                  readOnly={readOnly}
-                />
-              </li>
+              </AccordionItem>
             ))}
-          </ul>
+          </Accordion>
 
           {/* Submitting is one-way: it puts the milestone in the instructor's
               Pending Review queue on /startups. Not gated on the checklist. */}
