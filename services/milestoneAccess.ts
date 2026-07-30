@@ -57,6 +57,32 @@ export async function getAllMilestoneAccess(): Promise<
 }
 
 /**
+ * Whether the active startup has this milestone unlocked. Same read rule as
+ * `getAllMilestoneAccess`: milestone 1 is always on, a missing row means locked.
+ *
+ * Admins and mentors browse without an active org — milestone access is a
+ * startup-progression concept, so nothing is gated for them.
+ */
+export async function isMilestoneAvailable(
+  milestone: number,
+): Promise<boolean> {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) return true;
+
+  if (milestone === ALWAYS_AVAILABLE_MILESTONE) return true;
+
+  const row = await prisma.milestoneAccess.findUnique({
+    where: { org_id_milestone: { org_id: orgId, milestone } },
+    select: { available: true },
+  });
+
+  return row?.available ?? false;
+}
+
+/**
  * When the active startup submitted this milestone, or null if it hasn't.
  *
  * Unlike the rest of this module these two actions are the startup acting on its

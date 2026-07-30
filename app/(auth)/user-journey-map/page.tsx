@@ -7,13 +7,16 @@ import { SubStepProgressProvider } from "@/components/ProblemJourneyMap/SubStepP
 import { Room } from "@/components/Room";
 import { generateProblemJourneyRoom } from "@/services/problemJourney";
 import { getMarketData } from "@/services/market";
+import { isMilestoneAvailable } from "@/services/milestoneAccess";
+import { EVIDENCE_MILESTONE } from "@/lib/milestones";
 
 export default async function ProblemJourneyMapPage() {
   const { orgId } = await auth();
   const roomId = `problem-journey-${orgId}`;
-  const [, marketData] = await Promise.all([
+  const [, marketData, evidenceUnlocked] = await Promise.all([
     generateProblemJourneyRoom(roomId),
     getMarketData(),
+    isMilestoneAvailable(EVIDENCE_MILESTONE),
   ]);
 
   return (
@@ -26,6 +29,7 @@ export default async function ProblemJourneyMapPage() {
               <Room roomId={roomId}>
                 <ProblemJourneyCanvas
                   stakeholderRows={marketData.stakeholderRows}
+                  evidenceUnlocked={evidenceUnlocked}
                 />
               </Room>
             }

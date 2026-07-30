@@ -15,6 +15,11 @@ export const MILESTONE_NUMBERS = [1, 2, 3, 4, 5] as const;
 /** Milestone 1 ships unlocked for every startup and cannot be turned off. */
 export const ALWAYS_AVAILABLE_MILESTONE = 1;
 
+/** Milestone that unlocks the evidence controls in the Problem/Solution sheet:
+ * the type + pain-or-gain classification, the hypothesis toggle, the answer
+ * source and the confidence rating. */
+export const EVIDENCE_MILESTONE = 2;
+
 export type MilestoneAccessState = {
   milestone: number;
   available: boolean;

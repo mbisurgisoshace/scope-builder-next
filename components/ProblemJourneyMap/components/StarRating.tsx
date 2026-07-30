@@ -7,6 +7,9 @@ interface StarRatingProps {
   /** Omit for a display-only rating. */
   onChange?: (value: number) => void;
   readOnly?: boolean;
+  /** Greyed out because the control is locked — as opposed to `readOnly`, which
+   * shows the rating at full strength and only blocks editing. */
+  disabled?: boolean;
   /** `sm` for tight rows where the rating sits inline with label text. */
   size?: "sm" | "md";
 }
@@ -17,13 +20,16 @@ export function StarRating({
   value,
   onChange,
   readOnly = false,
+  disabled = false,
   size = "md",
 }: StarRatingProps) {
-  const interactive = Boolean(onChange) && !readOnly;
+  const interactive = Boolean(onChange) && !readOnly && !disabled;
   const starSize = size === "sm" ? "w-3.5 h-3.5" : "w-4 h-4";
 
   return (
-    <div className="flex items-center gap-0.5">
+    <div
+      className={`flex items-center gap-0.5 ${disabled ? "opacity-50" : ""}`}
+    >
       {[1, 2, 3, 4, 5].map((i) => (
         <button
           key={i}

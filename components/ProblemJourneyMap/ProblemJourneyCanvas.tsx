@@ -34,6 +34,9 @@ interface ProblemJourneyCanvasProps {
   /** Org-wide stakeholder rows from the Market tab, used by Trigger nodes to
    * pick and display stakeholders. Loaded once server-side. */
   stakeholderRows: StakeholderRow[];
+  /** Whether the startup has reached the milestone that unlocks the evidence
+   * controls in the problem/solution sheet. Resolved server-side by the page. */
+  evidenceUnlocked: boolean;
   /** Render the canvas as a read-only viewer (Examples pages). */
   readOnly?: boolean;
 }
@@ -42,6 +45,7 @@ const noop = () => {};
 
 function CanvasInner({
   stakeholderRows,
+  evidenceUnlocked,
   readOnly = false,
 }: ProblemJourneyCanvasProps) {
   const {
@@ -157,6 +161,7 @@ function CanvasInner({
 
               <ActionNodeSheet
                 readOnly={readOnly}
+                evidenceUnlocked={evidenceUnlocked}
                 open={selectedProblem !== null}
                 onOpenChange={(open) => {
                   if (!open) setSelectedProblem(null);
@@ -200,11 +205,16 @@ function CanvasInner({
 
 export function ProblemJourneyCanvas({
   stakeholderRows,
+  evidenceUnlocked,
   readOnly = false,
 }: ProblemJourneyCanvasProps) {
   return (
     <ReactFlowProvider>
-      <CanvasInner stakeholderRows={stakeholderRows} readOnly={readOnly} />
+      <CanvasInner
+        stakeholderRows={stakeholderRows}
+        evidenceUnlocked={evidenceUnlocked}
+        readOnly={readOnly}
+      />
     </ReactFlowProvider>
   );
 }

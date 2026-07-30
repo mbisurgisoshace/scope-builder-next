@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { EVIDENCE_MILESTONE } from "@/lib/milestones";
 import { StarRating } from "./StarRating";
 import {
   BANK_QUESTIONS,
@@ -115,6 +116,11 @@ const SOLUTION_TAB_LOCKED: boolean = true;
 interface ActionNodeSheetProps {
   /** Pure viewer: inputs disabled, Save hidden, bank-of-questions hidden. */
   readOnly?: boolean;
+  /** Whether the startup has reached `EVIDENCE_MILESTONE`. Until then the
+   * classification selects, the hypothesis toggle, the source select and the
+   * confidence rating render greyed out — describing the problem and answering
+   * the questions stays open. */
+  evidenceUnlocked: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   activeTab: ActionSheetTab;
@@ -332,6 +338,13 @@ interface QuestionRowProps {
   isHypothesis?: boolean;
   onToggleHypothesis?: (isHypothesis: boolean) => void;
   readOnly?: boolean;
+  /** Locks the hypothesis toggle, source and confidence — the answer input stays
+   * live. See `evidenceDisabled` in the sheet. */
+  evidenceDisabled?: boolean;
+  /** Tooltip explaining the lock, or undefined when nothing is locked. */
+  lockedHint?: string;
+  /** Label colour, dimmed while the evidence columns are locked. */
+  labelClass?: string;
 }
 
 function QuestionRow({
@@ -346,6 +359,9 @@ function QuestionRow({
   isHypothesis,
   onToggleHypothesis,
   readOnly = false,
+  evidenceDisabled = false,
+  lockedHint,
+  labelClass = "text-gray-500",
 }: QuestionRowProps) {
   // Two explicit grid rows — labels on the first, controls on the second — so the
   // answer input, the source select and the stars stay on one line no matter how
@@ -368,22 +384,27 @@ function QuestionRow({
       {showHypothesis && (
         <button
           type="button"
-          disabled={readOnly}
+          disabled={evidenceDisabled}
           onClick={() => onToggleHypothesis?.(!isHypothesis)}
           aria-pressed={isHypothesis}
-          title={isHypothesis ? "Marked as hypothesis" : "Mark as hypothesis"}
-          className={`self-center shrink-0 w-7 h-7 rounded-full border flex items-center justify-center text-xs font-bold transition-colors ${
+          title={
+            lockedHint ??
+            (isHypothesis ? "Marked as hypothesis" : "Mark as hypothesis")
+          }
+          className={`self-center shrink-0 w-7 h-7 rounded-full border flex items-center justify-center text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
             isHypothesis
               ? "border-[#6A35FF] text-[#6A35FF] bg-[#F4F0FF]"
-              : "border-gray-300 text-gray-400 hover:border-[#6A35FF] hover:text-[#6A35FF]"
+              : "border-gray-300 text-gray-400 enabled:hover:border-[#6A35FF] enabled:hover:text-[#6A35FF]"
           }`}
         >
           H
         </button>
       )}
 
-      <span className="text-xs text-gray-500 font-medium">Source:</span>
-      <span className="text-xs text-gray-500 font-medium">
+      <span className={`text-xs font-medium ${labelClass}`} title={lockedHint}>
+        Source:
+      </span>
+      <span className={`text-xs font-medium ${labelClass}`} title={lockedHint}>
         Your confidence:
       </span>
 
@@ -401,9 +422,9 @@ function QuestionRow({
       <Select
         value={source ?? ""}
         onValueChange={onSourceChange}
-        disabled={readOnly}
+        disabled={evidenceDisabled}
       >
-        <SelectTrigger className="h-9 text-sm bg-white">
+        <SelectTrigger className="h-9 text-sm bg-white" title={lockedHint}>
           <SelectValue placeholder="Select source" />
         </SelectTrigger>
         <SelectContent>
@@ -415,11 +436,12 @@ function QuestionRow({
         </SelectContent>
       </Select>
 
-      <div className="h-9 flex items-center">
+      <div className="h-9 flex items-center" title={lockedHint}>
         <StarRating
           value={confidence ?? 0}
           onChange={onConfidenceChange}
           readOnly={readOnly}
+          disabled={evidenceDisabled}
         />
       </div>
     </div>
@@ -496,6 +518,7 @@ function BankOfQuestions({
 
 export function ActionNodeSheet({
   readOnly = false,
+  evidenceUnlocked,
   open,
   onOpenChange,
   activeTab,
@@ -510,6 +533,18 @@ export function ActionNodeSheet({
   // The Solution tab is read-only whenever the whole sheet is (Examples pages) or
   // while the Solutions feature is still locked.
   const solutionReadOnly = readOnly || SOLUTION_TAB_LOCKED;
+
+  // Evidence controls are Milestone 2 work: they stay in the layout but go inert
+  // and greyed until the startup gets there. Existing values are untouched — a
+  // save still round-trips whatever is already stored.
+  const evidenceDisabled = readOnly || !evidenceUnlocked;
+  const solutionEvidenceDisabled = solutionReadOnly || !evidenceUnlocked;
+  const lockedHint = evidenceUnlocked
+    ? undefined
+    : `Unlocks in Milestone ${EVIDENCE_MILESTONE}`;
+  const evidenceLabelClass = evidenceUnlocked
+    ? "text-gray-500"
+    : "text-gray-400";
 
   // ── Problem editor state (single problem, inline) ──
   const [problemDraft, setProblemDraft] = useState("");
@@ -724,14 +759,19 @@ export function ActionNodeSheet({
                       onChange={(e) => setProblemDraft(e.target.value)}
                     />
                     <div className="flex flex-col gap-3 w-[250px] shrink-0">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs text-gray-500 font-medium whitespace-nowrap">
+                      <div
+                        className="flex items-center justify-between gap-3"
+                        title={lockedHint}
+                      >
+                        <span
+                          className={`text-xs font-medium whitespace-nowrap ${evidenceLabelClass}`}
+                        >
                           Type of problem
                         </span>
                         <Select
                           value={problemType}
                           onValueChange={setProblemType}
-                          disabled={readOnly}
+                          disabled={evidenceDisabled}
                         >
                           <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
                             <SelectValue placeholder="Select" />
@@ -745,8 +785,13 @@ export function ActionNodeSheet({
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs text-gray-500 font-medium whitespace-nowrap">
+                      <div
+                        className="flex items-center justify-between gap-3"
+                        title={lockedHint}
+                      >
+                        <span
+                          className={`text-xs font-medium whitespace-nowrap ${evidenceLabelClass}`}
+                        >
                           Is it pain or gain?
                         </span>
                         <Select
@@ -754,7 +799,7 @@ export function ActionNodeSheet({
                           onValueChange={(v) =>
                             setProblemPainGain(v as PainOrGain)
                           }
-                          disabled={readOnly}
+                          disabled={evidenceDisabled}
                         >
                           <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
                             <SelectValue />
@@ -816,6 +861,9 @@ export function ActionNodeSheet({
                           }))
                         }
                         readOnly={readOnly}
+                        evidenceDisabled={evidenceDisabled}
+                        lockedHint={lockedHint}
+                        labelClass={evidenceLabelClass}
                       />
                     );
                   })}
@@ -851,14 +899,19 @@ export function ActionNodeSheet({
                       onChange={(e) => setSolutionDraft(e.target.value)}
                     />
                     <div className="flex flex-col gap-3 w-[250px] shrink-0">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs text-gray-500 font-medium whitespace-nowrap">
+                      <div
+                        className="flex items-center justify-between gap-3"
+                        title={lockedHint}
+                      >
+                        <span
+                          className={`text-xs font-medium whitespace-nowrap ${evidenceLabelClass}`}
+                        >
                           Type of solution
                         </span>
                         <Select
                           value={solutionType}
                           onValueChange={setSolutionType}
-                          disabled={solutionReadOnly}
+                          disabled={solutionEvidenceDisabled}
                         >
                           <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
                             <SelectValue placeholder="Select" />
@@ -872,8 +925,13 @@ export function ActionNodeSheet({
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs text-gray-500 font-medium whitespace-nowrap">
+                      <div
+                        className="flex items-center justify-between gap-3"
+                        title={lockedHint}
+                      >
+                        <span
+                          className={`text-xs font-medium whitespace-nowrap ${evidenceLabelClass}`}
+                        >
                           Is it reliever or creator?
                         </span>
                         <Select
@@ -881,7 +939,7 @@ export function ActionNodeSheet({
                           onValueChange={(v) =>
                             setSolutionRelieverCreator(v as RelieverOrCreator)
                           }
-                          disabled={solutionReadOnly}
+                          disabled={solutionEvidenceDisabled}
                         >
                           <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
                             <SelectValue />
@@ -938,6 +996,9 @@ export function ActionNodeSheet({
                           }))
                         }
                         readOnly={solutionReadOnly}
+                        evidenceDisabled={solutionEvidenceDisabled}
+                        lockedHint={lockedHint}
+                        labelClass={evidenceLabelClass}
                       />
                     );
                   })}
