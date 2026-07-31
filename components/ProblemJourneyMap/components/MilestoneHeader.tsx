@@ -140,7 +140,7 @@ function SubStepCell({
     >
       {/* Capped narrow so labels wrap onto a second line instead of stretching
           the cell wide on one. */}
-      <span className="line-clamp-2 max-w-[112px] text-center text-xs font-medium leading-tight text-gray-700 xl:max-w-[132px] xl:text-sm">
+      <span className="h-[30px] block line-clamp-2 max-w-[112px] text-center text-xs font-medium leading-tight text-gray-700 xl:max-w-[132px] xl:text-sm">
         {subStep.label}
       </span>
 
@@ -237,7 +237,8 @@ export function MilestoneHeader({
       // reach the left edge: the shortfall between the visible strip width and
       // the real content from the selected block to the end. Middle milestones
       // have enough following content, so this is 0 and no blank is added.
-      const trailingContent = lastBlock.getBoundingClientRect().right - blockLeft;
+      const trailingContent =
+        lastBlock.getBoundingClientRect().right - blockLeft;
       const needed = Math.max(0, container.clientWidth - trailingContent);
       if (spacerRef.current) spacerRef.current.style.width = `${needed}px`;
 
@@ -256,9 +257,12 @@ export function MilestoneHeader({
     // selected block and the alignment lands off. rAF ensures the final layout
     // is flushed before measuring.
     let raf = 0;
-    const id = window.setTimeout(() => {
-      raf = window.requestAnimationFrame(scroll);
-    }, TRANSITION.duration * 1000 + 80);
+    const id = window.setTimeout(
+      () => {
+        raf = window.requestAnimationFrame(scroll);
+      },
+      TRANSITION.duration * 1000 + 80,
+    );
     return () => {
       window.clearTimeout(id);
       window.cancelAnimationFrame(raf);
@@ -267,7 +271,10 @@ export function MilestoneHeader({
 
   return (
     <div className="flex w-full items-stretch border-b border-[#E4E5ED] bg-white">
-      <div ref={scrollRef} className="no-scrollbar min-w-0 flex-1 overflow-x-auto">
+      <div
+        ref={scrollRef}
+        className="no-scrollbar min-w-0 flex-1 overflow-x-auto"
+      >
         <div className="flex w-full min-w-max items-stretch [--ms-basis:90px] lg:[--ms-basis:110px] xl:[--ms-basis:130px]">
           {milestones.map((milestone, index) => {
             const isExpanded = index === expandedIndex;
@@ -311,8 +318,12 @@ export function MilestoneHeader({
                 {/* Milestone label — arrow-shaped block. Purple when expanded. */}
                 <motion.div
                   transition={transition}
-                  animate={{ backgroundColor: isExpanded ? accent : BLOCK_GRAY }}
-                  whileHover={isExpanded ? undefined : { backgroundColor: "#E4E5ED" }}
+                  animate={{
+                    backgroundColor: isExpanded ? accent : BLOCK_GRAY,
+                  }}
+                  whileHover={
+                    isExpanded ? undefined : { backgroundColor: "#E4E5ED" }
+                  }
                   className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 lg:py-3 ${
                     isExpanded
                       ? "px-2 lg:px-2.5 xl:px-3"
