@@ -8,6 +8,7 @@ import {
 } from "@/services/participants";
 import { getJobTitles } from "@/services/jobTitles";
 import { checkRole } from "@/lib/auth";
+import { MIN_PAYER_INTERVIEWS } from "@/lib/milestones";
 
 export default async function ParticipantsInterviewPage() {
   const [tags, jobTitles, { payerDocumentedCount }, isAdmin, isMentor] =
@@ -29,9 +30,7 @@ export default async function ParticipantsInterviewPage() {
       <SubStepProgressProvider>
         <div className="flex flex-col h-full overflow-hidden">
           <MilestoneHeader
-            payerInterviews={Number(
-              process.env.NEXT_PUBLIC_MIN_PAYER_INTERVIEWS ?? 8,
-            )}
+            payerInterviews={MIN_PAYER_INTERVIEWS}
             currentNumber={payerDocumentedCount}
           />
           <div className="flex-1 min-h-0 px-8 py-4">

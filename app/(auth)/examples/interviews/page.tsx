@@ -7,6 +7,7 @@ import {
   getExampleJobTitles,
   getExampleInterviewMilestonesWithProgress,
 } from "@/services/examples";
+import { MIN_PAYER_INTERVIEWS } from "@/lib/milestones";
 
 // Read-only showcase mirror of /participants/interviews. Same Kanban, but sourced
 // from example set N (global) with every add/edit/answer control removed.
@@ -24,9 +25,7 @@ export default async function ExampleInterviewsPage() {
       <SubStepProgressProvider exampleNumber={EXAMPLE_NUMBER}>
         <div className="flex flex-col h-full overflow-hidden">
           <MilestoneHeader
-            payerInterviews={Number(
-              process.env.NEXT_PUBLIC_MIN_PAYER_INTERVIEWS ?? 8,
-            )}
+            payerInterviews={MIN_PAYER_INTERVIEWS}
             currentNumber={payerDocumentedCount}
           />
           <div className="flex-1 min-h-0 px-8 py-4">

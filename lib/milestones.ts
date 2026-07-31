@@ -20,6 +20,13 @@ export const ALWAYS_AVAILABLE_MILESTONE = 1;
  * source and the confidence rating. */
 export const EVIDENCE_MILESTONE = 2;
 
+/** Payer interviews a startup has to document — the denominator the MilestoneHeader
+ * counts toward. Read here rather than at each call site so the interviews board and
+ * the journey map can't show different targets. */
+export const MIN_PAYER_INTERVIEWS = Number(
+  process.env.NEXT_PUBLIC_MIN_PAYER_INTERVIEWS ?? 8,
+);
+
 export type MilestoneAccessState = {
   milestone: number;
   available: boolean;
