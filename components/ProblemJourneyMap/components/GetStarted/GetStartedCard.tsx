@@ -63,7 +63,7 @@ export function GetStartedCard({
   const body = (
     <>
       {card.body && (
-        <p className="whitespace-pre-line text-sm leading-relaxed text-[#697288]">
+        <p className="whitespace-pre-line text-base leading-relaxed text-[#4E5566]">
           {card.body}
         </p>
       )}
@@ -116,7 +116,7 @@ export function GetStartedCard({
           {/* Optional intro authored in /admin-panel — text, then a video, then
               the checklist. The sub-steps themselves come from the seed. */}
           {card.body && (
-            <p className="mb-4 whitespace-pre-line text-sm leading-relaxed text-[#697288]">
+            <p className="mb-4 whitespace-pre-line text-base leading-relaxed text-[#4E5566]">
               {card.body}
             </p>
           )}
@@ -133,8 +133,8 @@ export function GetStartedCard({
             type="single"
             collapsible
             className={cn(
-              "flex flex-col divide-y divide-[#EEF0F4]",
-              hasStepsIntro && "border-t border-[#EEF0F4]",
+              "flex flex-col divide-y divide-[#D8DBE3]",
+              hasStepsIntro && "border-t border-[#D8DBE3]",
             )}
           >
             {card.items.map((item, index) => (
@@ -156,8 +156,8 @@ export function GetStartedCard({
                       long labels push the Reviewed toggle out of the card. */}
                   <AccordionPrimitive.Header className="flex min-w-0 flex-1">
                     <AccordionPrimitive.Trigger className="group flex min-w-0 flex-1 cursor-pointer items-start gap-2 text-left outline-none">
-                      <ChevronDown className="mt-0.5 size-4 shrink-0 text-[#9AA1B2] transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                      <span className="min-w-0 text-sm font-medium text-[#2E3545]">
+                      <ChevronDown className="mt-0.5 size-4 shrink-0 text-[#6E7689] transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                      <span className="min-w-0 text-base font-medium text-[#2E3545]">
                         {item.title}
                       </span>
                     </AccordionPrimitive.Trigger>
@@ -171,7 +171,7 @@ export function GetStartedCard({
                       href={item.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-0.5 shrink-0 text-[#9AA1B2] hover:text-[#6A35FF]"
+                      className="mt-0.5 shrink-0 text-[#6E7689] hover:text-[#6A35FF]"
                     >
                       <ExternalLink className="size-3.5" />
                     </Link>
@@ -188,7 +188,7 @@ export function GetStartedCard({
                 {item.description && (
                   <AccordionContent className="pt-0 pb-3">
                     {/* pl-6 lines the text up under the label, past the chevron. */}
-                    <p className="whitespace-pre-line pl-6 text-sm leading-relaxed text-[#697288]">
+                    <p className="whitespace-pre-line pl-6 text-base leading-relaxed text-[#4E5566]">
                       {item.description}
                     </p>
                   </AccordionContent>

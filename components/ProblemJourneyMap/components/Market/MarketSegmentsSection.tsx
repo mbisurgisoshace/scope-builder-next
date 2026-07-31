@@ -168,17 +168,17 @@ export function MarketSegmentsSection({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Editable spreadsheet-style table — full grid borders on every cell. */}
-        <div className="overflow-hidden rounded-lg border border-[#D5D8E2] bg-white">
+        <div className="overflow-hidden rounded-lg border border-[#BFC4D2] bg-white">
           <Table className="border-collapse">
             <TableHeader>
               <TableRow className="bg-[#F7F8FA] hover:bg-[#F7F8FA]">
-                <TableHead className="h-9 border-b border-r border-[#D5D8E2] text-xs font-medium text-[#697288]">
+                <TableHead className="h-9 border-b border-r border-[#BFC4D2] text-sm font-medium text-[#4E5566]">
                   Name
                 </TableHead>
-                <TableHead className="h-9 border-b border-r border-[#D5D8E2] text-xs font-medium text-[#697288]">
+                <TableHead className="h-9 border-b border-r border-[#BFC4D2] text-sm font-medium text-[#4E5566]">
                   Notes
                 </TableHead>
-                <TableHead className="h-9 w-24 border-b border-[#D5D8E2] text-center text-xs font-medium text-[#697288]">
+                <TableHead className="h-9 w-24 border-b border-[#BFC4D2] text-center text-sm font-medium text-[#4E5566]">
                   Beachhead
                 </TableHead>
               </TableRow>
@@ -189,7 +189,7 @@ export function MarketSegmentsSection({
                   key={row.localKey}
                   className="border-0 hover:bg-transparent"
                 >
-                  <TableCell className="border-b border-r border-[#D5D8E2] p-0">
+                  <TableCell className="border-b border-r border-[#BFC4D2] p-0">
                     <Input
                       value={row.name}
                       readOnly={readOnly}
@@ -197,10 +197,10 @@ export function MarketSegmentsSection({
                         patchRow(row.localKey, { name: e.target.value })
                       }
                       onBlur={() => commitRow(row.localKey)}
-                      className="h-9 w-full rounded-none border-0 bg-transparent text-sm shadow-none focus-visible:ring-0"
+                      className="h-9 w-full rounded-none border-0 bg-transparent text-base shadow-none focus-visible:ring-0"
                     />
                   </TableCell>
-                  <TableCell className="border-b border-r border-[#D5D8E2] p-0">
+                  <TableCell className="border-b border-r border-[#BFC4D2] p-0">
                     <Input
                       value={row.notes}
                       readOnly={readOnly}
@@ -208,10 +208,10 @@ export function MarketSegmentsSection({
                         patchRow(row.localKey, { notes: e.target.value })
                       }
                       onBlur={() => commitRow(row.localKey)}
-                      className="h-9 w-full rounded-none border-0 bg-transparent text-sm shadow-none focus-visible:ring-0"
+                      className="h-9 w-full rounded-none border-0 bg-transparent text-base shadow-none focus-visible:ring-0"
                     />
                   </TableCell>
-                  <TableCell className="border-b border-[#D5D8E2] text-center">
+                  <TableCell className="border-b border-[#BFC4D2] text-center">
                     <Checkbox
                       checked={row.beachhead}
                       disabled={readOnly}
@@ -231,7 +231,7 @@ export function MarketSegmentsSection({
         <div className="flex flex-col gap-4 rounded-lg bg-[#EFF0F4] p-5 justify-between">
           <div className="flex flex-col gap-4 sm:flex-row">
             <BeachheadChart className="w-full sm:w-1/2" />
-            <p className="text-xs leading-relaxed text-[#697288] sm:w-1/2">
+            <p className="text-sm leading-relaxed text-[#4E5566] sm:w-1/2">
               A beachhead chart is a strategic tool used to visualize and
               prioritize market opportunities for a product or service. It helps
               businesses identify their initial target market segment, or
@@ -241,14 +241,14 @@ export function MarketSegmentsSection({
           </div>
 
           <div>
-            <p className="mb-1.5 text-sm font-medium text-[#1F2430]">Notes</p>
+            <p className="mb-1.5 text-base font-medium text-[#1F2430]">Notes</p>
             <Textarea
               value={noteValue}
               readOnly={readOnly}
               onChange={(e) => setNoteValue(e.target.value)}
               onBlur={commitNote}
               placeholder="Type here"
-              className="min-h-[64px] resize-none bg-white text-sm"
+              className="min-h-[64px] resize-none bg-white text-base"
             />
           </div>
         </div>

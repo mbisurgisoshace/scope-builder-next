@@ -67,7 +67,7 @@ export function JourneyEdge({
   const labelY = targetY;
 
   const pillClasses =
-    "text-[12px] leading-none font-medium text-[#111827] bg-white px-1.5 py-0.5 rounded-full border border-gray-200";
+    "text-sm leading-none font-medium text-[#111827] bg-white px-1.5 py-0.5 rounded-full border border-gray-300";
 
   return (
     <>
@@ -75,7 +75,7 @@ export function JourneyEdge({
         id={id}
         path={edgePath}
         markerEnd={markerEnd}
-        style={{ stroke: "#A198BA", strokeWidth: 1.5, ...style }}
+        style={{ stroke: "#7A7099", strokeWidth: 1.5, ...style }}
       />
       {showLabel && (
         <EdgeLabelRenderer>

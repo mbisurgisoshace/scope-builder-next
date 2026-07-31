@@ -102,7 +102,7 @@ export function InterviewPrep({ readOnly = false, exampleNumber }: InterviewPrep
           <h2 className="text-xl font-semibold text-[#1F2430]">
             What you will ask
           </h2>
-          <p className="max-w-3xl text-xs text-[#697288]">
+          <p className="max-w-3xl text-sm text-[#4E5566]">
             You have your answers to the problem statement questions that should
             be validated through user testing. Transform them into actual
             interview questions that will help determine whether your assumptions
@@ -115,7 +115,7 @@ export function InterviewPrep({ readOnly = false, exampleNumber }: InterviewPrep
             <h3 className="text-base font-semibold text-[#1F2430]">
               Nothing to prepare yet
             </h3>
-            <p className="mx-auto mt-2 max-w-md text-xs text-[#697288]">
+            <p className="mx-auto mt-2 max-w-md text-sm text-[#4E5566]">
               Open an action card on the Canvas, describe its problem, then mark the
               questions you want to validate as hypotheses. They will show up here.
             </p>

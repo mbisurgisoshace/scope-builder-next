@@ -43,7 +43,7 @@ export function StarRating({
             className={`${starSize} ${
               i <= value
                 ? "fill-[#6A35FF] text-[#6A35FF]"
-                : "fill-none text-gray-300"
+                : "fill-none text-gray-400"
             }`}
           />
         </button>

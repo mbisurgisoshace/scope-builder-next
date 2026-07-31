@@ -47,7 +47,7 @@ export function Market({ readOnly = false, exampleNumber }: MarketProps) {
       </div>
 
       {/* Gray divider separating the two parts (matches the design). */}
-      <div className="my-6 border-t border-[#D5D8E2]" />
+      <div className="my-6 border-t border-[#BFC4D2]" />
 
       <MarketSegmentsSection
         segments={data.segments}

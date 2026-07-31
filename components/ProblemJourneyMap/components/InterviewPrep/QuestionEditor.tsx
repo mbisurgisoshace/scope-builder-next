@@ -58,12 +58,12 @@ export function QuestionEditor({
     <div className="flex flex-col gap-4">
       {/* Question title — bold text once written, otherwise an input. */}
       <div className="flex flex-col gap-2">
-        <span className="text-sm text-[#697288]">Question:</span>
+        <span className="text-base text-[#4E5566]">Question:</span>
         {authored ? (
           readOnly ? (
-            <p className="text-sm font-semibold text-[#1F2430]">
+            <p className="text-base font-semibold text-[#1F2430]">
               {question.title || (
-                <span className="font-normal text-[#9AA1B1]">
+                <span className="font-normal text-[#6E7689]">
                   No question yet
                 </span>
               )}
@@ -76,7 +76,7 @@ export function QuestionEditor({
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") setEditing(true);
               }}
-              className="cursor-text text-sm font-semibold text-[#1F2430]"
+              className="cursor-text text-base font-semibold text-[#1F2430]"
             >
               {question.title}
             </p>
@@ -94,14 +94,14 @@ export function QuestionEditor({
               onCommit();
             }}
             placeholder="Type your question"
-            className="h-9 bg-white"
+            className="h-9 bg-white text-base"
           />
         )}
       </div>
 
       {/* Response type selector — inline, violet accent. */}
       <div className="flex items-center gap-2">
-        <span className="text-sm text-[#697288]">Response type:</span>
+        <span className="text-base text-[#4E5566]">Response type:</span>
         <Select
           value={question.responseType}
           disabled={readOnly}
@@ -113,7 +113,7 @@ export function QuestionEditor({
         >
           <SelectTrigger
             size="sm"
-            className="h-auto gap-1 border-0 bg-transparent px-0 py-0 text-sm font-semibold text-[#6A35FF] shadow-none focus-visible:ring-0 dark:bg-transparent dark:hover:bg-transparent [&_svg]:text-[#6A35FF] [&_svg]:opacity-100"
+            className="h-auto gap-1 border-0 bg-transparent px-0 py-0 text-base font-semibold text-[#6A35FF] shadow-none focus-visible:ring-0 dark:bg-transparent dark:hover:bg-transparent [&_svg]:text-[#6A35FF] [&_svg]:opacity-100"
           >
             <SelectValue />
           </SelectTrigger>

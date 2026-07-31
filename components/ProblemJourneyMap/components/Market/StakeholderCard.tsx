@@ -150,17 +150,17 @@ export function StakeholderCard({
   };
 
   return (
-    <div className="flex min-w-0 flex-col rounded-2xl border border-[#E3E5EC] bg-white p-5">
+    <div className="flex min-w-0 flex-col rounded-2xl border border-[#CDD1DC] bg-white p-5">
       <div className="mb-2 flex items-center gap-2">
         <span className="flex size-6 items-center justify-center rounded-md bg-[#F1ECFF] text-[#6A35FF]">
           <User className="size-3.5" />
         </span>
-        <h3 className="text-sm font-semibold leading-tight text-[#1F2430]">
+        <h3 className="text-base font-semibold leading-tight text-[#1F2430]">
           {definition.title}
         </h3>
       </div>
 
-      <p className="mb-3 text-xs leading-relaxed text-[#697288]">
+      <p className="mb-3 text-sm leading-relaxed text-[#4E5566]">
         {definition.description}
       </p>
 
@@ -169,7 +169,7 @@ export function StakeholderCard({
         <button
           type="button"
           onClick={addRow}
-          className="mb-3 flex w-fit items-center gap-1 text-xs font-semibold text-[#6A35FF] hover:opacity-80"
+          className="mb-3 flex w-fit items-center gap-1 text-sm font-semibold text-[#6A35FF] hover:opacity-80"
         >
           <Plus className="size-3.5" />
           Row
@@ -201,13 +201,13 @@ export function StakeholderCard({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") e.currentTarget.blur();
                 }}
-                className="h-8 border-[#E3E5EC] text-sm focus-visible:border-[#6A35FF] focus-visible:ring-0"
+                className="h-8 border-[#CDD1DC] text-base focus-visible:border-[#6A35FF] focus-visible:ring-0"
               />
               {!readOnly && (
                 <button
                   type="button"
                   onClick={() => removeRow(row.localKey)}
-                  className="flex size-6 shrink-0 items-center justify-center rounded text-[#9AA1B2] hover:text-[#6A35FF]"
+                  className="flex size-6 shrink-0 items-center justify-center rounded text-[#6E7689] hover:text-[#6A35FF]"
                   aria-label="Remove row"
                 >
                   <X className="size-4" />

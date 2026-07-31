@@ -21,19 +21,19 @@ export function ReviewedToggle({ reviewed, onToggle, readOnly = false }: Reviewe
       type="button"
       disabled={readOnly}
       onClick={() => onToggle(!reviewed)}
-      className="flex shrink-0 items-center gap-1.5 text-xs font-medium disabled:cursor-default"
+      className="flex shrink-0 items-center gap-1.5 text-sm font-medium disabled:cursor-default"
     >
       <span
         className={cn(
           "flex size-4 items-center justify-center rounded-full border transition-colors",
           reviewed
-            ? "border-[#28BF58] bg-[#28BF58] text-white"
-            : "border-[#C4C5D0] bg-white text-transparent",
+            ? "border-[#2F9E63] bg-[#2F9E63] text-white"
+            : "border-[#9CA3AF] bg-white text-transparent",
         )}
       >
         <Check className="size-3" strokeWidth={3} />
       </span>
-      <span className={reviewed ? "text-[#28BF58]" : "text-[#697288]"}>
+      <span className={reviewed ? "text-[#2F9E63]" : "text-[#4E5566]"}>
         Reviewed
       </span>
     </button>

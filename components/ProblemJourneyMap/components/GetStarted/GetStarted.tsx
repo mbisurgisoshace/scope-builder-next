@@ -157,7 +157,7 @@ export function GetStarted({ readOnly = false, exampleNumber }: GetStartedProps)
           transition={transition}
           className="flex h-full w-full items-center justify-center p-8"
         >
-          <p className="text-sm text-[#697288]">
+          <p className="text-base text-[#4E5566]">
             No Get Started content for this milestone yet.
           </p>
         </motion.div>

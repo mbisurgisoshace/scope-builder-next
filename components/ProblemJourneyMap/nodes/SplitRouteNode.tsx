@@ -31,7 +31,7 @@ function SplitRouteNodeInner({ id }: NodeProps) {
   const handleClose = useCallback(() => setAnchorRect(null), []);
 
   return (
-    <div className="nopan nodrag pointer-events-auto w-[180px] bg-[#FFF7ED] border border-orange-200 rounded-xl p-4 relative shadow-sm flex items-center gap-3">
+    <div className="nopan nodrag pointer-events-auto w-[180px] bg-[#FFF7ED] border border-orange-300 rounded-xl p-4 relative shadow-sm flex items-center gap-3">
       <Handle
         id="left"
         type="target"
@@ -40,13 +40,13 @@ function SplitRouteNodeInner({ id }: NodeProps) {
       />
 
       <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-        <GitForkIcon className="w-4 h-4 text-orange-500" />
+        <GitForkIcon className="w-4 h-4 text-orange-600" />
       </div>
       <div>
-        <div className="text-xs font-semibold text-orange-500 uppercase tracking-wide leading-tight">
+        <div className="text-sm font-semibold text-orange-700 uppercase tracking-wide leading-tight">
           Scenarios
         </div>
-        <div className="text-xs text-gray-400 mt-0.5">Branches here</div>
+        <div className="text-sm text-gray-600 mt-0.5">Branches here</div>
       </div>
 
       <Handle
@@ -60,7 +60,7 @@ function SplitRouteNodeInner({ id }: NodeProps) {
         <div className="nopan nodrag absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-1">
           <button
             ref={buttonRef}
-            className="nodrag nopan w-6 h-6 rounded-full bg-orange-400 text-white flex items-center justify-center shadow hover:bg-orange-500 transition-colors"
+            className="nodrag nopan w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center shadow hover:bg-orange-600 transition-colors"
             onClick={handleToggleMenu}
           >
             <PlusIcon className="w-3.5 h-3.5" />

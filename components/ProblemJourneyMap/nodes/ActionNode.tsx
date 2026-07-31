@@ -63,15 +63,15 @@ function ProblemCard({
   return (
     <div
       onClick={handleClick}
-      className="mt-3 pt-3 border-t border-gray-100 cursor-pointer group"
+      className="mt-3 pt-3 border-t border-gray-300 cursor-pointer group"
     >
       <div className="flex items-center justify-between mb-1.5">
-        <p className="text-xs text-gray-400">What is the problem/pain?</p>
+        <p className="text-sm text-gray-600">What is the problem/pain?</p>
         {canDelete && (
           <button
             onClick={handleDelete}
             title="Delete problem"
-            className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50"
+            className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 hover:bg-red-50"
           >
             <XIcon className="w-3.5 h-3.5" />
           </button>
@@ -83,9 +83,9 @@ function ProblemCard({
           isSelected ? "ring-1 ring-[#6A35FF]" : ""
         }`}
       >
-        <p className="text-sm text-gray-700">
+        <p className="text-base text-gray-800">
           {problem.description || (
-            <span className="text-gray-400 italic">No description yet</span>
+            <span className="text-gray-500 italic">No description yet</span>
           )}
         </p>
       </div>
@@ -94,10 +94,10 @@ function ProblemCard({
         <div className="mt-3" onClick={handleSolutionClick}>
           <p className="font-semibold text-[#111827] mb-2">Solution</p>
           <div className="bg-[#E8FAE9] rounded-lg p-3">
-            <span className="text-xs font-semibold bg-[#70E38F] text-[#111827] rounded-full px-2 py-0.5">
+            <span className="text-sm font-semibold bg-[#2F9E63] text-white rounded-full px-2 py-0.5">
               Solution
             </span>
-            <p className="text-sm text-gray-700 mt-1.5">
+            <p className="text-base text-gray-800 mt-1.5">
               {solution.description}
             </p>
           </div>
@@ -151,7 +151,7 @@ function ActionNodeInner({ id, data }: NodeProps) {
 
   return (
     <div
-      className={`nopan nodrag pointer-events-auto w-[370px] bg-white border rounded-xl p-4 relative shadow-sm ${isNodeSelected ? "border-purple-500 " : "border-gray-200"}`}
+      className={`nopan nodrag pointer-events-auto w-[370px] bg-white border rounded-xl p-4 relative shadow-sm ${isNodeSelected ? "border-purple-500 " : "border-gray-300"}`}
     >
       <Handle
         id="left"
@@ -170,7 +170,7 @@ function ActionNodeInner({ id, data }: NodeProps) {
       </div>
 
       <Textarea
-        className="nodrag nopan w-full text-sm text-gray-700 bg-transparent resize-none placeholder-gray-400 focus:outline-none leading-snug"
+        className="nodrag nopan w-full text-base text-gray-800 bg-transparent resize-none placeholder-gray-500 focus:outline-none leading-snug"
         placeholder="Type your action..."
         value={nodeData.content ?? ""}
         readOnly={readOnly}
@@ -191,7 +191,7 @@ function ActionNodeInner({ id, data }: NodeProps) {
       {!readOnly && (
         <button
           onClick={handleAddProblem}
-          className="nodrag nopan mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-gray-300 text-sm font-medium text-gray-500 hover:border-[#6A35FF] hover:text-[#6A35FF] transition-colors"
+          className="nodrag nopan mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-gray-400 text-base font-medium text-gray-700 hover:border-[#6A35FF] hover:text-[#6A35FF] transition-colors"
         >
           <PlusIcon className="w-3.5 h-3.5" />
           Add a problem
@@ -209,7 +209,7 @@ function ActionNodeInner({ id, data }: NodeProps) {
         <div className="nopan nodrag absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-3">
           <button
             ref={buttonRef}
-            className="nodrag nopan w-[30px] h-[30px] rounded-full bg-[#A198BA] text-white flex items-center justify-center shadow hover:bg-[#9486bb] transition-colors"
+            className="nodrag nopan w-[30px] h-[30px] rounded-full bg-[#7A7099] text-white flex items-center justify-center shadow hover:bg-[#655C82] transition-colors"
             onClick={handleToggleMenu}
           >
             <PlusIcon className="w-3.5 h-3.5" />

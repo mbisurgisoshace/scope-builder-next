@@ -166,7 +166,7 @@ function AnswerInput({
   if (question.answerType === "plain_text") {
     return (
       <Input
-        className="text-sm bg-white"
+        className="text-base bg-white"
         placeholder="Answer..."
         value={(value as string) ?? ""}
         readOnly={readOnly}
@@ -187,10 +187,10 @@ function AnswerInput({
               type="button"
               disabled={readOnly}
               onClick={() => onChange(selected ? "" : opt)}
-              className={`h-9 px-5 rounded-lg border text-sm font-medium transition-colors disabled:cursor-default ${
+              className={`h-9 px-5 rounded-lg border text-base font-medium transition-colors disabled:cursor-default ${
                 selected
                   ? "border-[#6A35FF] bg-[#F4F0FF] text-[#6A35FF]"
-                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                  : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
               }`}
             >
               {opt}
@@ -213,10 +213,10 @@ function AnswerInput({
               type="button"
               disabled={readOnly}
               onClick={() => onChange(selected ? "" : String(n))}
-              className={`h-9 w-9 rounded-lg border text-sm font-medium transition-colors disabled:cursor-default ${
+              className={`h-9 w-9 rounded-lg border text-base font-medium transition-colors disabled:cursor-default ${
                 selected
                   ? "border-[#6A35FF] bg-[#F4F0FF] text-[#6A35FF]"
-                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                  : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
               }`}
             >
               {n}
@@ -234,7 +234,7 @@ function AnswerInput({
         value={strValue}
         onValueChange={(v) => onChange(v)}
         disabled={readOnly}
-        className="bg-white rounded-xl overflow-hidden border border-gray-200 p-1.5"
+        className="bg-white rounded-xl overflow-hidden border border-gray-300 p-1.5"
       >
         {question.options?.map((opt) => (
           <div
@@ -250,10 +250,10 @@ function AnswerInput({
             />
             <Label
               htmlFor={`${question.id}-${opt}`}
-              className={`text-sm cursor-pointer ${
+              className={`text-base cursor-pointer ${
                 strValue === opt
                   ? "text-[#6A35FF] font-medium"
-                  : "text-gray-700"
+                  : "text-gray-800"
               }`}
             >
               {opt}
@@ -267,7 +267,7 @@ function AnswerInput({
   // multiple_choice
   const arrValue = (value as string[]) ?? [];
   return (
-    <div className="bg-white rounded-xl overflow-hidden border border-gray-200 p-1.5">
+    <div className="bg-white rounded-xl overflow-hidden border border-gray-300 p-1.5">
       {question.options?.map((opt) => {
         const checked = arrValue.includes(opt);
         return (
@@ -292,8 +292,8 @@ function AnswerInput({
             />
             <Label
               htmlFor={`${question.id}-${opt}`}
-              className={`text-sm cursor-pointer leading-snug ${
-                checked ? "text-[#6A35FF] font-medium" : "text-gray-700"
+              className={`text-base cursor-pointer leading-snug ${
+                checked ? "text-[#6A35FF] font-medium" : "text-gray-800"
               }`}
             >
               {opt}
@@ -317,8 +317,8 @@ function SectionHeader({ title }: { title: string }) {
     <div
       className={`flex items-center gap-1.5 bg-[#F3F3F6] ${SECTION_PADDING} py-2.5`}
     >
-      <CircleHelpIcon className="w-4 h-4 text-gray-400" />
-      <span className="text-sm font-semibold text-gray-700">{title}</span>
+      <CircleHelpIcon className="w-4 h-4 text-gray-600" />
+      <span className="text-base font-semibold text-gray-800">{title}</span>
     </div>
   );
 }
@@ -361,22 +361,24 @@ function QuestionRow({
   readOnly = false,
   evidenceDisabled = false,
   lockedHint,
-  labelClass = "text-gray-500",
+  labelClass = "text-gray-700",
 }: QuestionRowProps) {
   // Two explicit grid rows — labels on the first, controls on the second — so the
   // answer input, the source select and the stars stay on one line no matter how
   // many lines the question text wraps onto.
   const showHypothesis = Boolean(onToggleHypothesis);
+  // The source column is sized for its longest option ("Shared personally") at
+  // the larger text size — narrower and the select truncates it.
   const gridCols = showHypothesis
-    ? "grid-cols-[minmax(0,1fr)_auto_180px_130px]"
-    : "grid-cols-[minmax(0,1fr)_180px_130px]";
+    ? "grid-cols-[minmax(0,1fr)_auto_200px_130px]"
+    : "grid-cols-[minmax(0,1fr)_200px_130px]";
 
   return (
     <div
-      className={`grid ${gridCols} items-start gap-x-4 gap-y-2 py-4 border-t border-gray-100 first:border-t-0`}
+      className={`grid ${gridCols} items-start gap-x-4 gap-y-2 py-4 border-t border-gray-300 first:border-t-0`}
     >
       {/* ── Row 1: question + column labels ── */}
-      <p className="text-sm font-semibold text-gray-800">
+      <p className="text-base font-semibold text-gray-900">
         <span className="text-[#6A35FF] mr-1.5">{index}.</span>
         {question.text}
       </p>
@@ -391,20 +393,20 @@ function QuestionRow({
             lockedHint ??
             (isHypothesis ? "Marked as hypothesis" : "Mark as hypothesis")
           }
-          className={`self-center shrink-0 w-7 h-7 rounded-full border flex items-center justify-center text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`self-center shrink-0 w-7 h-7 rounded-full border flex items-center justify-center text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
             isHypothesis
               ? "border-[#6A35FF] text-[#6A35FF] bg-[#F4F0FF]"
-              : "border-gray-300 text-gray-400 enabled:hover:border-[#6A35FF] enabled:hover:text-[#6A35FF]"
+              : "border-gray-400 text-gray-600 enabled:hover:border-[#6A35FF] enabled:hover:text-[#6A35FF]"
           }`}
         >
           H
         </button>
       )}
 
-      <span className={`text-xs font-medium ${labelClass}`} title={lockedHint}>
+      <span className={`text-sm font-medium ${labelClass}`} title={lockedHint}>
         Source:
       </span>
-      <span className={`text-xs font-medium ${labelClass}`} title={lockedHint}>
+      <span className={`text-sm font-medium ${labelClass}`} title={lockedHint}>
         Your confidence:
       </span>
 
@@ -424,7 +426,7 @@ function QuestionRow({
         onValueChange={onSourceChange}
         disabled={evidenceDisabled}
       >
-        <SelectTrigger className="h-9 text-sm bg-white" title={lockedHint}>
+        <SelectTrigger className="h-9 text-base bg-white" title={lockedHint}>
           <SelectValue placeholder="Select source" />
         </SelectTrigger>
         <SelectContent>
@@ -475,19 +477,19 @@ function BankOfQuestions({
           const questions = bankQuestions.filter((q) => q.category === cat);
           return (
             <div key={cat} className="mb-4 last:mb-0">
-              <p className="text-xs font-semibold text-gray-500 mb-2">{cat}</p>
+              <p className="text-sm font-semibold text-gray-700 mb-2">{cat}</p>
               {/* Boxed so the category's questions read as one group under its label. */}
-              <div className="rounded-xl border border-gray-200">
+              <div className="rounded-xl border border-gray-300">
                 {questions.map((q, idx) => {
                   const added = activeSet.has(q.id);
                   return (
                     <div
                       key={q.id}
                       className={`flex items-center justify-between gap-3 px-4 py-3 ${
-                        idx > 0 ? "border-t border-gray-100" : ""
+                        idx > 0 ? "border-t border-gray-300" : ""
                       }`}
                     >
-                      <span className="text-sm text-gray-700 pr-2">
+                      <span className="text-base text-gray-800 pr-2">
                         {q.text}
                       </span>
                       {added ? (
@@ -497,7 +499,7 @@ function BankOfQuestions({
                       ) : (
                         <button
                           onClick={() => onAdd(q.id)}
-                          className="flex-shrink-0 w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center text-gray-400 hover:border-[#6A35FF] hover:text-[#6A35FF] transition-colors"
+                          className="flex-shrink-0 w-6 h-6 rounded-full border border-gray-400 flex items-center justify-center text-gray-600 hover:border-[#6A35FF] hover:text-[#6A35FF] transition-colors"
                         >
                           <PlusIcon className="w-3.5 h-3.5" />
                         </button>
@@ -543,8 +545,8 @@ export function ActionNodeSheet({
     ? undefined
     : `Unlocks in Milestone ${EVIDENCE_MILESTONE}`;
   const evidenceLabelClass = evidenceUnlocked
-    ? "text-gray-500"
-    : "text-gray-400";
+    ? "text-gray-700"
+    : "text-gray-500";
 
   // ── Problem editor state (single problem, inline) ──
   const [problemDraft, setProblemDraft] = useState("");
@@ -726,7 +728,7 @@ export function ActionNodeSheet({
               <TabsTrigger
                 key={value}
                 value={value}
-                className="group text-xs rounded-sm"
+                className="group text-sm rounded-sm"
               >
                 <span className="flex items-center gap-1.5">
                   {value === "solution" && SOLUTION_TAB_LOCKED && (
@@ -746,12 +748,12 @@ export function ActionNodeSheet({
                 {/* What the problem? */}
                 <SectionHeader title="What the problem?" />
                 <div className={`${SECTION_PADDING} py-4`}>
-                  <span className="inline-block mb-2 text-xs font-semibold bg-[#F5E7D0] text-[#9C7B4D] rounded-full px-2.5 py-0.5">
+                  <span className="inline-block mb-2 text-sm font-semibold bg-[#F5E7D0] text-[#7A5C33] rounded-full px-2.5 py-0.5">
                     Problem
                   </span>
                   <div className="flex gap-4 items-start">
                     <textarea
-                      className="flex-1 self-stretch bg-white border border-gray-200 rounded-lg p-3 text-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none focus:ring-1 focus:ring-[#6A35FF] leading-snug"
+                      className="flex-1 self-stretch bg-white border border-gray-300 rounded-lg p-3 text-base text-gray-800 placeholder-gray-500 resize-none focus:outline-none focus:ring-1 focus:ring-[#6A35FF] leading-snug"
                       rows={3}
                       placeholder="Describe your problem..."
                       value={problemDraft}
@@ -764,7 +766,7 @@ export function ActionNodeSheet({
                         title={lockedHint}
                       >
                         <span
-                          className={`text-xs font-medium whitespace-nowrap ${evidenceLabelClass}`}
+                          className={`text-sm font-medium whitespace-nowrap ${evidenceLabelClass}`}
                         >
                           Type of problem
                         </span>
@@ -773,7 +775,7 @@ export function ActionNodeSheet({
                           onValueChange={setProblemType}
                           disabled={evidenceDisabled}
                         >
-                          <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
+                          <SelectTrigger className="h-9 text-base w-[130px] bg-white">
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
                           <SelectContent className="bg-white">
@@ -790,7 +792,7 @@ export function ActionNodeSheet({
                         title={lockedHint}
                       >
                         <span
-                          className={`text-xs font-medium whitespace-nowrap ${evidenceLabelClass}`}
+                          className={`text-sm font-medium whitespace-nowrap ${evidenceLabelClass}`}
                         >
                           Is it pain or gain?
                         </span>
@@ -801,7 +803,7 @@ export function ActionNodeSheet({
                           }
                           disabled={evidenceDisabled}
                         >
-                          <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
+                          <SelectTrigger className="h-9 text-base w-[130px] bg-white">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -886,12 +888,12 @@ export function ActionNodeSheet({
                 {/* What the solution? */}
                 <SectionHeader title="What the solution?" />
                 <div className={`${SECTION_PADDING} py-4`}>
-                  <span className="inline-block mb-2 text-xs font-semibold bg-[#70E38F] text-[#111827] rounded-full px-2.5 py-0.5">
+                  <span className="inline-block mb-2 text-sm font-semibold bg-[#2F9E63] text-white rounded-full px-2.5 py-0.5">
                     Solution
                   </span>
                   <div className="flex gap-4 items-start">
                     <textarea
-                      className="flex-1 self-stretch bg-white border border-gray-200 rounded-lg p-3 text-sm text-gray-700 placeholder-gray-400 resize-none focus:outline-none focus:ring-1 focus:ring-[#6A35FF] leading-snug"
+                      className="flex-1 self-stretch bg-white border border-gray-300 rounded-lg p-3 text-base text-gray-800 placeholder-gray-500 resize-none focus:outline-none focus:ring-1 focus:ring-[#6A35FF] leading-snug"
                       rows={3}
                       placeholder="Describe your solution..."
                       value={solutionDraft}
@@ -904,7 +906,7 @@ export function ActionNodeSheet({
                         title={lockedHint}
                       >
                         <span
-                          className={`text-xs font-medium whitespace-nowrap ${evidenceLabelClass}`}
+                          className={`text-sm font-medium whitespace-nowrap ${evidenceLabelClass}`}
                         >
                           Type of solution
                         </span>
@@ -913,7 +915,7 @@ export function ActionNodeSheet({
                           onValueChange={setSolutionType}
                           disabled={solutionEvidenceDisabled}
                         >
-                          <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
+                          <SelectTrigger className="h-9 text-base w-[130px] bg-white">
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
                           <SelectContent className="bg-white">
@@ -930,7 +932,7 @@ export function ActionNodeSheet({
                         title={lockedHint}
                       >
                         <span
-                          className={`text-xs font-medium whitespace-nowrap ${evidenceLabelClass}`}
+                          className={`text-sm font-medium whitespace-nowrap ${evidenceLabelClass}`}
                         >
                           Is it reliever or creator?
                         </span>
@@ -941,7 +943,7 @@ export function ActionNodeSheet({
                           }
                           disabled={solutionEvidenceDisabled}
                         >
-                          <SelectTrigger className="h-9 text-sm w-[130px] bg-white">
+                          <SelectTrigger className="h-9 text-base w-[130px] bg-white">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1021,14 +1023,14 @@ export function ActionNodeSheet({
               {activeTab === "problem" ? (
                 <Button
                   onClick={handleSaveProblem}
-                  className="text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors rounded-full"
+                  className="text-base font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors rounded-full"
                 >
                   Save problem
                 </Button>
               ) : (
                 <Button
                   onClick={handleSaveSolution}
-                  className=" text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors rounded-full"
+                  className=" text-base font-medium text-white bg-gray-900 hover:bg-gray-700 transition-colors rounded-full"
                 >
                   Save solution
                 </Button>

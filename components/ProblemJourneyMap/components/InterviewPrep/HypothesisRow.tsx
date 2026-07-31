@@ -22,20 +22,20 @@ export function HypothesisRow({
   return (
     <div className="relative grid grid-cols-2">
       {/* Left: the hypothesis (read-only). */}
-      <div className="flex gap-3 border-r border-[#E5E7EF] px-6 py-6">
-        <span className="text-sm font-bold text-[#1F2430]">
+      <div className="flex gap-3 border-r border-[#CFD3E0] px-6 py-6">
+        <span className="text-base font-bold text-[#1F2430]">
           {hypothesis.index}.
         </span>
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
-            <p className="text-sm text-[#697288]">{hypothesis.prompt}</p>
-            <p className="text-sm font-semibold text-[#1F2430]">
+            <p className="text-base text-[#4E5566]">{hypothesis.prompt}</p>
+            <p className="text-base font-semibold text-[#1F2430]">
               {hypothesis.answer}
             </p>
           </div>
           {/* Source and confidence share one line — nowrap plus the smaller star
               size keeps them there in the narrow hypothesis column. */}
-          <div className="flex flex-nowrap items-center gap-x-4 whitespace-nowrap text-[11px] text-[#697288]">
+          <div className="flex flex-nowrap items-center gap-x-4 whitespace-nowrap text-xs text-[#4E5566]">
             <span>
               Source:{" "}
               <span className="font-semibold text-[#4B4560]">
@@ -62,7 +62,7 @@ export function HypothesisRow({
 
       {/* Center connector — green circular arrow straddling the divider. */}
       <div className="pointer-events-none absolute left-1/2 top-8 -translate-x-1/2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100 text-green-700">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100 text-green-800">
           <ArrowRight className="h-4 w-4" />
         </div>
       </div>

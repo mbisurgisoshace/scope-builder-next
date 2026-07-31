@@ -44,7 +44,7 @@ export function BeachheadChart({ className }: { className?: string }) {
               className="size-2 rounded-full"
               style={{ backgroundColor: item.color }}
             />
-            <span className="text-[10px] text-[#697288]">{item.label}</span>
+            <span className="text-xs text-[#4E5566]">{item.label}</span>
           </div>
         ))}
       </div>

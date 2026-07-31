@@ -48,7 +48,7 @@ export function DropdownOptionsEditor({
             <button
               type="button"
               aria-label="Reorder option"
-              className="flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-md text-[#9AA1B1] hover:bg-[#F1F2F6]"
+              className="flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-md text-[#6E7689] hover:bg-[#F1F2F6]"
             >
               <GripVertical className="h-4 w-4" />
             </button>
@@ -59,14 +59,14 @@ export function DropdownOptionsEditor({
             onChange={(e) => updateLabel(option.id, e.target.value)}
             onBlur={() => onChange(options, { commit: true })}
             placeholder="Enter dropdown option"
-            className="h-9 bg-white"
+            className="h-9 bg-white text-base"
           />
           {!readOnly && (
             <button
               type="button"
               aria-label="Remove option"
               onClick={() => removeOption(option.id)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#9AA1B1] hover:bg-[#F1F2F6] hover:text-[#4B4560]"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#6E7689] hover:bg-[#F1F2F6] hover:text-[#4B4560]"
             >
               <X className="h-4 w-4" />
             </button>
@@ -79,7 +79,7 @@ export function DropdownOptionsEditor({
           type="button"
           onClick={addOption}
           className={cn(
-            "inline-flex w-fit items-center gap-1 pl-10 text-sm font-semibold text-[#6A35FF] hover:underline",
+            "inline-flex w-fit items-center gap-1 pl-10 text-base font-semibold text-[#6A35FF] hover:underline",
           )}
         >
           <Plus className="h-4 w-4" />

@@ -89,7 +89,7 @@ function TriggerNodeInner({ id, data }: NodeProps) {
           <>
             <button
               type="button"
-              className="nodrag nopan text-sm font-medium text-[#6A35FF] hover:underline"
+              className="nodrag nopan text-base font-medium text-[#6A35FF] hover:underline"
               onClick={() => setShowPicker(true)}
             >
               Stakeholders
@@ -109,8 +109,8 @@ function TriggerNodeInner({ id, data }: NodeProps) {
       {groups.length > 0 ? (
         <div className="mb-3 flex flex-col gap-0.5">
           {groups.map((group) => (
-            <p key={group.title} className="text-xs leading-snug text-gray-700">
-              <span className="font-semibold text-gray-500">
+            <p key={group.title} className="text-sm leading-snug text-gray-800">
+              <span className="font-semibold text-gray-700">
                 {group.title}:
               </span>{" "}
               {group.values.join(", ")}
@@ -118,14 +118,14 @@ function TriggerNodeInner({ id, data }: NodeProps) {
           ))}
         </div>
       ) : (
-        readOnly && <p className="mb-3 text-xs text-gray-400">—</p>
+        readOnly && <p className="mb-3 text-sm text-gray-600">—</p>
       )}
 
       <Textarea
         value={nodeData.content ?? ""}
         placeholder="Type your trigger..."
         readOnly={readOnly}
-        className="nodrag nopan w-full text-sm text-gray-700 bg-transparent resize-none placeholder-gray-400 focus:outline-none leading-snug"
+        className="nodrag nopan w-full text-base text-gray-800 bg-transparent resize-none placeholder-gray-500 focus:outline-none leading-snug"
         onChange={(e) => updateNodeData(id, { content: e.target.value })}
       />
 
@@ -141,7 +141,7 @@ function TriggerNodeInner({ id, data }: NodeProps) {
         <div className="nopan nodrag absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-3">
           <button
             ref={buttonRef}
-            className="nodrag nopan w-[30px] h-[30px] rounded-full bg-[#A198BA] text-white flex items-center justify-center shadow hover:bg-[#9486bb] transition-colors"
+            className="nodrag nopan w-[30px] h-[30px] rounded-full bg-[#7A7099] text-white flex items-center justify-center shadow hover:bg-[#655C82] transition-colors"
             onClick={handleToggleMenu}
           >
             <PlusIcon className="w-3.5 h-3.5" />

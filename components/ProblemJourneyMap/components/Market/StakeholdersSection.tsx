@@ -20,7 +20,7 @@ export function StakeholdersSection({ rows, readOnly = false }: StakeholdersSect
   return (
     <section>
       <h2 className="text-lg font-semibold text-[#1F2430]">Stakeholders</h2>
-      <p className="mb-4 mt-1 text-sm text-[#697288]">
+      <p className="mb-4 mt-1 text-base text-[#4E5566]">
         In the realm of decision-making, the individual wielding influence
         determines the path…
       </p>
