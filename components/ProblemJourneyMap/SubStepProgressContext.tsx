@@ -35,13 +35,24 @@ export function useSubStepProgress() {
  */
 export function SubStepProgressProvider({
   exampleNumber,
+  initialProgress,
   children,
 }: {
   /** Set on the read-only /examples pages: read example set N instead of the org. */
   exampleNumber?: number;
+  /**
+   * Progress resolved server-side by the page. Worth passing wherever sub-steps
+   * *gate* something rather than merely display it — the canvas reads this to
+   * decide which parts of the problem sheet exist, and without a seed it would
+   * mount fully locked and expand a moment later. The effect below still runs
+   * and refreshes it.
+   */
+  initialProgress?: Record<string, boolean>;
   children: React.ReactNode;
 }) {
-  const [progress, setProgress] = useState<Record<string, boolean>>(EMPTY);
+  const [progress, setProgress] = useState<Record<string, boolean>>(
+    initialProgress ?? EMPTY,
+  );
 
   useEffect(() => {
     let active = true;

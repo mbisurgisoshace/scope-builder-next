@@ -86,6 +86,35 @@ export async function isMilestoneAvailable(
 }
 
 /**
+ * Every milestone number the active startup has unlocked. The set form of
+ * `isMilestoneAvailable` — one round trip for callers that gate several features
+ * at once, like the journey canvas.
+ *
+ * Availability is toggled per milestone from /startups and is *not* guaranteed
+ * contiguous, so this is a set rather than a "highest reached" number. Same read
+ * rules as `isMilestoneAvailable`: milestone 1 is always on, a missing row means
+ * locked, and admins/mentors browsing without an active org get everything.
+ */
+export async function getAvailableMilestones(): Promise<number[]> {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) return [...MILESTONE_NUMBERS];
+
+  const rows = await prisma.milestoneAccess.findMany({
+    where: { org_id: orgId, available: true },
+    select: { milestone: true },
+  });
+
+  const available = new Set(rows.map((row) => row.milestone));
+
+  available.add(ALWAYS_AVAILABLE_MILESTONE);
+
+  return MILESTONE_NUMBERS.filter((milestone) => available.has(milestone));
+}
+
+/**
  * Milestone numbers the active startup has been signed off on, for the header to
  * paint green. Admins and mentors browse without an active org and the /examples
  * pages have no org at all — both get an empty list, i.e. nothing signed off.
