@@ -82,6 +82,29 @@ function ProgressCheck({ done }: { done: boolean }) {
   );
 }
 
+/** Sub-steps stay a circle whether or not they are done — a row of 26 checkmarks
+ * was hard to scan — and signal completion by filling green instead. */
+function SubStepCheck({ done }: { done: boolean }) {
+  return (
+    <span
+      className="flex justify-center"
+      title={done ? "Reviewed" : "Not reviewed"}
+    >
+      {/* A div, not lucide's CircleIcon — that svg carries `fill="none"`, so a
+       * fill utility on it only ever colors the ring. The green is a lighter
+       * relative of the --progress-done checkmark, kept literal so this does not
+       * depend on a palette token being registered. */}
+      <div
+        className={
+          done
+            ? "border-progress-done size-4 rounded-full border bg-[#6ec48f]"
+            : "border-check-empty size-4 rounded-full border"
+        }
+      />
+    </span>
+  );
+}
+
 /** The three stages fill the track in kanban order — scheduled, then conducted, then
  * documented — and the gray track is whatever is left of the target. Each segment is
  * clamped against the room its predecessors left, so a team past 15 simply fills the
@@ -180,7 +203,7 @@ const columns: ColumnDef<MilestoneProgressRow>[] = [
           header: () => <span title={subStep.label}>{subStep.key}</span>,
           size: SUB_STEP_WIDTH,
           cell: ({ row }) => (
-            <ProgressCheck done={Boolean(row.original.subSteps[subStep.key])} />
+            <SubStepCheck done={Boolean(row.original.subSteps[subStep.key])} />
           ),
         }),
       ),
