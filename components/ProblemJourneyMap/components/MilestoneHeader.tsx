@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { CheckCircle2, Info, Calendar, type LucideIcon } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 
 import { MILESTONE_LABELS, SUB_STEPS } from "@/lib/milestones";
 import { useMilestoneSelection } from "../MilestoneSelectionContext";
@@ -12,8 +12,6 @@ type SubStepStatus = "done" | "active" | "pending";
 
 interface SubStep {
   label: string;
-  /** Fixed icon for the sub-step. `done` sub-steps show a green check instead. */
-  icon?: LucideIcon;
   status: SubStepStatus;
   /** Number of filled progress segments (0..SEGMENTS). */
   filled: number;
@@ -50,6 +48,7 @@ const INDIGO_LABEL = "#C7D2FE"; // indigo-200, used for the milestone title
 
 const INDIGO_TINT = "#F1ECFF"; // sub-step cells of the selected milestone
 const GREEN_TINT = "#E7F7EC"; // completed sub-step cells
+const GREEN_TEXT = "#2F9E63"; // "Completed" check + label (matches --progress-done)
 const BLOCK_GRAY = "#EFF0F4"; // unselected milestone blocks
 const GRAY_LABEL = "#697288"; // "#N" caption on unselected blocks
 
@@ -57,16 +56,6 @@ const GRAY_LABEL = "#697288"; // "#N" caption on unselected blocks
 // reveal all move together. easeInOut cubic-bezier, ~280ms.
 const TRANSITION = { duration: 0.28, ease: [0.4, 0, 0.2, 1] } as const;
 const INSTANT = { duration: 0 } as const;
-
-/**
- * Per-sub-step icon, keyed by sub-step key. Icons stay here rather than in
- * `lib/milestones.ts` so that module (imported by "use server" code) keeps no
- * React dependency. Unlisted keys fall back to `Calendar`; "1.1" has no icon.
- */
-const SUB_STEP_ICONS: Record<string, LucideIcon | undefined> = {
-  "1.1": undefined,
-  "1.2": Info,
-};
 
 /**
  * The arrow tip / divider drawn on the right edge of a block. `fill` paints the
@@ -130,7 +119,6 @@ function SubStepCell({
   subStep: SubStep;
   showDivider: boolean;
 }) {
-  const Icon = subStep.icon;
   // The cell's own tint. The divider chevron is filled with the same color so the
   // arrow reads as an extension of this cell over its neighbour's left corner.
   const isDone = subStep.status === "done";
@@ -139,26 +127,23 @@ function SubStepCell({
   return (
     <div
       style={{ backgroundColor: bg }}
-      className="relative flex flex-col items-center justify-center gap-1.5 px-3 py-2 lg:px-5 lg:py-3 xl:px-8"
+      className="relative flex flex-col items-center justify-center gap-1.5 px-2 py-2 lg:px-3 lg:py-3 xl:px-4"
     >
-      <div className="flex items-center gap-1.5">
-        <span className="line-clamp-2 max-w-[180px] text-center text-xs font-medium text-gray-700 xl:text-sm">
-          {subStep.label}
-        </span>
-        {!isDone && Icon && (
-          <Icon size={14} className="shrink-0 text-gray-400" />
-        )}
-      </div>
+      {/* Capped narrow so labels wrap onto a second line instead of stretching
+          the cell wide on one. */}
+      <span className="line-clamp-2 max-w-[112px] text-center text-xs font-medium leading-tight text-gray-700 xl:max-w-[132px] xl:text-sm">
+        {subStep.label}
+      </span>
 
       {isDone ? (
-        <div className="flex items-center gap-1">
-          <CheckCircle2 size={13} className="text-green-500" />
-          <span className="text-xs text-green-500">Done</span>
+        <div className="flex items-center gap-1" style={{ color: GREEN_TEXT }}>
+          <CheckCircle2 size={13} />
+          <span className="text-xs">Completed</span>
         </div>
       ) : SHOW_PROGRESS_SEGMENTS ? (
         <ProgressSegments filled={subStep.filled} />
       ) : (
-        // Placeholder matching the height of the "Done" row / segments, so
+        // Placeholder matching the height of the "Completed" row / segments, so
         // pending cells don't shrink and shift the strip.
         <span aria-hidden className="h-[18px]" />
       )}
@@ -190,10 +175,6 @@ export function MilestoneHeader({
           (subStep) => subStep.milestone === index + 1,
         ).map((subStep) => ({
           label: subStep.label,
-          icon:
-            subStep.key in SUB_STEP_ICONS
-              ? SUB_STEP_ICONS[subStep.key]
-              : Calendar,
           status: progress[subStep.key] ? "done" : "active",
           filled: progress[subStep.key] ? SEGMENTS : 0,
         })),
@@ -314,13 +295,15 @@ export function MilestoneHeader({
                   animate={{ backgroundColor: isExpanded ? INDIGO : BLOCK_GRAY }}
                   whileHover={isExpanded ? undefined : { backgroundColor: "#E4E5ED" }}
                   className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 lg:py-3 ${
-                    isExpanded ? "px-3 lg:px-4 xl:px-5" : "px-2 lg:px-3 xl:px-4"
+                    isExpanded
+                      ? "px-2 lg:px-2.5 xl:px-3"
+                      : "px-1.5 lg:px-2 xl:px-2.5"
                   }`}
                 >
                   <motion.span
                     transition={transition}
                     animate={{ color: isExpanded ? "#ffffff" : GRAY_LABEL }}
-                    className="text-xs font-bold leading-none xl:text-sm"
+                    className="text-sm font-bold leading-none xl:text-base"
                   >
                     #{index + 1}
                   </motion.span>
@@ -328,8 +311,9 @@ export function MilestoneHeader({
                     transition={transition}
                     animate={{ color: isExpanded ? INDIGO_LABEL : GRAY_TEXT }}
                     // Capped width so the label wraps onto a second line instead
-                    // of stretching the block wide on one.
-                    className={`max-w-[104px] text-center text-[10px] leading-tight xl:max-w-[120px] xl:text-xs ${
+                    // of stretching the block wide on one. Wide enough that the
+                    // longest label ("User, their Journey & Market") fits in two.
+                    className={`max-w-[116px] text-center text-xs leading-tight xl:max-w-[140px] xl:text-sm ${
                       isExpanded ? "font-bold" : "font-medium"
                     }`}
                   >

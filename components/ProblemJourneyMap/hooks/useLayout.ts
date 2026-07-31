@@ -22,6 +22,7 @@ const VERTICAL_GAP = 40; // px gap between siblings (top ↔ bottom)
 const TREE_GAP = 80; // px gap between separate trigger chains
 const ANIMATION_DURATION = 300;
 const INITIAL_ZOOM = 0.85; // fixed comfortable zoom instead of fitting the whole tree
+const INITIAL_LEFT_MARGIN = 0.1; // on first load the root's left edge sits this far (× viewport width) from the left
 
 function nodeHeight(n: Node): number {
   return n.measured?.height ?? 120;
@@ -180,6 +181,7 @@ const totalWidthSelector = (state: ReactFlowState) =>
     (sum, n) => sum + (n.measured?.width ?? 0),
     0,
   );
+const viewportWidthSelector = (state: ReactFlowState) => state.width;
 
 // setNodesState: when ReactFlow is in controlled mode, pass the useNodesState setter here
 // so layout positions are written to the controlled state (not just the internal RF store,
@@ -195,6 +197,7 @@ export function useLayout(
   const edgeCount = useStore(edgeCountSelector);
   const totalHeight = useStore(totalHeightSelector);
   const totalWidth = useStore(totalWidthSelector);
+  const viewportWidth = useStore(viewportWidthSelector);
   const {
     getNodes,
     getNode,
@@ -207,6 +210,13 @@ export function useLayout(
 
   // Whether we've done the one-time center-on-root that happens on initial load.
   const hasInitialCenteredRef = useRef(false);
+
+  // The layout effect only re-runs on node/edge changes, so keep the latest
+  // container width in a ref for the initial placement math below.
+  const viewportWidthRef = useRef(viewportWidth);
+  useEffect(() => {
+    viewportWidthRef.current = viewportWidth;
+  }, [viewportWidth]);
 
   useEffect(() => {
     const nodes = getNodes();
@@ -256,6 +266,26 @@ export function useLayout(
             { zoom: INITIAL_ZOOM, duration: 200 },
           );
 
+        // Initial load: instead of centering the root, park its left edge near
+        // the left edge of the viewport so the tree — which grows to the right —
+        // fills the screen instead of leaving the left half empty.
+        // Screen x of a flow point is `fx * zoom + tx`. Requiring the root's left
+        // edge to land at `MARGIN * width` gives a viewport center of
+        // `rootX + (0.5 - MARGIN) * width / zoom`.
+        const placeLeftAligned = (node: Node) => {
+          const width = viewportWidthRef.current;
+          if (!width) {
+            centerOn(node);
+            return;
+          }
+          setCenter(
+            node.position.x +
+              ((0.5 - INITIAL_LEFT_MARGIN) * width) / INITIAL_ZOOM,
+            node.position.y + nodeHeight(node) / 2,
+            { zoom: INITIAL_ZOOM, duration: 200 },
+          );
+        };
+
         const focusId = pendingFocusRef?.current ?? null;
         if (focusId) {
           // User just added a node locally → center on it.
@@ -268,8 +298,8 @@ export function useLayout(
           // If the new node isn't in this layout pass yet (transient sync state),
           // leave the ref set so a later tick centers on it.
         } else if (!hasInitialCenteredRef.current) {
-          // First load → center on the root/first node (unchanged behavior).
-          centerOn(targetNodes[0]);
+          // First load → root sits near the left edge, tree extends right.
+          placeLeftAligned(targetNodes[0]);
           hasInitialCenteredRef.current = true;
         }
         // Otherwise this is a resize/content-edit or a remote add → leave the
