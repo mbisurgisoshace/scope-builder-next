@@ -21,7 +21,7 @@ export const BANK_QUESTIONS: BankQuestion[] = [
   {
     id: "bq-1",
     category: "Market Size",
-    text: "How many people on average are experiencing this problem?",
+    text: "How many people on average are experiencing this?",
     answerType: "plain_text",
   },
   {
@@ -33,19 +33,19 @@ export const BANK_QUESTIONS: BankQuestion[] = [
   {
     id: "bq-3",
     category: "Market Size",
-    text: "How significant is the problem for these people?",
+    text: "How significant is this issue for the stakeholder(s)?",
     answerType: "scale",
   },
   {
     id: "bq-4",
     category: "Significance",
-    text: "Would customers pay to solve this problem?",
+    text: "Would customers pay to solve this?",
     answerType: "yes_no",
   },
   {
     id: "bq-5",
     category: "Significance",
-    text: "What factors make this problem significant?",
+    text: "What factors make this pain/gain significant?",
     answerType: "plain_text",
   },
   {

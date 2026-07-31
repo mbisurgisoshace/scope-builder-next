@@ -34,7 +34,7 @@ export function ReviewedToggle({ reviewed, onToggle, readOnly = false }: Reviewe
         <Check className="size-3" strokeWidth={3} />
       </span>
       <span className={reviewed ? "text-[#2F9E63]" : "text-[#4E5566]"}>
-        Reviewed
+        Completed
       </span>
     </button>
   );
