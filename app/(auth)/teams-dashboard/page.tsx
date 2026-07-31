@@ -4,6 +4,7 @@ import MilestoneProgressTable, {
   type MilestoneProgressRow,
 } from "./_components/MilestoneProgressTable";
 import { getAllSubStepProgress } from "@/services/getStarted";
+import { getAllInterviewCounts } from "@/services/participants";
 import { getAllMilestoneAccess } from "@/services/milestoneAccess";
 import { defaultMilestoneAccess } from "@/lib/milestones";
 
@@ -23,17 +24,20 @@ export default async function TeamsDashboardPage() {
 
   // Org identity comes from Clerk, per-startup progress from Prisma; the two are
   // joined by `org_id` here on the server.
-  const [organizations, subStepProgress, milestoneAccess] = await Promise.all([
-    client.organizations.getOrganizationList({ limit: 200 }),
-    getAllSubStepProgress(),
-    getAllMilestoneAccess(),
-  ]);
+  const [organizations, subStepProgress, milestoneAccess, interviewCounts] =
+    await Promise.all([
+      client.organizations.getOrganizationList({ limit: 200 }),
+      getAllSubStepProgress(),
+      getAllMilestoneAccess(),
+      getAllInterviewCounts(),
+    ]);
 
   const rows: MilestoneProgressRow[] = organizations.data
     .filter((org) => org.publicMetadata?.cohort === "spring26")
     .map((org) => ({
       orgId: org.id,
       orgName: org.name,
+      interviews: interviewCounts[org.id] ?? { conducted: 0, documented: 0 },
       subSteps: subStepProgress[org.id] ?? {},
       milestones: milestoneAccess[org.id] ?? defaultMilestoneAccess(),
     }))

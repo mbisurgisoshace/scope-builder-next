@@ -8,6 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -23,9 +24,17 @@ import {
   type MilestoneAccessState,
 } from "@/lib/milestones";
 
+export interface InterviewCounts {
+  /** Conducted but not yet written up — Participant.status "complete". */
+  conducted: number;
+  /** Participant.status "documented". Never also counted as `conducted`. */
+  documented: number;
+}
+
 export interface MilestoneProgressRow {
   orgId: string;
   orgName: string;
+  interviews: InterviewCounts;
   /** Sub-step key ("1.1", "2.3"…) → reviewed. Absent key means not reviewed. */
   subSteps: Record<string, boolean>;
   /** All 5 slots, indexed by milestone - 1. */
@@ -37,6 +46,12 @@ export interface MilestoneProgressRow {
 const SUB_STEP_WIDTH = 52;
 const MILESTONE_WIDTH = 64;
 const NAME_WIDTH = 220;
+/** Wide enough for "15 / 3 / 4" plus the bar beside it. */
+const INTERVIEWS_WIDTH = 210;
+
+/** Interviews each startup is expected to land by the end of the program. The bar
+ * is always drawn against this, so a team past it simply fills the track. */
+const INTERVIEW_TARGET = 15;
 
 /** Pins the startup name while the other 26 columns scroll under it. Needs an
  * opaque background of its own or the cells show through. */
@@ -55,11 +70,48 @@ function ProgressCheck({ done }: { done: boolean }) {
       title={done ? "Reviewed" : "Not reviewed"}
     >
       {done ? (
-        <CheckIcon className="size-4 text-[#58C184]" />
+        <CheckIcon className="text-progress-done size-4" />
       ) : (
-        <CircleIcon className="size-4 text-gray-300" />
+        <CircleIcon className="text-check-empty size-4" />
       )}
     </span>
+  );
+}
+
+/** Documented fills the track first, then conducted-but-not-documented, then the
+ * remainder to the target. Each segment is clamped so a team past 15 can't push the
+ * later segments negative. */
+function InterviewProgress({ conducted, documented }: InterviewCounts) {
+  const documentedWidth = Math.min(documented, INTERVIEW_TARGET);
+  const conductedWidth = Math.min(
+    conducted,
+    Math.max(0, INTERVIEW_TARGET - documentedWidth),
+  );
+  const remaining = Math.max(
+    0,
+    INTERVIEW_TARGET - documentedWidth - conductedWidth,
+  );
+
+  return (
+    <div className="flex flex-row items-center gap-2">
+      <span
+        className="text-label-muted font-semibold whitespace-nowrap"
+        title={`${documented} documented, ${conducted} conducted, target ${INTERVIEW_TARGET}`}
+      >
+        {INTERVIEW_TARGET} /{" "}
+        <span className="text-progress-done underline">{documented}</span> /{" "}
+        <span className="text-progress-pending underline">{conducted}</span>
+      </span>
+      <Progress
+        className="w-[55%]"
+        total={INTERVIEW_TARGET}
+        segments={[
+          { value: documentedWidth, colorClass: "bg-progress-done" },
+          { value: conductedWidth, colorClass: "bg-progress-pending" },
+          { value: remaining, colorClass: "bg-progress-track" },
+        ]}
+      />
+    </div>
   );
 }
 
@@ -71,6 +123,25 @@ const columns: ColumnDef<MilestoneProgressRow>[] = [
     header: "Startup",
     size: NAME_WIDTH,
     minSize: NAME_WIDTH,
+  },
+  // Sits ahead of the milestone groups so it's readable without scrolling the 26
+  // columns to its right. Like `orgName` it's a top-level leaf, so it renders in the
+  // group header row and leaves a placeholder in the sub-step row.
+  {
+    id: "interviews",
+    header: () => (
+      <div className="text-label-muted flex flex-col">
+        <span>Interviews:</span>
+        <span className="whitespace-nowrap">
+          {INTERVIEW_TARGET} /{" "}
+          <span className="text-progress-done">documented</span> /{" "}
+          <span className="text-progress-pending">conducted</span>
+        </span>
+      </div>
+    ),
+    size: INTERVIEWS_WIDTH,
+    minSize: INTERVIEWS_WIDTH,
+    cell: ({ row }) => <InterviewProgress {...row.original.interviews} />,
   },
   // One group per milestone: its sub-steps, then the milestone sign-off itself.
   // The grouped header is what keeps 26 columns readable — `getHeaderGroups()`
@@ -132,6 +203,7 @@ export default function MilestoneProgressTable({
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
                 const isName = header.column.id === "orgName";
+                const isInterviews = header.column.id === "interviews";
                 const isMilestone = isMilestoneColumn(header.column.id);
 
                 return (
@@ -142,7 +214,9 @@ export default function MilestoneProgressTable({
                     style={{ width: header.getSize() }}
                     className={`p-2 text-center text-xs font-semibold ${
                       isName ? `text-left ${STICKY_NAME_HEAD}` : ""
-                    } ${isMilestone ? MILESTONE_TINT : ""}`}
+                    } ${isInterviews ? "text-left" : ""} ${
+                      isMilestone ? MILESTONE_TINT : ""
+                    }`}
                   >
                     {header.isPlaceholder
                       ? null

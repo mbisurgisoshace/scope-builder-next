@@ -133,6 +133,42 @@ export async function getAllParticipants() {
   return participants;
 }
 
+// Interview counts for every org at once, for the instructor-side progress grid.
+// The two buckets are exclusive, matching the kanban columns: an interview that has
+// been written up counts as `documented` and no longer as `conducted`.
+export async function getAllInterviewCounts(): Promise<
+  Record<string, { conducted: number; documented: number }>
+> {
+  const { userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  const rows = await prisma.participant.groupBy({
+    by: ["org_id", "status"],
+    // `example_number: null` matters here — the /examples sets write their
+    // participants into this same table and would otherwise count as real progress.
+    where: {
+      example_number: null,
+      status: { in: ["complete", "documented"] },
+    },
+    _count: { _all: true },
+  });
+
+  const byOrg: Record<string, { conducted: number; documented: number }> = {};
+
+  for (const row of rows) {
+    const counts = (byOrg[row.org_id] ??= { conducted: 0, documented: 0 });
+
+    if (row.status === "documented") {
+      counts.documented = row._count._all;
+    } else {
+      counts.conducted = row._count._all;
+    }
+  }
+
+  return byOrg;
+}
+
 export async function createParticipant(
   values: z.infer<typeof participantFormSchema>,
 ) {
