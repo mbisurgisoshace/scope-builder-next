@@ -206,8 +206,8 @@ export function GetStartedCard({
             onClick={onSubmitMilestone}
           >
             {milestoneSubmittedAt
-              ? `Submitted ${formatSubmittedAt(milestoneSubmittedAt)}`
-              : "Submit"}
+              ? `Submitted for Review ${formatSubmittedAt(milestoneSubmittedAt)}`
+              : "Submit for Review"}
           </Button>
         </>
       )}

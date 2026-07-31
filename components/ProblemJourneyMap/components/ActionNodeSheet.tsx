@@ -746,7 +746,7 @@ export function ActionNodeSheet({
             <TabsContent value="problem" className="p-0">
               <div>
                 {/* What the problem? */}
-                <SectionHeader title="What the problem?" />
+                <SectionHeader title="What is the pain/gain you intend to address?" />
                 <div className={`${SECTION_PADDING} py-4`}>
                   <span className="inline-block mb-2 text-sm font-semibold bg-[#F5E7D0] text-[#7A5C33] rounded-full px-2.5 py-0.5">
                     Problem
@@ -755,7 +755,7 @@ export function ActionNodeSheet({
                     <textarea
                       className="flex-1 self-stretch bg-white border border-gray-300 rounded-lg p-3 text-base text-gray-800 placeholder-gray-500 resize-none focus:outline-none focus:ring-1 focus:ring-[#6A35FF] leading-snug"
                       rows={3}
-                      placeholder="Describe your problem..."
+                      placeholder="Don't focus on the solution. Focus on what is it they are not able to do well or at all currently."
                       value={problemDraft}
                       readOnly={readOnly}
                       onChange={(e) => setProblemDraft(e.target.value)}
