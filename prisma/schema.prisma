@@ -47,6 +47,9 @@ enum ParticipantRelationship {
 model Participant {
   id                     String                   @id @default(uuid())
   name                   String
+  // Where the participant works. Distinct from `org_id`, which is the founder's own
+  // Clerk organization that owns this row.
+  organization           String?
   job_title              String?
   org_id                 String
   role                   String?

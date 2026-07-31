@@ -76,6 +76,7 @@ export default function EditParticipantForm({
     resolver: zodResolver(participantFormSchema),
     defaultValues: {
       name: participant.name,
+      organization: participant.organization || "",
       role: participant.role || "",
       relationship: participant.relationship || "",
       contact_info: participant.contact_info || "",
@@ -219,6 +220,20 @@ export default function EditParticipantForm({
                 <FormLabel>Name</FormLabel>
                 <FormControl>
                   <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="organization"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Organization</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Where they work" />
                 </FormControl>
                 <FormMessage />
               </FormItem>

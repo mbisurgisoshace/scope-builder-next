@@ -33,11 +33,17 @@ const PROGRESS_COLUMNS = [
   { key: "documented", label: "Documented" },
 ];
 
-const PROGRESS_COLORS: Record<string, string> = {
-  need_to_schedule: "#F5F5F8",
-  scheduled: "#FFF3E6",
-  complete: "#F4F0FF",
-  documented: "#F0FDF4",
+// Each column carries two tints of one hue: `card` for the cards inside it, `header`
+// one perceptual notch darker so the header still reads as a header against them.
+type ColumnColors = { card: string; header: string };
+
+const FALLBACK_COLORS: ColumnColors = { card: "#F5F5F8", header: "#E2E2E8" };
+
+const PROGRESS_COLORS: Record<string, ColumnColors> = {
+  need_to_schedule: { card: "#F5F5F8", header: "#E2E2E8" },
+  scheduled: { card: "#FFF3E6", header: "#F5DFC6" },
+  complete: { card: "#F4F0FF", header: "#E6DEFA" },
+  documented: { card: "#F0FDF4", header: "#D2EAD9" },
 };
 
 // Derived from the shared options so the board and the participant sheets can't drift.
@@ -46,12 +52,45 @@ const RELATIONSHIP_COLUMNS = RELATIONSHIP_OPTIONS.map(({ value, label }) => ({
   label,
 }));
 
-const RELATIONSHIP_COLORS: Record<string, string> = {
-  family_friends_colleagues: "#F5F5F8",
-  friend_of_friend: "#FFF3E6",
-  cold_connections: "#F4F0FF",
-  networking_event: "#F0FDF4",
+const RELATIONSHIP_COLORS: Record<string, ColumnColors> = {
+  family_friends_colleagues: { card: "#F5F5F8", header: "#E2E2E8" },
+  friend_of_friend: { card: "#FFF3E6", header: "#F5DFC6" },
+  cold_connections: { card: "#F4F0FF", header: "#E6DEFA" },
+  networking_event: { card: "#F0FDF4", header: "#D2EAD9" },
 };
+
+/**
+ * One label/value row on a card. The row is always rendered — a participant with
+ * nothing filled in still shows every label with an empty value, so cards stay the
+ * same shape and a missing field reads as "not answered yet" rather than absent.
+ */
+function CardField({
+  label,
+  value,
+  asBadge = false,
+}: {
+  label: string;
+  value?: string | null;
+  asBadge?: boolean;
+}) {
+  const filled = value != null && value.trim() !== "";
+  return (
+    <div className="flex items-start justify-between gap-2">
+      <span className="text-xs font-semibold shrink-0">{label}:</span>
+      {asBadge && filled ? (
+        // The base Badge is `whitespace-nowrap shrink-0`, which pushes long labels
+        // past the card edge — let this one wrap and shrink instead.
+        <Badge className="bg-[#EEEFF5] text-[#111827] min-w-0 shrink whitespace-normal text-right leading-snug">
+          {value}
+        </Badge>
+      ) : (
+        <span className="text-xs font-semibold text-[#70747D] min-w-0 text-right break-words">
+          {filled ? value : "—"}
+        </span>
+      )}
+    </div>
+  );
+}
 
 function ParticipantCard({
   participant,
@@ -115,28 +154,16 @@ function ParticipantCard({
           </button>
         )}
       </div>
-      {!hideRelationship && participant.relationship && (
-        <div className="flex items-start justify-between gap-2">
-          <span className="text-xs font-semibold shrink-0">Relationship:</span>
-          {/* The base Badge is `whitespace-nowrap shrink-0`, which pushes long
-              labels past the card edge — let this one wrap and shrink instead. */}
-          <Badge className="bg-[#EEEFF5] text-[#111827] min-w-0 shrink whitespace-normal text-right leading-snug">
-            {relationshipLabel(participant.relationship)}
-          </Badge>
-        </div>
+      <CardField label="Organization" value={participant.organization} />
+      <CardField label="Title" value={participant.job_title} />
+      <CardField label="Stakeholder" value={participant.role} />
+      {!hideRelationship && (
+        <CardField
+          label="Relationship to Founder"
+          value={relationshipLabel(participant.relationship)}
+          asBadge
+        />
       )}
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-xs font-semibold shrink-0">Stakeholder:</span>
-        <span className="text-xs font-semibold text-[#70747D] min-w-0 text-right break-words">
-          {participant.role}
-        </span>
-      </div>
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-xs font-semibold shrink-0">Title:</span>
-        <span className="text-xs font-semibold text-[#70747D] min-w-0 text-right break-words">
-          {participant.job_title}
-        </span>
-      </div>
       {!participant.scheduled_date && (
         <p className="text-[12px] font-medium text-[#70747D]">Not scheduled</p>
       )}
@@ -155,7 +182,7 @@ function ParticipantCard({
 function KanbanBoard({
   columns,
   getColumnCards,
-  getColumnColor,
+  getColumnColors,
   hideRelationship = false,
   onAddClick,
   onCardClick,
@@ -164,7 +191,7 @@ function KanbanBoard({
 }: {
   columns: { key: string; label: string }[];
   getColumnCards: (key: string) => Participant[];
-  getColumnColor: (key: string) => string;
+  getColumnColors: (key: string) => ColumnColors;
   hideRelationship?: boolean;
   onAddClick?: () => void;
   onCardClick?: (participant: Participant) => void;
@@ -175,7 +202,7 @@ function KanbanBoard({
     <div className="flex flex-row gap-4 overflow-x-auto h-full">
       {columns.map(({ key, label }, index) => {
         const cards = getColumnCards(key);
-        const color = getColumnColor(key);
+        const colors = getColumnColors(key);
         const isFirst = index === 0;
         return (
           <div
@@ -183,7 +210,7 @@ function KanbanBoard({
             className="flex flex-col min-w-[300px] bg-[#FFFFFF] rounded-xl border-2 border-[#FFFFFF] overflow-hidden h-full"
           >
             <div
-              style={{ backgroundColor: color }}
+              style={{ backgroundColor: colors.header }}
               className="flex items-center justify-between px-3 h-10 border-b border-gray-200"
             >
               <span className="text-xs font-semibold text-[#111827]">
@@ -203,7 +230,7 @@ function KanbanBoard({
                 <ParticipantCard
                   key={participant.id}
                   participant={participant}
-                  color={color}
+                  color={colors.card}
                   hideRelationship={hideRelationship}
                   onCardClick={() => onCardClick?.(participant)}
                   onEditClick={
@@ -384,7 +411,7 @@ export default function ParticipantsKanbanView({
             <KanbanBoard
               columns={PROGRESS_COLUMNS}
               getColumnCards={(key) => groupedByStatus[key] ?? []}
-              getColumnColor={(key) => PROGRESS_COLORS[key] ?? "#F5F5F8"}
+              getColumnColors={(key) => PROGRESS_COLORS[key] ?? FALLBACK_COLORS}
               onAddClick={readOnly ? undefined : () => setSheetOpen(true)}
               onCardClick={openInterview}
               onEditClick={readOnly ? undefined : setEditParticipant}
@@ -398,7 +425,9 @@ export default function ParticipantsKanbanView({
             <KanbanBoard
               columns={RELATIONSHIP_COLUMNS}
               getColumnCards={(key) => groupedByRelationship[key] ?? []}
-              getColumnColor={(key) => RELATIONSHIP_COLORS[key] ?? "#F5F5F8"}
+              getColumnColors={(key) =>
+                RELATIONSHIP_COLORS[key] ?? FALLBACK_COLORS
+              }
               hideRelationship
               onAddClick={readOnly ? undefined : () => setSheetOpen(true)}
               onCardClick={openInterview}

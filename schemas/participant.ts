@@ -26,6 +26,7 @@ export const relationshipLabel = (value: string | null | undefined) =>
 
 export const participantFormSchema = z.object({
   name: z.string().min(1, "Name is required."),
+  organization: z.string().optional(),
   job_title: z.string().optional(),
   role: z.string().optional(),
   relationship: z.string().optional(),
