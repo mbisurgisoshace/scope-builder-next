@@ -7,20 +7,29 @@ import { SubStepProgressProvider } from "@/components/ProblemJourneyMap/SubStepP
 import { Room } from "@/components/Room";
 import { generateProblemJourneyRoom } from "@/services/problemJourney";
 import { getMarketData } from "@/services/market";
-import { isMilestoneAvailable } from "@/services/milestoneAccess";
+import {
+  getReviewedMilestones,
+  isMilestoneAvailable,
+} from "@/services/milestoneAccess";
 import { getInterviewMilestonesWithProgress } from "@/services/participants";
 import { EVIDENCE_MILESTONE, MIN_PAYER_INTERVIEWS } from "@/lib/milestones";
 
 export default async function ProblemJourneyMapPage() {
   const { orgId } = await auth();
   const roomId = `problem-journey-${orgId}`;
-  const [, marketData, evidenceUnlocked, { payerDocumentedCount }] =
-    await Promise.all([
-      generateProblemJourneyRoom(roomId),
-      getMarketData(),
-      isMilestoneAvailable(EVIDENCE_MILESTONE),
-      getInterviewMilestonesWithProgress(),
-    ]);
+  const [
+    ,
+    marketData,
+    evidenceUnlocked,
+    { payerDocumentedCount },
+    reviewedMilestones,
+  ] = await Promise.all([
+    generateProblemJourneyRoom(roomId),
+    getMarketData(),
+    isMilestoneAvailable(EVIDENCE_MILESTONE),
+    getInterviewMilestonesWithProgress(),
+    getReviewedMilestones(),
+  ]);
 
   return (
     <MilestoneSelectionProvider>
@@ -29,6 +38,7 @@ export default async function ProblemJourneyMapPage() {
           <MilestoneHeader
             payerInterviews={MIN_PAYER_INTERVIEWS}
             currentNumber={payerDocumentedCount}
+            reviewedMilestones={reviewedMilestones}
           />
           <JourneyMapTabs
             canvas={

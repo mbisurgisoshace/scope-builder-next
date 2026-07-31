@@ -26,6 +26,9 @@ interface MilestoneHeaderProps {
   milestones?: Milestone[];
   payerInterviews?: number;
   currentNumber?: number;
+  /** Milestone numbers (1-based) an instructor has signed off — these paint
+   *  green instead of indigo when selected. */
+  reviewedMilestones?: number[];
 }
 
 // Number of progress segments rendered under each sub-step.
@@ -45,6 +48,12 @@ const CHEVRON_INDIGO = "#C3B0F5"; // divider outline between tinted sub-steps
 const CHEVRON_GREEN = "#A8D5B5"; // divider outline on completed sub-steps
 const GRAY_TEXT = "#9CA3AF";
 const INDIGO_LABEL = "#C7D2FE"; // indigo-200, used for the milestone title
+
+// Reviewed milestones swap indigo for green on the label block only — the
+// sub-step cells keep their own indigo/green tints, which track sub-step
+// completion rather than instructor sign-off.
+const GREEN_SOLID = "#2F9E63"; // label block of a reviewed, selected milestone
+const GREEN_SOLID_LABEL = "#C7EBD5"; // its title text, mirroring INDIGO_LABEL
 
 const INDIGO_TINT = "#F1ECFF"; // sub-step cells of the selected milestone
 const GREEN_TINT = "#E7F7EC"; // completed sub-step cells
@@ -157,7 +166,12 @@ export function MilestoneHeader({
   milestones: milestonesProp,
   payerInterviews = 8,
   currentNumber = 4,
+  reviewedMilestones,
 }: MilestoneHeaderProps) {
+  const reviewed = useMemo(
+    () => new Set(reviewedMilestones ?? []),
+    [reviewedMilestones],
+  );
   // Selected milestone is shared via context so the tab content (Get Started)
   // can react to it. `expandedIndex` here mirrors the selected milestone.
   const { selectedMilestone: expandedIndex, setSelectedMilestone } =
@@ -257,6 +271,11 @@ export function MilestoneHeader({
         <div className="flex w-full min-w-max items-stretch [--ms-basis:90px] lg:[--ms-basis:110px] xl:[--ms-basis:130px]">
           {milestones.map((milestone, index) => {
             const isExpanded = index === expandedIndex;
+            // Sign-off recolours the selected block; a collapsed block stays gray
+            // either way, so this only matters while expanded.
+            const isReviewed = reviewed.has(index + 1);
+            const accent = isReviewed ? GREEN_SOLID : INDIGO;
+            const accentLabel = isReviewed ? GREEN_SOLID_LABEL : INDIGO_LABEL;
             // Content-sized while expanded (and while collapsing) so the sub-steps
             // widen the block instead of overflowing onto the next one.
             const sizeToContent = isExpanded || index === exitingIndex;
@@ -279,7 +298,7 @@ export function MilestoneHeader({
                 // width; grow=1 lets the expanded one absorb the free space.
                 animate={{
                   flexGrow: isExpanded ? 1 : 0,
-                  borderColor: isExpanded ? INDIGO : "rgba(0,0,0,0)",
+                  borderColor: isExpanded ? accent : "rgba(0,0,0,0)",
                 }}
                 style={{
                   zIndex,
@@ -292,7 +311,7 @@ export function MilestoneHeader({
                 {/* Milestone label — arrow-shaped block. Purple when expanded. */}
                 <motion.div
                   transition={transition}
-                  animate={{ backgroundColor: isExpanded ? INDIGO : BLOCK_GRAY }}
+                  animate={{ backgroundColor: isExpanded ? accent : BLOCK_GRAY }}
                   whileHover={isExpanded ? undefined : { backgroundColor: "#E4E5ED" }}
                   className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 lg:py-3 ${
                     isExpanded
@@ -309,7 +328,7 @@ export function MilestoneHeader({
                   </motion.span>
                   <motion.span
                     transition={transition}
-                    animate={{ color: isExpanded ? INDIGO_LABEL : GRAY_TEXT }}
+                    animate={{ color: isExpanded ? accentLabel : GRAY_TEXT }}
                     // Capped width so the label wraps onto a second line instead
                     // of stretching the block wide on one. Wide enough that the
                     // longest label ("User, their Journey & Market") fits in two.
@@ -320,7 +339,7 @@ export function MilestoneHeader({
                     {milestone.label}
                   </motion.span>
                   <Chevron
-                    fill={isExpanded ? INDIGO : BLOCK_GRAY}
+                    fill={isExpanded ? accent : BLOCK_GRAY}
                     stroke={isExpanded ? undefined : CHEVRON_GRAY}
                     transition={transition}
                   />
@@ -362,7 +381,7 @@ export function MilestoneHeader({
                         ? GREEN_TINT
                         : INDIGO_TINT
                     }
-                    stroke={INDIGO}
+                    stroke={accent}
                     transition={transition}
                   />
                 )}

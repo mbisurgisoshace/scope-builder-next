@@ -86,6 +86,26 @@ export async function isMilestoneAvailable(
 }
 
 /**
+ * Milestone numbers the active startup has been signed off on, for the header to
+ * paint green. Admins and mentors browse without an active org and the /examples
+ * pages have no org at all — both get an empty list, i.e. nothing signed off.
+ */
+export async function getReviewedMilestones(): Promise<number[]> {
+  const { orgId, userId } = await auth();
+
+  if (!userId) redirect("/sign-in");
+
+  if (!orgId) return [];
+
+  const rows = await prisma.milestoneAccess.findMany({
+    where: { org_id: orgId, reviewed_at: { not: null } },
+    select: { milestone: true },
+  });
+
+  return rows.map((row) => row.milestone);
+}
+
+/**
  * When the active startup submitted this milestone, or null if it hasn't.
  *
  * Unlike the rest of this module these two actions are the startup acting on its

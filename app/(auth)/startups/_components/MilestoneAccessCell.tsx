@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock } from "lucide-react";
+import { Hourglass } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";
 import { ALWAYS_AVAILABLE_MILESTONE } from "@/lib/milestones";
@@ -9,16 +9,20 @@ interface MilestoneAccessCellProps {
   milestone: number;
   available: boolean;
   submittedAt: Date | null;
+  reviewedAt: Date | null;
   disabled?: boolean;
   onToggle: (available: boolean) => void;
+  onReview: () => void;
 }
 
 export default function MilestoneAccessCell({
   milestone,
   available,
   submittedAt,
+  reviewedAt,
   disabled,
   onToggle,
+  onReview,
 }: MilestoneAccessCellProps) {
   const locked = milestone === ALWAYS_AVAILABLE_MILESTONE;
 
@@ -39,7 +43,11 @@ export default function MilestoneAccessCell({
             : `Milestone ${milestone} ${available ? "available" : "not available"}`
         }
       />
-      <MilestoneStatusIcon submittedAt={submittedAt} />
+      <MilestoneStatusIcon
+        submittedAt={submittedAt}
+        reviewedAt={reviewedAt}
+        onReview={onReview}
+      />
     </div>
   );
 }
@@ -49,15 +57,37 @@ export default function MilestoneAccessCell({
  * about progress, so the switch alone covers that state and the instructor's eye
  * goes to the rows actually waiting on them.
  *
- * There is no "reviewed" state yet — when the approve flow lands it gets its own
- * colour here, and this clock stops being the end of the line.
+ * Amber hourglass = handed in, waiting on the instructor; click it to sign the
+ * milestone off and it turns green. Signing off is one-way (`reviewMilestone`
+ * returns the existing date rather than bumping it), so the green icon is inert.
  */
-function MilestoneStatusIcon({ submittedAt }: { submittedAt: Date | null }) {
+function MilestoneStatusIcon({
+  submittedAt,
+  reviewedAt,
+  onReview,
+}: {
+  submittedAt: Date | null;
+  reviewedAt: Date | null;
+  onReview: () => void;
+}) {
+  if (reviewedAt) {
+    return (
+      <span title="Reviewed" className="flex">
+        <Hourglass className="size-4 text-[#16A34A]" />
+      </span>
+    );
+  }
+
   if (submittedAt) {
     return (
-      <span title="Pending Review" className="flex">
-        <Clock className="size-4 text-[#CA8A04]" />
-      </span>
+      <button
+        type="button"
+        title="Pending Review — click to mark as Reviewed"
+        onClick={onReview}
+        className="flex cursor-pointer"
+      >
+        <Hourglass className="size-4 text-[#CA8A04]" />
+      </button>
     );
   }
 

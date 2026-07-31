@@ -10,8 +10,19 @@ import {
 } from "@/lib/milestones";
 import {
   getAllMilestoneAccess,
+  reviewMilestone,
   setMilestoneAvailability,
 } from "@/services/milestoneAccess";
+
+function withReviewedAt(
+  access: MilestoneAccessState[],
+  milestone: number,
+  reviewedAt: Date,
+): MilestoneAccessState[] {
+  return access.map((entry) =>
+    entry.milestone === milestone ? { ...entry, reviewedAt } : entry,
+  );
+}
 
 export default function Startups() {
   const [data, setData] = useState<any[]>([]);
@@ -120,10 +131,43 @@ export default function Startups() {
     [],
   );
 
+  // Signing off is one-way, so there is no un-review path to model here — the icon
+  // stops being clickable the moment this lands. The server returns the real
+  // timestamp (an existing one if it was already reviewed); we take it over the
+  // optimistic `new Date()` so the row agrees with the database.
+  const onReviewMilestone = useCallback((orgId: string, milestone: number) => {
+    let previous: MilestoneAccessState[] | undefined;
+
+    setAccessByOrg((current) => {
+      const access = current[orgId] ?? defaultMilestoneAccess();
+      previous = access;
+
+      return { ...current, [orgId]: withReviewedAt(access, milestone, new Date()) };
+    });
+
+    reviewMilestone(orgId, milestone)
+      .then((reviewedAt) =>
+        setAccessByOrg((current) => ({
+          ...current,
+          [orgId]: withReviewedAt(
+            current[orgId] ?? defaultMilestoneAccess(),
+            milestone,
+            reviewedAt,
+          ),
+        })),
+      )
+      .catch(() => {
+        setAccessByOrg((current) =>
+          previous ? { ...current, [orgId]: previous } : current,
+        );
+      });
+  }, []);
+
   return (
     <StartupsTable
       data={rows}
       onToggleMilestone={onToggleMilestone}
+      onReviewMilestone={onReviewMilestone}
       onSelectOrganization={(organization: any) => {
         // Open in a new tab so admins keep this list around while working
         // through milestones. The interstitial sets the active org on arrival.

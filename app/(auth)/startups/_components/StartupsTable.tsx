@@ -32,6 +32,7 @@ export default function StartupsTable({
   data,
   onSelectOrganization,
   onToggleMilestone,
+  onReviewMilestone,
 }: {
   data: any[];
   onSelectOrganization: (organization: any) => void;
@@ -40,10 +41,11 @@ export default function StartupsTable({
     milestone: number,
     available: boolean,
   ) => void;
+  onReviewMilestone: (orgId: string, milestone: number) => void;
 }) {
   const columns = useMemo(
-    () => getColumns(onToggleMilestone),
-    [onToggleMilestone],
+    () => getColumns(onToggleMilestone, onReviewMilestone),
+    [onToggleMilestone, onReviewMilestone],
   );
 
   const table = useReactTable({
@@ -146,6 +148,7 @@ const getColumns = (
     milestone: number,
     available: boolean,
   ) => void,
+  onReviewMilestone: (orgId: string, milestone: number) => void,
 ): ColumnDef<any>[] => [
   {
     accessorKey: "name",
@@ -215,9 +218,11 @@ const getColumns = (
           milestone={milestone}
           available={state?.available ?? false}
           submittedAt={state?.submittedAt ?? null}
+          reviewedAt={state?.reviewedAt ?? null}
           onToggle={(available) =>
             onToggleMilestone(row.original.org_id, milestone, available)
           }
+          onReview={() => onReviewMilestone(row.original.org_id, milestone)}
         />
       );
     },

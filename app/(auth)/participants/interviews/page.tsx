@@ -7,18 +7,26 @@ import {
   getInterviewMilestonesWithProgress,
 } from "@/services/participants";
 import { getJobTitles } from "@/services/jobTitles";
+import { getReviewedMilestones } from "@/services/milestoneAccess";
 import { checkRole } from "@/lib/auth";
 import { MIN_PAYER_INTERVIEWS } from "@/lib/milestones";
 
 export default async function ParticipantsInterviewPage() {
-  const [tags, jobTitles, { payerDocumentedCount }, isAdmin, isMentor] =
-    await Promise.all([
-      getParticipantTags(),
-      getJobTitles(),
-      getInterviewMilestonesWithProgress(),
-      checkRole("admin"),
-      checkRole("mentor"),
-    ]);
+  const [
+    tags,
+    jobTitles,
+    { payerDocumentedCount },
+    isAdmin,
+    isMentor,
+    reviewedMilestones,
+  ] = await Promise.all([
+    getParticipantTags(),
+    getJobTitles(),
+    getInterviewMilestonesWithProgress(),
+    checkRole("admin"),
+    checkRole("mentor"),
+    getReviewedMilestones(),
+  ]);
 
   return (
     // MilestoneHeader reads the selected milestone from context and throws without a
@@ -32,6 +40,7 @@ export default async function ParticipantsInterviewPage() {
           <MilestoneHeader
             payerInterviews={MIN_PAYER_INTERVIEWS}
             currentNumber={payerDocumentedCount}
+            reviewedMilestones={reviewedMilestones}
           />
           <div className="flex-1 min-h-0 px-8 py-4">
             <ParticipantsKanbanView
