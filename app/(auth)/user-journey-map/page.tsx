@@ -8,11 +8,12 @@ import { Room } from "@/components/Room";
 import { generateProblemJourneyRoom } from "@/services/problemJourney";
 import { getMarketData } from "@/services/market";
 import {
+  getAvailableMilestones,
   getReviewedMilestones,
-  isMilestoneAvailable,
 } from "@/services/milestoneAccess";
 import { getInterviewMilestonesWithProgress } from "@/services/participants";
-import { EVIDENCE_MILESTONE, MIN_PAYER_INTERVIEWS } from "@/lib/milestones";
+import { getSubStepProgress } from "@/services/getStarted";
+import { MIN_PAYER_INTERVIEWS } from "@/lib/milestones";
 
 export default async function ProblemJourneyMapPage() {
   const { orgId } = await auth();
@@ -20,20 +21,28 @@ export default async function ProblemJourneyMapPage() {
   const [
     ,
     marketData,
-    evidenceUnlocked,
+    availableMilestones,
+    subStepProgress,
     { payerDocumentedCount },
     reviewedMilestones,
   ] = await Promise.all([
     generateProblemJourneyRoom(roomId),
     getMarketData(),
-    isMilestoneAvailable(EVIDENCE_MILESTONE),
+    // Drives every progressive-disclosure gate on the canvas — which features
+    // the startup can see follows its real milestone access, not the milestone
+    // block selected in the header.
+    getAvailableMilestones(),
+    // Seeds SubStepProgressProvider. The canvas gates on these, so fetching them
+    // here rather than after mount keeps the problem sheet from opening locked
+    // and filling in a beat later.
+    getSubStepProgress(),
     getInterviewMilestonesWithProgress(),
     getReviewedMilestones(),
   ]);
 
   return (
     <MilestoneSelectionProvider>
-      <SubStepProgressProvider>
+      <SubStepProgressProvider initialProgress={subStepProgress}>
         <div className="flex flex-col h-full">
           <MilestoneHeader
             payerInterviews={MIN_PAYER_INTERVIEWS}
@@ -45,7 +54,7 @@ export default async function ProblemJourneyMapPage() {
               <Room roomId={roomId}>
                 <ProblemJourneyCanvas
                   stakeholderRows={marketData.stakeholderRows}
-                  evidenceUnlocked={evidenceUnlocked}
+                  availableMilestones={availableMilestones}
                 />
               </Room>
             }

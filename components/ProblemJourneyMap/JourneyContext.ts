@@ -22,6 +22,16 @@ interface JourneyContextValue {
   /** When true the canvas is a pure viewer: all edit affordances are hidden and
    * every mutator is a no-op. Milestone/card navigation stays enabled. */
   readOnly: boolean;
+  /**
+   * Whether the startup has unlocked a given milestone, for features that appear
+   * as the curriculum progresses. Resolved from the DB server-side by the page —
+   * it tracks real access, *not* the milestone selected in the header, so
+   * browsing the header never reveals or hides canvas features.
+   *
+   * Call it with a named constant from `lib/milestones` (`PROBLEMS_MILESTONE`,
+   * …) rather than a bare number, so a gate can be re-pointed in one place.
+   */
+  isMilestoneUnlocked: (milestone: number) => boolean;
   addTriggerNode: () => void;
   addChildNode: (parentId: string, type: JourneyNodeType) => void;
   updateNodeData: (id: string, patch: Partial<Omit<JourneyNodeData, 'id' | 'type'>>) => void;

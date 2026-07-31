@@ -13,6 +13,7 @@ import {
 import { useSelectedNode } from "../SelectedNodeContext";
 import { useNodeProblems } from "../NodeProblemsContext";
 import { Textarea } from "@/components/ui/textarea";
+import { PROBLEMS_MILESTONE } from "@/lib/milestones";
 import type { Problem } from "../components/ActionNodeSheet";
 
 // A single problem (+ its solution preview) as it appears stacked on the card.
@@ -109,12 +110,28 @@ function ProblemCard({
 
 function ActionNodeInner({ id, data }: NodeProps) {
   const nodeData = data as unknown as JourneyNodeData;
-  const { readOnly, addChildNode, updateNodeData, openProblem, addEmptyProblem } =
-    useJourneyContext();
+  const {
+    readOnly,
+    isMilestoneUnlocked,
+    addChildNode,
+    updateNodeData,
+    openProblem,
+    addEmptyProblem,
+  } = useJourneyContext();
+  // Until the startup reaches Milestone 2 an Action node is just its text —
+  // problems are hidden entirely, including any already saved on the node.
+  const problemsUnlocked = isMilestoneUnlocked(PROBLEMS_MILESTONE);
   const selected = useSelectedNode();
   const isNodeSelected = selected?.nodeId === id;
   const nodeProblemsMap = useNodeProblems();
   const problems = nodeProblemsMap.get(id) ?? [];
+  // A problem is "finished" once it has a description — the sheet refuses to save
+  // without one, so a blank description means it was added and abandoned. Adding
+  // is withheld only while the node's *lone* problem is blank: there's nothing to
+  // add on to yet. Once any problem is real, a stray blank one doesn't block the
+  // node from growing.
+  const hasOnlyBlankProblem =
+    problems.length === 1 && !problems[0].description.trim();
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -178,23 +195,24 @@ function ActionNodeInner({ id, data }: NodeProps) {
         onClick={(e) => e.stopPropagation()}
       />
 
-      {problems.map((problem) => (
-        <ProblemCard
-          key={problem.id}
-          nodeId={id}
-          problem={problem}
-          isSelected={selected?.problemId === problem.id}
-          canDelete={!readOnly && problems.length > 1}
-        />
-      ))}
+      {problemsUnlocked &&
+        problems.map((problem) => (
+          <ProblemCard
+            key={problem.id}
+            nodeId={id}
+            problem={problem}
+            isSelected={selected?.problemId === problem.id}
+            canDelete={!readOnly && problems.length > 1}
+          />
+        ))}
 
-      {!readOnly && (
+      {!readOnly && problemsUnlocked && !hasOnlyBlankProblem && (
         <button
           onClick={handleAddProblem}
           className="nodrag nopan mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-gray-400 text-base font-medium text-gray-700 hover:border-[#6A35FF] hover:text-[#6A35FF] transition-colors"
         >
           <PlusIcon className="w-3.5 h-3.5" />
-          Add a problem
+          {problems.length === 0 ? "Add a problem" : "Add an additional problem"}
         </button>
       )}
 

@@ -15,10 +15,37 @@ export const MILESTONE_NUMBERS = [1, 2, 3, 4, 5] as const;
 /** Milestone 1 ships unlocked for every startup and cannot be turned off. */
 export const ALWAYS_AVAILABLE_MILESTONE = 1;
 
-/** Milestone that unlocks the evidence controls in the Problem/Solution sheet:
- * the type + pain-or-gain classification, the hypothesis toggle, the answer
- * source and the confidence rating. */
-export const EVIDENCE_MILESTONE = 2;
+/**
+ * Sub-step that reveals the body of the Problem/Solution sheet: the type and
+ * pain-or-gain (reliever-or-creator) classification, the Market Questions the
+ * team has answered, and the bank they add more from. Until it's reviewed the
+ * sheet is the description alone.
+ *
+ * Sub-step gates are keyed off the *self-marked* "Reviewed" toggles on the
+ * Instructions tab, not `MilestoneAccess` — a team reveals these by working
+ * through the curriculum rather than by an instructor unlocking them. They sit
+ * behind `PROBLEMS_MILESTONE` regardless, since the sheet itself is unreachable
+ * until problems exist.
+ */
+export const PROBLEM_DETAIL_SUB_STEP = subStepKey(2, 1);
+
+/** Sub-step that reveals the evidence columns on each answered question: the
+ * hypothesis toggle, the answer's source and the confidence rating. Reviewing
+ * "2.2 Expand on Pains/Gains" is what opens them up — the later "2.3 Source &
+ * Confidence Score" is where the team is expected to fill them in, not where
+ * they appear. */
+export const EVIDENCE_SUB_STEP = subStepKey(2, 2);
+
+/**
+ * Milestone that unlocks problems on the journey canvas — the problem cards
+ * stacked on an Action node, "Add a problem", and the Problem/Solution sheet
+ * they open. Until then Milestone 1 is journey structure only: triggers,
+ * actions and their text.
+ *
+ * This is the coarse gate; what the sheet shows *inside* Milestone 2 is then
+ * staged by `PROBLEM_DETAIL_SUB_STEP` and `EVIDENCE_SUB_STEP` above.
+ */
+export const PROBLEMS_MILESTONE = 2;
 
 /** Payer interviews a startup has to document — the denominator the MilestoneHeader
  * counts toward. Read here rather than at each call site so the interviews board and

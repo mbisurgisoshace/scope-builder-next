@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -29,14 +29,21 @@ import {
   type ActionSheetTab,
 } from "./components/ActionNodeSheet";
 import type { StakeholderRow } from "@/services/market";
+import {
+  EVIDENCE_SUB_STEP,
+  PROBLEM_DETAIL_SUB_STEP,
+  PROBLEMS_MILESTONE,
+} from "@/lib/milestones";
+import { useSubStepProgress } from "./SubStepProgressContext";
 
 interface ProblemJourneyCanvasProps {
   /** Org-wide stakeholder rows from the Market tab, used by Trigger nodes to
    * pick and display stakeholders. Loaded once server-side. */
   stakeholderRows: StakeholderRow[];
-  /** Whether the startup has reached the milestone that unlocks the evidence
-   * controls in the problem/solution sheet. Resolved server-side by the page. */
-  evidenceUnlocked: boolean;
+  /** Every milestone the startup has unlocked, resolved server-side by the page.
+   * The canvas derives its progressive-disclosure gates from this — see
+   * `isMilestoneUnlocked` on JourneyContext. */
+  availableMilestones: number[];
   /** Render the canvas as a read-only viewer (Examples pages). */
   readOnly?: boolean;
 }
@@ -45,7 +52,7 @@ const noop = () => {};
 
 function CanvasInner({
   stakeholderRows,
-  evidenceUnlocked,
+  availableMilestones,
   readOnly = false,
 }: ProblemJourneyCanvasProps) {
   const {
@@ -71,6 +78,31 @@ function CanvasInner({
 
   useLayout(setNodes, pendingFocusRef);
 
+  const unlockedMilestones = useMemo(
+    () => new Set(availableMilestones),
+    [availableMilestones],
+  );
+
+  const isMilestoneUnlocked = useCallback(
+    (milestone: number) => unlockedMilestones.has(milestone),
+    [unlockedMilestones],
+  );
+
+  // Problems (the cards on an Action node, "Add a problem", and the sheet they
+  // open) are Milestone 2 work — Milestone 1 is the journey structure alone.
+  // Locked hides them outright rather than greying them: existing problems stay
+  // in storage untouched and reappear when the milestone unlocks.
+  const problemsUnlocked = isMilestoneUnlocked(PROBLEMS_MILESTONE);
+
+  // Inside Milestone 2 the sheet then fills in by sub-step. A fresh Milestone 2
+  // is the description alone; reviewing 2.1 adds the classification, the
+  // answered questions and the bank; 2.3 adds the evidence columns on each
+  // question. Same rule as the milestone gate — locked means absent, and saved
+  // values are left untouched underneath.
+  const { progress } = useSubStepProgress();
+  const detailUnlocked = progress[PROBLEM_DETAIL_SUB_STEP] ?? false;
+  const evidenceUnlocked = progress[EVIDENCE_SUB_STEP] ?? false;
+
   const [selectedProblem, setSelectedProblem] =
     useState<SelectedProblem | null>(null);
   // Controlled like `open` is, so a click on the card always lands on the right
@@ -79,10 +111,14 @@ function CanvasInner({
 
   const openProblem = useCallback(
     (nodeId: string, problemId: string, tab: ActionSheetTab = "problem") => {
+      // Nothing on a locked canvas can reach this, but the sheet is the one
+      // problem surface that isn't rendered by ActionNode — keep it shut here
+      // too so a stale handler can't open it.
+      if (!problemsUnlocked) return;
       setSelectedProblem({ nodeId, problemId });
       setSheetTab(tab);
     },
-    [],
+    [problemsUnlocked],
   );
 
   const onPaneClick = useCallback(() => {
@@ -107,6 +143,7 @@ function CanvasInner({
             <JourneyContext.Provider
               value={{
                 readOnly,
+                isMilestoneUnlocked,
                 // Structural/field mutators are hard no-ops in read-only mode so
                 // nothing can write to the shared example room even if a control
                 // were somehow reachable.
@@ -116,8 +153,12 @@ function CanvasInner({
                 updateEdgeLabel: readOnly ? noop : updateEdgeLabel,
                 stakeholderRows,
                 openProblem,
-                addEmptyProblem: readOnly ? () => "" : addEmptyProblem,
-                removeProblem: readOnly ? noop : removeProblem,
+                // Problem writes are gated on the milestone as well as read-only,
+                // so a locked canvas can never add or drop a problem.
+                addEmptyProblem:
+                  readOnly || !problemsUnlocked ? () => "" : addEmptyProblem,
+                removeProblem:
+                  readOnly || !problemsUnlocked ? noop : removeProblem,
                 solutionForProblem,
               }}
             >
@@ -161,6 +202,7 @@ function CanvasInner({
 
               <ActionNodeSheet
                 readOnly={readOnly}
+                detailUnlocked={detailUnlocked}
                 evidenceUnlocked={evidenceUnlocked}
                 open={selectedProblem !== null}
                 onOpenChange={(open) => {
@@ -205,14 +247,14 @@ function CanvasInner({
 
 export function ProblemJourneyCanvas({
   stakeholderRows,
-  evidenceUnlocked,
+  availableMilestones,
   readOnly = false,
 }: ProblemJourneyCanvasProps) {
   return (
     <ReactFlowProvider>
       <CanvasInner
         stakeholderRows={stakeholderRows}
-        evidenceUnlocked={evidenceUnlocked}
+        availableMilestones={availableMilestones}
         readOnly={readOnly}
       />
     </ReactFlowProvider>

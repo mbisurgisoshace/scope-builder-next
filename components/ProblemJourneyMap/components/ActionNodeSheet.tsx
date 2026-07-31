@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { EVIDENCE_MILESTONE } from "@/lib/milestones";
 import { StarRating } from "./StarRating";
 import {
   BANK_QUESTIONS,
@@ -116,10 +115,13 @@ const SOLUTION_TAB_LOCKED: boolean = true;
 interface ActionNodeSheetProps {
   /** Pure viewer: inputs disabled, Save hidden, bank-of-questions hidden. */
   readOnly?: boolean;
-  /** Whether the startup has reached `EVIDENCE_MILESTONE`. Until then the
-   * classification selects, the hypothesis toggle, the source select and the
-   * confidence rating render greyed out — describing the problem and answering
-   * the questions stays open. */
+  /** Whether `PROBLEM_DETAIL_SUB_STEP` is reviewed. Until then both tabs are the
+   * description alone: the classification column, the Market Questions section
+   * and the bank aren't rendered at all. */
+  detailUnlocked: boolean;
+  /** Whether `EVIDENCE_SUB_STEP` is reviewed. Until then each answered question
+   * is just its answer — no hypothesis toggle, source or confidence. Implies
+   * `detailUnlocked`, since the questions themselves are hidden before that. */
   evidenceUnlocked: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -338,13 +340,10 @@ interface QuestionRowProps {
   isHypothesis?: boolean;
   onToggleHypothesis?: (isHypothesis: boolean) => void;
   readOnly?: boolean;
-  /** Locks the hypothesis toggle, source and confidence — the answer input stays
-   * live. See `evidenceDisabled` in the sheet. */
-  evidenceDisabled?: boolean;
-  /** Tooltip explaining the lock, or undefined when nothing is locked. */
-  lockedHint?: string;
-  /** Label colour, dimmed while the evidence columns are locked. */
-  labelClass?: string;
+  /** Whether `EVIDENCE_SUB_STEP` is reviewed. Until then the row is the question
+   * and its answer alone — the hypothesis toggle, source and confidence columns
+   * aren't rendered and the grid collapses to one column. */
+  evidenceUnlocked?: boolean;
 }
 
 function QuestionRow({
@@ -359,56 +358,57 @@ function QuestionRow({
   isHypothesis,
   onToggleHypothesis,
   readOnly = false,
-  evidenceDisabled = false,
-  lockedHint,
-  labelClass = "text-gray-700",
+  evidenceUnlocked = false,
 }: QuestionRowProps) {
   // Two explicit grid rows — labels on the first, controls on the second — so the
   // answer input, the source select and the stars stay on one line no matter how
   // many lines the question text wraps onto.
-  const showHypothesis = Boolean(onToggleHypothesis);
+  const showHypothesis = evidenceUnlocked && Boolean(onToggleHypothesis);
   // The source column is sized for its longest option ("Shared personally") at
-  // the larger text size — narrower and the select truncates it.
-  const gridCols = showHypothesis
-    ? "grid-cols-[minmax(0,1fr)_auto_200px_130px]"
-    : "grid-cols-[minmax(0,1fr)_200px_130px]";
+  // the larger text size — narrower and the select truncates it. The hypothesis
+  // toggle sits under the question rather than in a column of its own, so the
+  // shape is the same whether or not it's shown.
+  const gridCols = evidenceUnlocked
+    ? "grid-cols-[minmax(0,1fr)_200px_130px]"
+    : "grid-cols-[minmax(0,1fr)]";
 
   return (
     <div
       className={`grid ${gridCols} items-start gap-x-4 gap-y-2 py-4 border-t border-gray-300 first:border-t-0`}
     >
-      {/* ── Row 1: question + column labels ── */}
-      <p className="text-base font-semibold text-gray-900">
-        <span className="text-[#6A35FF] mr-1.5">{index}.</span>
-        {question.text}
-      </p>
+      {/* ── Row 1: question (+ its hypothesis toggle) + column labels ── */}
+      <div>
+        <p className="text-base font-semibold text-gray-900">
+          <span className="text-[#6A35FF] mr-1.5">{index}.</span>
+          {question.text}
+        </p>
 
-      {showHypothesis && (
-        <button
-          type="button"
-          disabled={evidenceDisabled}
-          onClick={() => onToggleHypothesis?.(!isHypothesis)}
-          aria-pressed={isHypothesis}
-          title={
-            lockedHint ??
-            (isHypothesis ? "Marked as hypothesis" : "Mark as hypothesis")
-          }
-          className={`self-center shrink-0 w-7 h-7 rounded-full border flex items-center justify-center text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-            isHypothesis
-              ? "border-[#6A35FF] text-[#6A35FF] bg-[#F4F0FF]"
-              : "border-gray-400 text-gray-600 enabled:hover:border-[#6A35FF] enabled:hover:text-[#6A35FF]"
-          }`}
-        >
-          H
-        </button>
+        {showHypothesis && (
+          <button
+            type="button"
+            disabled={readOnly}
+            onClick={() => onToggleHypothesis?.(!isHypothesis)}
+            aria-pressed={isHypothesis}
+            title={isHypothesis ? "Marked as hypothesis" : "Mark as hypothesis"}
+            className={`mt-2 inline-flex items-center rounded-full border px-3 py-1 text-sm font-semibold transition-colors disabled:opacity-50 disabled:pointer-events-none ${
+              isHypothesis
+                ? "border-[#6A35FF] text-[#6A35FF] bg-[#F4F0FF]"
+                : "border-gray-400 text-gray-600 hover:border-[#6A35FF] hover:text-[#6A35FF]"
+            }`}
+          >
+            Hypothesis
+          </button>
+        )}
+      </div>
+
+      {evidenceUnlocked && (
+        <>
+          <span className="text-sm font-medium text-gray-700">Source:</span>
+          <span className="text-sm font-medium text-gray-700">
+            Your confidence:
+          </span>
+        </>
       )}
-
-      <span className={`text-sm font-medium ${labelClass}`} title={lockedHint}>
-        Source:
-      </span>
-      <span className={`text-sm font-medium ${labelClass}`} title={lockedHint}>
-        Your confidence:
-      </span>
 
       {/* ── Row 2: answer + controls ── */}
       <AnswerInput
@@ -418,34 +418,34 @@ function QuestionRow({
         readOnly={readOnly}
       />
 
-      {/* Nothing under the hypothesis toggle — keeps the column in step. */}
-      {showHypothesis && <div aria-hidden />}
+      {evidenceUnlocked && (
+        <>
+          <Select
+            value={source ?? ""}
+            onValueChange={onSourceChange}
+            disabled={readOnly}
+          >
+            <SelectTrigger className="h-9 text-base bg-white">
+              <SelectValue placeholder="Select source" />
+            </SelectTrigger>
+            <SelectContent>
+              {SOURCE_OPTIONS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-      <Select
-        value={source ?? ""}
-        onValueChange={onSourceChange}
-        disabled={evidenceDisabled}
-      >
-        <SelectTrigger className="h-9 text-base bg-white" title={lockedHint}>
-          <SelectValue placeholder="Select source" />
-        </SelectTrigger>
-        <SelectContent>
-          {SOURCE_OPTIONS.map((s) => (
-            <SelectItem key={s} value={s}>
-              {s}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <div className="h-9 flex items-center" title={lockedHint}>
-        <StarRating
-          value={confidence ?? 0}
-          onChange={onConfidenceChange}
-          readOnly={readOnly}
-          disabled={evidenceDisabled}
-        />
-      </div>
+          <div className="h-9 flex items-center">
+            <StarRating
+              value={confidence ?? 0}
+              onChange={onConfidenceChange}
+              readOnly={readOnly}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -520,6 +520,7 @@ function BankOfQuestions({
 
 export function ActionNodeSheet({
   readOnly = false,
+  detailUnlocked,
   evidenceUnlocked,
   open,
   onOpenChange,
@@ -536,17 +537,10 @@ export function ActionNodeSheet({
   // while the Solutions feature is still locked.
   const solutionReadOnly = readOnly || SOLUTION_TAB_LOCKED;
 
-  // Evidence controls are Milestone 2 work: they stay in the layout but go inert
-  // and greyed until the startup gets there. Existing values are untouched — a
-  // save still round-trips whatever is already stored.
-  const evidenceDisabled = readOnly || !evidenceUnlocked;
-  const solutionEvidenceDisabled = solutionReadOnly || !evidenceUnlocked;
-  const lockedHint = evidenceUnlocked
-    ? undefined
-    : `Unlocks in Milestone ${EVIDENCE_MILESTONE}`;
-  const evidenceLabelClass = evidenceUnlocked
-    ? "text-gray-700"
-    : "text-gray-500";
+  // A locked section is simply absent — nothing renders greyed. Saved values sit
+  // untouched behind the gate: the editor still hydrates from them and a save
+  // round-trips whatever is already stored, so revealing a section brings the
+  // team's own data back rather than a blank form.
 
   // ── Problem editor state (single problem, inline) ──
   const [problemDraft, setProblemDraft] = useState("");
@@ -760,124 +754,118 @@ export function ActionNodeSheet({
                       readOnly={readOnly}
                       onChange={(e) => setProblemDraft(e.target.value)}
                     />
-                    <div className="flex flex-col gap-3 w-[250px] shrink-0">
-                      <div
-                        className="flex items-center justify-between gap-3"
-                        title={lockedHint}
-                      >
-                        <span
-                          className={`text-sm font-medium whitespace-nowrap ${evidenceLabelClass}`}
-                        >
-                          Type of problem
-                        </span>
-                        <Select
-                          value={problemType}
-                          onValueChange={setProblemType}
-                          disabled={evidenceDisabled}
-                        >
-                          <SelectTrigger className="h-9 text-base w-[130px] bg-white">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            {PROBLEM_TYPES.map((t) => (
-                              <SelectItem key={t} value={t}>
-                                {t}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                    {detailUnlocked && (
+                      <div className="flex flex-col gap-3 w-[250px] shrink-0">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-medium whitespace-nowrap text-gray-700">
+                            Type of problem
+                          </span>
+                          <Select
+                            value={problemType}
+                            onValueChange={setProblemType}
+                            disabled={readOnly}
+                          >
+                            <SelectTrigger className="h-9 text-base w-[130px] bg-white">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white">
+                              {PROBLEM_TYPES.map((t) => (
+                                <SelectItem key={t} value={t}>
+                                  {t}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-medium whitespace-nowrap text-gray-700">
+                            Is it pain or gain?
+                          </span>
+                          <Select
+                            value={problemPainGain}
+                            onValueChange={(v) =>
+                              setProblemPainGain(v as PainOrGain)
+                            }
+                            disabled={readOnly}
+                          >
+                            <SelectTrigger className="h-9 text-base w-[130px] bg-white">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {PAIN_OR_GAIN_OPTIONS.map((o) => (
+                                <SelectItem key={o.value} value={o.value}>
+                                  {o.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <div
-                        className="flex items-center justify-between gap-3"
-                        title={lockedHint}
-                      >
-                        <span
-                          className={`text-sm font-medium whitespace-nowrap ${evidenceLabelClass}`}
-                        >
-                          Is it pain or gain?
-                        </span>
-                        <Select
-                          value={problemPainGain}
-                          onValueChange={(v) =>
-                            setProblemPainGain(v as PainOrGain)
-                          }
-                          disabled={evidenceDisabled}
-                        >
-                          <SelectTrigger className="h-9 text-base w-[130px] bg-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {PAIN_OR_GAIN_OPTIONS.map((o) => (
-                              <SelectItem key={o.value} value={o.value}>
-                                {o.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Market Questions */}
-                <SectionHeader title="Market Questions" />
+                {detailUnlocked && (
+                  <>
+                    <SectionHeader title="Market Questions" />
 
-                <div className={SECTION_PADDING}>
-                  {activeQuestionIds.map((qId, i) => {
-                    const bq = BANK_QUESTIONS.find((q) => q.id === qId);
-                    if (!bq) return null;
-                    return (
-                      <QuestionRow
-                        key={qId}
-                        index={i + 1}
-                        question={bq}
-                        value={
-                          questionAnswers[qId] ??
-                          (bq.answerType === "multiple_choice" ? [] : "")
-                        }
-                        onChange={(val) =>
-                          setQuestionAnswers((prev) => ({
-                            ...prev,
-                            [qId]: val,
-                          }))
-                        }
-                        source={questionSources[qId] ?? ""}
-                        confidence={questionConfidence[qId] ?? 0}
-                        isHypothesis={questionHypothesis[qId] ?? false}
-                        onSourceChange={(val) =>
-                          setQuestionSources((prev) => ({
-                            ...prev,
-                            [qId]: val,
-                          }))
-                        }
-                        onConfidenceChange={(val) =>
-                          setQuestionConfidence((prev) => ({
-                            ...prev,
-                            [qId]: val,
-                          }))
-                        }
-                        onToggleHypothesis={(val) =>
-                          setQuestionHypothesis((prev) => ({
-                            ...prev,
-                            [qId]: val,
-                          }))
-                        }
-                        readOnly={readOnly}
-                        evidenceDisabled={evidenceDisabled}
-                        lockedHint={lockedHint}
-                        labelClass={evidenceLabelClass}
+                    <div className={SECTION_PADDING}>
+                      {activeQuestionIds.map((qId, i) => {
+                        const bq = BANK_QUESTIONS.find((q) => q.id === qId);
+                        if (!bq) return null;
+                        return (
+                          <QuestionRow
+                            key={qId}
+                            index={i + 1}
+                            question={bq}
+                            value={
+                              questionAnswers[qId] ??
+                              (bq.answerType === "multiple_choice" ? [] : "")
+                            }
+                            onChange={(val) =>
+                              setQuestionAnswers((prev) => ({
+                                ...prev,
+                                [qId]: val,
+                              }))
+                            }
+                            source={questionSources[qId] ?? ""}
+                            confidence={questionConfidence[qId] ?? 0}
+                            isHypothesis={questionHypothesis[qId] ?? false}
+                            onSourceChange={(val) =>
+                              setQuestionSources((prev) => ({
+                                ...prev,
+                                [qId]: val,
+                              }))
+                            }
+                            onConfidenceChange={(val) =>
+                              setQuestionConfidence((prev) => ({
+                                ...prev,
+                                [qId]: val,
+                              }))
+                            }
+                            onToggleHypothesis={(val) =>
+                              setQuestionHypothesis((prev) => ({
+                                ...prev,
+                                [qId]: val,
+                              }))
+                            }
+                            readOnly={readOnly}
+                            evidenceUnlocked={evidenceUnlocked}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    {!readOnly && (
+                      <BankOfQuestions
+                        questions={BANK_QUESTIONS}
+                        activeQuestionIds={activeQuestionIds}
+                        onAdd={handleAddBankQuestion}
+                        title="Bank of market questions"
                       />
-                    );
-                  })}
-                </div>
-
-                {!readOnly && (
-                  <BankOfQuestions
-                    questions={BANK_QUESTIONS}
-                    activeQuestionIds={activeQuestionIds}
-                    onAdd={handleAddBankQuestion}
-                    title="Bank of market questions"
-                  />
+                    )}
+                  </>
                 )}
               </div>
             </TabsContent>
@@ -900,119 +888,113 @@ export function ActionNodeSheet({
                       readOnly={solutionReadOnly}
                       onChange={(e) => setSolutionDraft(e.target.value)}
                     />
-                    <div className="flex flex-col gap-3 w-[250px] shrink-0">
-                      <div
-                        className="flex items-center justify-between gap-3"
-                        title={lockedHint}
-                      >
-                        <span
-                          className={`text-sm font-medium whitespace-nowrap ${evidenceLabelClass}`}
-                        >
-                          Type of solution
-                        </span>
-                        <Select
-                          value={solutionType}
-                          onValueChange={setSolutionType}
-                          disabled={solutionEvidenceDisabled}
-                        >
-                          <SelectTrigger className="h-9 text-base w-[130px] bg-white">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            {SOLUTION_TYPES.map((t) => (
-                              <SelectItem key={t} value={t}>
-                                {t}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                    {detailUnlocked && (
+                      <div className="flex flex-col gap-3 w-[250px] shrink-0">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-medium whitespace-nowrap text-gray-700">
+                            Type of solution
+                          </span>
+                          <Select
+                            value={solutionType}
+                            onValueChange={setSolutionType}
+                            disabled={solutionReadOnly}
+                          >
+                            <SelectTrigger className="h-9 text-base w-[130px] bg-white">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white">
+                              {SOLUTION_TYPES.map((t) => (
+                                <SelectItem key={t} value={t}>
+                                  {t}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-medium whitespace-nowrap text-gray-700">
+                            Is it reliever or creator?
+                          </span>
+                          <Select
+                            value={solutionRelieverCreator}
+                            onValueChange={(v) =>
+                              setSolutionRelieverCreator(v as RelieverOrCreator)
+                            }
+                            disabled={solutionReadOnly}
+                          >
+                            <SelectTrigger className="h-9 text-base w-[130px] bg-white">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {RELIEVER_OR_CREATOR_OPTIONS.map((o) => (
+                                <SelectItem key={o.value} value={o.value}>
+                                  {o.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <div
-                        className="flex items-center justify-between gap-3"
-                        title={lockedHint}
-                      >
-                        <span
-                          className={`text-sm font-medium whitespace-nowrap ${evidenceLabelClass}`}
-                        >
-                          Is it reliever or creator?
-                        </span>
-                        <Select
-                          value={solutionRelieverCreator}
-                          onValueChange={(v) =>
-                            setSolutionRelieverCreator(v as RelieverOrCreator)
-                          }
-                          disabled={solutionEvidenceDisabled}
-                        >
-                          <SelectTrigger className="h-9 text-base w-[130px] bg-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {RELIEVER_OR_CREATOR_OPTIONS.map((o) => (
-                              <SelectItem key={o.value} value={o.value}>
-                                {o.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Market Questions */}
-                <SectionHeader title="Market Questions" />
+                {detailUnlocked && (
+                  <>
+                    <SectionHeader title="Market Questions" />
 
-                <div className={SECTION_PADDING}>
-                  {activeSolutionQuestionIds.map((qId, i) => {
-                    const bq = SOLUTION_BANK_QUESTIONS.find(
-                      (q) => q.id === qId,
-                    );
-                    if (!bq) return null;
-                    return (
-                      <QuestionRow
-                        key={qId}
-                        index={i + 1}
-                        question={bq}
-                        value={
-                          solutionQuestionAnswers[qId] ??
-                          (bq.answerType === "multiple_choice" ? [] : "")
-                        }
-                        onChange={(val) =>
-                          setSolutionQuestionAnswers((prev) => ({
-                            ...prev,
-                            [qId]: val,
-                          }))
-                        }
-                        source={solutionQuestionSources[qId] ?? ""}
-                        confidence={solutionQuestionConfidence[qId] ?? 0}
-                        onSourceChange={(val) =>
-                          setSolutionQuestionSources((prev) => ({
-                            ...prev,
-                            [qId]: val,
-                          }))
-                        }
-                        onConfidenceChange={(val) =>
-                          setSolutionQuestionConfidence((prev) => ({
-                            ...prev,
-                            [qId]: val,
-                          }))
-                        }
-                        readOnly={solutionReadOnly}
-                        evidenceDisabled={solutionEvidenceDisabled}
-                        lockedHint={lockedHint}
-                        labelClass={evidenceLabelClass}
+                    <div className={SECTION_PADDING}>
+                      {activeSolutionQuestionIds.map((qId, i) => {
+                        const bq = SOLUTION_BANK_QUESTIONS.find(
+                          (q) => q.id === qId,
+                        );
+                        if (!bq) return null;
+                        return (
+                          <QuestionRow
+                            key={qId}
+                            index={i + 1}
+                            question={bq}
+                            value={
+                              solutionQuestionAnswers[qId] ??
+                              (bq.answerType === "multiple_choice" ? [] : "")
+                            }
+                            onChange={(val) =>
+                              setSolutionQuestionAnswers((prev) => ({
+                                ...prev,
+                                [qId]: val,
+                              }))
+                            }
+                            source={solutionQuestionSources[qId] ?? ""}
+                            confidence={solutionQuestionConfidence[qId] ?? 0}
+                            onSourceChange={(val) =>
+                              setSolutionQuestionSources((prev) => ({
+                                ...prev,
+                                [qId]: val,
+                              }))
+                            }
+                            onConfidenceChange={(val) =>
+                              setSolutionQuestionConfidence((prev) => ({
+                                ...prev,
+                                [qId]: val,
+                              }))
+                            }
+                            readOnly={solutionReadOnly}
+                            evidenceUnlocked={evidenceUnlocked}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    {!solutionReadOnly && (
+                      <BankOfQuestions
+                        questions={SOLUTION_BANK_QUESTIONS}
+                        activeQuestionIds={activeSolutionQuestionIds}
+                        onAdd={handleAddSolutionBankQuestion}
+                        title="Bank of market questions"
                       />
-                    );
-                  })}
-                </div>
-
-                {!solutionReadOnly && (
-                  <BankOfQuestions
-                    questions={SOLUTION_BANK_QUESTIONS}
-                    activeQuestionIds={activeSolutionQuestionIds}
-                    onAdd={handleAddSolutionBankQuestion}
-                    title="Bank of market questions"
-                  />
+                    )}
+                  </>
                 )}
               </div>
             </TabsContent>
