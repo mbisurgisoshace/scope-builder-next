@@ -229,16 +229,7 @@ export function MarketSegmentsSection({
 
         {/* Beachhead chart + section-level notes */}
         <div className="flex flex-col gap-4 rounded-lg bg-[#EFF0F4] p-5 justify-between">
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <BeachheadChart className="w-full sm:w-1/2" />
-            <p className="text-sm leading-relaxed text-[#4E5566] sm:w-1/2">
-              A beachhead chart is a strategic tool used to visualize and
-              prioritize market opportunities for a product or service. It helps
-              businesses identify their initial target market segment, or
-              &quot;beachhead,&quot; where they can gain traction before
-              expanding further.
-            </p>
-          </div>
+          <BeachheadChart className="h-auto w-full" />
 
           <div>
             <p className="mb-1.5 text-base font-medium text-[#1F2430]">Notes</p>
