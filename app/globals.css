@@ -39,7 +39,8 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-progress-done: var(--progress-done);
-  --color-progress-pending: var(--progress-pending);
+  --color-progress-scheduled: var(--progress-scheduled);
+  --color-progress-conducted: var(--progress-conducted);
   --color-progress-track: var(--progress-track);
   --color-check-empty: var(--check-empty);
   --color-label-muted: var(--label-muted);
@@ -72,9 +73,13 @@
   --input: oklch(0.87 0 0);
   --ring: oklch(0.708 0 0);
   /* Status palette. Stronger than the pastels these replace so a checkmark or a
-   * filled bar segment carries at a glance. Used app-wide, not just the grid. */
+   * filled bar segment carries at a glance. Used app-wide, not just the grid.
+   * The three interview stages are darkened versions of the Interviews board's
+   * kanban column tints (#F5DFC6 / #E6DEFA / #D2EAD9) — same hue, enough contrast
+   * to survive an 8px bar. `--progress-done` doubles as the reviewed checkmark. */
+  --progress-scheduled: #a66a45;
+  --progress-conducted: #6d4bc4;
   --progress-done: #2f9e63;
-  --progress-pending: #a66a45;
   --progress-track: #cfc9de;
   --check-empty: #9ca3af;
   --label-muted: #4b5563;

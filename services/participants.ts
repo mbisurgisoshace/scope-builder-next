@@ -133,11 +133,28 @@ export async function getAllParticipants() {
   return participants;
 }
 
+// `Participant.status` values that the progress grid counts, mapped to the bucket
+// they land in. Statuses are exclusive — an interview that has been written up is
+// `documented` and no longer `complete` — so the three buckets never double-count,
+// which is what lets the grid draw the remainder as `target - scheduled - conducted
+// - documented`. `need_to_schedule` is deliberately absent: nothing is committed yet.
+const INTERVIEW_COUNT_BUCKETS = {
+  scheduled: "scheduled",
+  complete: "conducted",
+  documented: "documented",
+} as const satisfies Partial<Record<ParticipantStatus, string>>;
+
+// `Object.keys` widens to string[], which Prisma's `status: { in: ... }` rejects.
+const COUNTED_STATUSES = Object.keys(
+  INTERVIEW_COUNT_BUCKETS,
+) as ParticipantStatus[];
+
 // Interview counts for every org at once, for the instructor-side progress grid.
-// The two buckets are exclusive, matching the kanban columns: an interview that has
-// been written up counts as `documented` and no longer as `conducted`.
 export async function getAllInterviewCounts(): Promise<
-  Record<string, { conducted: number; documented: number }>
+  Record<
+    string,
+    { scheduled: number; conducted: number; documented: number }
+  >
 > {
   const { userId } = await auth();
 
@@ -149,21 +166,30 @@ export async function getAllInterviewCounts(): Promise<
     // participants into this same table and would otherwise count as real progress.
     where: {
       example_number: null,
-      status: { in: ["complete", "documented"] },
+      status: { in: COUNTED_STATUSES },
     },
     _count: { _all: true },
   });
 
-  const byOrg: Record<string, { conducted: number; documented: number }> = {};
+  const byOrg: Record<
+    string,
+    { scheduled: number; conducted: number; documented: number }
+  > = {};
 
   for (const row of rows) {
-    const counts = (byOrg[row.org_id] ??= { conducted: 0, documented: 0 });
+    const bucket =
+      INTERVIEW_COUNT_BUCKETS[
+        row.status as keyof typeof INTERVIEW_COUNT_BUCKETS
+      ];
+    if (!bucket) continue;
 
-    if (row.status === "documented") {
-      counts.documented = row._count._all;
-    } else {
-      counts.conducted = row._count._all;
-    }
+    const counts = (byOrg[row.org_id] ??= {
+      scheduled: 0,
+      conducted: 0,
+      documented: 0,
+    });
+
+    counts[bucket] = row._count._all;
   }
 
   return byOrg;

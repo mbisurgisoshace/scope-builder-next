@@ -37,7 +37,11 @@ export default async function TeamsDashboardPage() {
     .map((org) => ({
       orgId: org.id,
       orgName: org.name,
-      interviews: interviewCounts[org.id] ?? { conducted: 0, documented: 0 },
+      interviews: interviewCounts[org.id] ?? {
+        scheduled: 0,
+        conducted: 0,
+        documented: 0,
+      },
       subSteps: subStepProgress[org.id] ?? {},
       milestones: milestoneAccess[org.id] ?? defaultMilestoneAccess(),
     }))

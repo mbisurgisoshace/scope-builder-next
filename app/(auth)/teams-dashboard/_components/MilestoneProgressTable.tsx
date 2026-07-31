@@ -24,7 +24,11 @@ import {
   type MilestoneAccessState,
 } from "@/lib/milestones";
 
+/** The three exclusive interview stages, in kanban order. `need_to_schedule` isn't
+ * here — an unscheduled participant hasn't entered the funnel yet. */
 export interface InterviewCounts {
+  /** Booked but not yet held — Participant.status "scheduled". */
+  scheduled: number;
   /** Conducted but not yet written up — Participant.status "complete". */
   conducted: number;
   /** Participant.status "documented". Never also counted as `conducted`. */
@@ -46,8 +50,8 @@ export interface MilestoneProgressRow {
 const SUB_STEP_WIDTH = 52;
 const MILESTONE_WIDTH = 64;
 const NAME_WIDTH = 220;
-/** Wide enough for "15 / 3 / 4" plus the bar beside it. */
-const INTERVIEWS_WIDTH = 210;
+/** Wide enough for "5 | 3 | 4 (15)" plus the bar beside it. */
+const INTERVIEWS_WIDTH = 230;
 
 /** Interviews each startup is expected to land by the end of the program. The bar
  * is always drawn against this, so a team past it simply fills the track. */
@@ -78,36 +82,49 @@ function ProgressCheck({ done }: { done: boolean }) {
   );
 }
 
-/** Documented fills the track first, then conducted-but-not-documented, then the
- * remainder to the target. Each segment is clamped so a team past 15 can't push the
- * later segments negative. */
-function InterviewProgress({ conducted, documented }: InterviewCounts) {
-  const documentedWidth = Math.min(documented, INTERVIEW_TARGET);
+/** The three stages fill the track in kanban order — scheduled, then conducted, then
+ * documented — and the gray track is whatever is left of the target. Each segment is
+ * clamped against the room its predecessors left, so a team past 15 simply fills the
+ * bar instead of pushing the later segments negative. */
+function InterviewProgress({
+  scheduled,
+  conducted,
+  documented,
+}: InterviewCounts) {
+  const scheduledWidth = Math.min(scheduled, INTERVIEW_TARGET);
   const conductedWidth = Math.min(
     conducted,
-    Math.max(0, INTERVIEW_TARGET - documentedWidth),
+    Math.max(0, INTERVIEW_TARGET - scheduledWidth),
+  );
+  const documentedWidth = Math.min(
+    documented,
+    Math.max(0, INTERVIEW_TARGET - scheduledWidth - conductedWidth),
   );
   const remaining = Math.max(
     0,
-    INTERVIEW_TARGET - documentedWidth - conductedWidth,
+    INTERVIEW_TARGET - scheduledWidth - conductedWidth - documentedWidth,
   );
 
   return (
     <div className="flex flex-row items-center gap-2">
       <span
         className="text-label-muted font-semibold whitespace-nowrap"
-        title={`${documented} documented, ${conducted} conducted, target ${INTERVIEW_TARGET}`}
+        title={`${scheduled} scheduled, ${conducted} conducted, ${documented} documented, target ${INTERVIEW_TARGET}`}
       >
-        {INTERVIEW_TARGET} /{" "}
-        <span className="text-progress-done underline">{documented}</span> /{" "}
-        <span className="text-progress-pending underline">{conducted}</span>
+        <span className="text-progress-scheduled">{scheduled}</span>
+        {" | "}
+        <span className="text-progress-conducted">{conducted}</span>
+        {" | "}
+        <span className="text-progress-done">{documented}</span>{" "}
+        <span className="font-medium">({INTERVIEW_TARGET})</span>
       </span>
       <Progress
         className="w-[55%]"
         total={INTERVIEW_TARGET}
         segments={[
+          { value: scheduledWidth, colorClass: "bg-progress-scheduled" },
+          { value: conductedWidth, colorClass: "bg-progress-conducted" },
           { value: documentedWidth, colorClass: "bg-progress-done" },
-          { value: conductedWidth, colorClass: "bg-progress-pending" },
           { value: remaining, colorClass: "bg-progress-track" },
         ]}
       />
@@ -133,9 +150,12 @@ const columns: ColumnDef<MilestoneProgressRow>[] = [
       <div className="text-label-muted flex flex-col">
         <span>Interviews:</span>
         <span className="whitespace-nowrap">
-          {INTERVIEW_TARGET} /{" "}
-          <span className="text-progress-done">documented</span> /{" "}
-          <span className="text-progress-pending">conducted</span>
+          <span className="text-progress-scheduled">Scheduled</span>
+          {" | "}
+          <span className="text-progress-conducted">Conducted</span>
+          {" | "}
+          <span className="text-progress-done">Documented</span>{" "}
+          <span className="font-medium">({INTERVIEW_TARGET})</span>
         </span>
       </div>
     ),
