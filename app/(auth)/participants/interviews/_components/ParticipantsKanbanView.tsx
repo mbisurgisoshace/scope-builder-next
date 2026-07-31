@@ -55,12 +55,15 @@ const RELATIONSHIP_COLORS: Record<string, string> = {
 
 function ParticipantCard({
   participant,
+  color,
   hideRelationship = false,
   onCardClick,
   onEditClick,
   onReviewClick,
 }: {
   participant: Participant;
+  /** Matches the header of the column the card sits in. */
+  color: string;
   hideRelationship?: boolean;
   onCardClick?: () => void;
   onEditClick?: () => void;
@@ -69,7 +72,8 @@ function ParticipantCard({
   return (
     <div
       onClick={onCardClick}
-      className="bg-white rounded-lg w-full border border-[#C9CAD4] p-3 hover:shadow-md transition-shadow cursor-pointer space-y-2"
+      style={{ backgroundColor: color }}
+      className="rounded-lg w-full border border-[#C9CAD4] p-3 hover:shadow-md transition-shadow cursor-pointer space-y-2"
     >
       {/* Pending review rides alongside the status rather than in it, so it gets a
           badge on the Conducted card instead of a column of its own. */}
@@ -171,6 +175,7 @@ function KanbanBoard({
     <div className="flex flex-row gap-4 overflow-x-auto h-full">
       {columns.map(({ key, label }, index) => {
         const cards = getColumnCards(key);
+        const color = getColumnColor(key);
         const isFirst = index === 0;
         return (
           <div
@@ -178,7 +183,7 @@ function KanbanBoard({
             className="flex flex-col min-w-[300px] bg-[#FFFFFF] rounded-xl border-2 border-[#FFFFFF] overflow-hidden h-full"
           >
             <div
-              style={{ backgroundColor: getColumnColor(key) }}
+              style={{ backgroundColor: color }}
               className="flex items-center justify-between px-3 h-10 border-b border-gray-200"
             >
               <span className="text-xs font-semibold text-[#111827]">
@@ -198,6 +203,7 @@ function KanbanBoard({
                 <ParticipantCard
                   key={participant.id}
                   participant={participant}
+                  color={color}
                   hideRelationship={hideRelationship}
                   onCardClick={() => onCardClick?.(participant)}
                   onEditClick={
