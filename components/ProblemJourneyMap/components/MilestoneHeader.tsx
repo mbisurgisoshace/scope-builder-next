@@ -140,7 +140,7 @@ function SubStepCell({
     >
       {/* Capped narrow so labels wrap onto a second line instead of stretching
           the cell wide on one. */}
-      <span className="h-[30px] block line-clamp-2 max-w-[112px] text-center text-xs font-medium leading-tight text-gray-700 xl:max-w-[132px] xl:text-sm">
+      <span className="h-[35px] block line-clamp-2 max-w-[112px] text-center text-xs font-medium leading-tight text-gray-700 xl:max-w-[132px] xl:text-sm">
         {subStep.label}
       </span>
 

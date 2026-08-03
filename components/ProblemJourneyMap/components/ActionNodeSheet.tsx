@@ -687,6 +687,7 @@ export function ActionNodeSheet({
     toast.success(
       problem?.description?.trim() ? "Problem updated" : "Problem saved",
     );
+    onOpenChange(false);
   }
 
   function handleSaveSolution() {
@@ -704,6 +705,7 @@ export function ActionNodeSheet({
     toast.success(
       solution?.description?.trim() ? "Solution updated" : "Solution saved",
     );
+    onOpenChange(false);
   }
 
   return (
