@@ -40,6 +40,9 @@ export interface JourneyNodeStorage {
     status: "testing" | "validated" | "invalidated";
     content: string;
   }>;
+  /** Logical delete marker (ISO timestamp). Set = the node and the edge that
+   * connects it are hidden everywhere; the data itself is never removed. */
+  deletedAt?: string | null;
 }
 
 export interface JourneyEdgeStorage {

@@ -2,7 +2,7 @@
 
 import { memo, useState, useCallback, useRef } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { PlayIcon, PlusIcon, XIcon } from "lucide-react";
+import { PlayIcon, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 
 import { NodeTypeMenu } from "../components/NodeTypeMenu";
 import {
@@ -117,6 +117,8 @@ function ActionNodeInner({ id, data }: NodeProps) {
     updateNodeData,
     openProblem,
     addEmptyProblem,
+    hasChildren,
+    requestDeleteNode,
   } = useJourneyContext();
   // Until the startup reaches Milestone 2 an Action node is just its text —
   // problems are hidden entirely, including any already saved on the node.
@@ -166,9 +168,21 @@ function ActionNodeInner({ id, data }: NodeProps) {
     [addEmptyProblem, openProblem, id],
   );
 
+  const handleDeleteNode = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      requestDeleteNode(id);
+    },
+    [requestDeleteNode, id],
+  );
+
+  // Deleting a card with children would tear the journey apart, so the control
+  // only exists on a leaf.
+  const canDeleteNode = !readOnly && !hasChildren(id);
+
   return (
     <div
-      className={`nopan nodrag pointer-events-auto w-[370px] bg-white border rounded-xl p-4 relative shadow-sm ${isNodeSelected ? "border-purple-500 " : "border-gray-300"}`}
+      className={`group/card nopan nodrag pointer-events-auto w-[370px] bg-white border rounded-xl p-4 relative shadow-sm ${isNodeSelected ? "border-purple-500 " : "border-gray-300"}`}
     >
       <Handle
         id="left"
@@ -184,6 +198,15 @@ function ActionNodeInner({ id, data }: NodeProps) {
         <span className="text-lg font-semibold text-[#111827] tracking-wide">
           Action
         </span>
+        {canDeleteNode && (
+          <button
+            onClick={handleDeleteNode}
+            title="Delete card"
+            className="nodrag nopan ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity w-6 h-6 rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 hover:bg-red-50"
+          >
+            <Trash2Icon className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       <Textarea

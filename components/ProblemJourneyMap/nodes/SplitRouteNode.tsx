@@ -2,13 +2,14 @@
 
 import { memo, useState, useCallback, useRef } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { GitForkIcon, PlusIcon } from 'lucide-react';
+import { GitForkIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 
 import { NodeTypeMenu } from '../components/NodeTypeMenu';
 import { useJourneyContext, type JourneyNodeType } from '../JourneyContext';
 
 function SplitRouteNodeInner({ id }: NodeProps) {
-  const { readOnly, addChildNode } = useJourneyContext();
+  const { readOnly, addChildNode, hasChildren, requestDeleteNode } =
+    useJourneyContext();
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -30,8 +31,19 @@ function SplitRouteNodeInner({ id }: NodeProps) {
 
   const handleClose = useCallback(() => setAnchorRect(null), []);
 
+  const handleDeleteNode = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      requestDeleteNode(id);
+    },
+    [requestDeleteNode, id]
+  );
+
+  // Branch cards hold everything downstream, so only an empty one can be removed.
+  const canDeleteNode = !readOnly && !hasChildren(id);
+
   return (
-    <div className="nopan nodrag pointer-events-auto w-[180px] bg-[#FFF7ED] border border-orange-300 rounded-xl p-4 relative shadow-sm flex items-center gap-3">
+    <div className="group/card nopan nodrag pointer-events-auto w-[180px] bg-[#FFF7ED] border border-orange-300 rounded-xl p-4 relative shadow-sm flex items-center gap-3">
       <Handle
         id="left"
         type="target"
@@ -55,6 +67,16 @@ function SplitRouteNodeInner({ id }: NodeProps) {
         position={Position.Right}
         className="!opacity-0 !pointer-events-none"
       />
+
+      {canDeleteNode && (
+        <button
+          onClick={handleDeleteNode}
+          title="Delete card"
+          className="nodrag nopan absolute top-1 right-1 opacity-0 group-hover/card:opacity-100 transition-opacity w-6 h-6 rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 hover:bg-red-50"
+        >
+          <Trash2Icon className="w-4 h-4" />
+        </button>
+      )}
 
       {!readOnly && (
         <div className="nopan nodrag absolute right-0 top-1/2 -translate-y-1/2 translate-x-full pl-1">

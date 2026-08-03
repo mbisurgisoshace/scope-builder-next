@@ -83,6 +83,7 @@ export function useJourneyDataBridge() {
     addJourneyEdge,
     updateJourneyEdge,
     updateJourneyNode,
+    softDeleteJourneyNode,
     addProblem: lbAddProblem,
     updateProblem: lbUpdateProblem,
     removeProblem: lbRemoveProblem,
@@ -92,6 +93,19 @@ export function useJourneyDataBridge() {
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+
+  // Logically deleted nodes stay in storage; everything downstream reads these
+  // filtered views instead. An edge is dropped when either endpoint is gone,
+  // which is why a delete never has to touch the edge list itself.
+  const visibleNodes = useMemo(
+    () => (lbNodes ?? []).filter((n) => !n.deletedAt),
+    [lbNodes]
+  );
+
+  const visibleEdges = useMemo(() => {
+    const live = new Set(visibleNodes.map((n) => n.id));
+    return (lbEdges ?? []).filter((e) => live.has(e.source) && live.has(e.target));
+  }, [lbEdges, visibleNodes]);
 
   const initializedRef = useRef(false);
 
@@ -108,9 +122,12 @@ export function useJourneyDataBridge() {
     if (!initializedRef.current) {
       initializedRef.current = true;
 
+      // Seeding is decided on the raw list, not the visible one: a room whose
+      // nodes were all deleted must stay empty rather than push a second
+      // 'initial-trigger' that would collide with the deleted one by id.
       if (lbNodes.length > 0) {
-        setNodes(lbNodes.map(lbNodeToRFNode));
-        setEdges(lbEdges.map(lbEdgeToRFEdge));
+        setNodes(visibleNodes.map(lbNodeToRFNode));
+        setEdges(visibleEdges.map(lbEdgeToRFEdge));
       } else {
         setNodes([INITIAL_TRIGGER_NODE]);
         addJourneyNode(buildNodeStorage(INITIAL_TRIGGER_ID, 'trigger'));
@@ -120,9 +137,9 @@ export function useJourneyDataBridge() {
 
     setNodes((currentNodes) => {
       const currentIds = new Set(currentNodes.map((n) => n.id));
-      const lbIds = new Set(lbNodes.map((lb) => lb.id));
+      const lbIds = new Set(visibleNodes.map((lb) => lb.id));
 
-      const remoteAdditions = lbNodes
+      const remoteAdditions = visibleNodes
         .filter((lb) => !currentIds.has(lb.id))
         .map(lbNodeToRFNode);
 
@@ -131,7 +148,7 @@ export function useJourneyDataBridge() {
       );
 
       if (remoteAdditions.length === 0 && removedIds.size === 0) {
-        const hasDataChange = lbNodes.some((lb) => {
+        const hasDataChange = visibleNodes.some((lb) => {
           const rf = currentNodes.find((n) => n.id === lb.id);
           if (!rf) return false;
           const data = rf.data as unknown as JourneyNodeData;
@@ -140,7 +157,7 @@ export function useJourneyDataBridge() {
         if (!hasDataChange) return currentNodes;
 
         return currentNodes.map((n) => {
-          const lb = lbNodes.find((lb) => lb.id === n.id);
+          const lb = visibleNodes.find((lb) => lb.id === n.id);
           if (!lb) return n;
           const data = n.data as unknown as JourneyNodeData;
           if (data.content === lb.content && sameIds(data.stakeholderIds, lb.stakeholderIds)) return n;
@@ -155,9 +172,9 @@ export function useJourneyDataBridge() {
 
     setEdges((currentEdges) => {
       const currentIds = new Set(currentEdges.map((e) => e.id));
-      const lbIds = new Set(lbEdges.map((e) => e.id));
+      const lbIds = new Set(visibleEdges.map((e) => e.id));
 
-      const remoteAdditions = lbEdges
+      const remoteAdditions = visibleEdges
         .filter((lb) => !currentIds.has(lb.id))
         .map(lbEdgeToRFEdge);
 
@@ -169,7 +186,7 @@ export function useJourneyDataBridge() {
         // No structural change, so the only thing that can differ is the branch
         // label. Return the same array reference when nothing changed — that
         // identity is what keeps the canvas from blinking on every sync tick.
-        const hasDataChange = lbEdges.some((lb) => {
+        const hasDataChange = visibleEdges.some((lb) => {
           const rf = currentEdges.find((e) => e.id === lb.id);
           if (!rf) return false;
           return labelOf(rf) !== (lb.label ?? '');
@@ -177,7 +194,7 @@ export function useJourneyDataBridge() {
         if (!hasDataChange) return currentEdges;
 
         return currentEdges.map((e) => {
-          const lb = lbEdges.find((lb) => lb.id === e.id);
+          const lb = visibleEdges.find((lb) => lb.id === e.id);
           if (!lb || labelOf(e) === (lb.label ?? '')) return e;
           return { ...e, data: { ...e.data, label: lb.label } as unknown as Record<string, unknown> };
         });
@@ -188,7 +205,7 @@ export function useJourneyDataBridge() {
       return result;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lbNodes, lbEdges]);
+  }, [visibleNodes, visibleEdges]);
 
   const addTriggerNode = useCallback(() => {
     const newId = crypto.randomUUID();
@@ -254,6 +271,32 @@ export function useJourneyDataBridge() {
       addJourneyEdge({ id: connId, source: parentId, target: newId, sourceHandle: 'right', targetHandle: 'left' });
     },
     [setNodes, setEdges, addJourneyNode, addJourneyEdge]
+  );
+
+  // Ids that are somebody's parent. Only a childless node can be deleted, so
+  // this is what the delete affordance on each card is gated on.
+  const parentIds = useMemo(
+    () => new Set(visibleEdges.map((e) => e.source)),
+    [visibleEdges]
+  );
+
+  const hasChildren = useCallback(
+    (nodeId: string) => parentIds.has(nodeId),
+    [parentIds]
+  );
+
+  // Logical delete. Drops the node locally right away — along with the edge that
+  // hung it off its parent — then marks it deleted in storage; collaborators pick
+  // the removal up through the same diff sync as any other remote change.
+  const deleteNode = useCallback(
+    (nodeId: string) => {
+      setNodes((current) => current.filter((n) => n.id !== nodeId));
+      setEdges((current) =>
+        current.filter((e) => e.source !== nodeId && e.target !== nodeId)
+      );
+      softDeleteJourneyNode(nodeId);
+    },
+    [setNodes, setEdges, softDeleteJourneyNode]
   );
 
   const updateNodeData = useCallback(
@@ -368,7 +411,7 @@ export function useJourneyDataBridge() {
 
   const nodeProblems = useMemo(() => {
     const map = new Map<string, Problem[]>();
-    for (const lb of lbNodes ?? []) {
+    for (const lb of visibleNodes) {
       map.set(
         lb.id,
         (lb.problems ?? []).map((p) => ({
@@ -387,11 +430,11 @@ export function useJourneyDataBridge() {
       );
     }
     return map;
-  }, [lbNodes]);
+  }, [visibleNodes]);
 
   const nodeSolutions = useMemo(() => {
     const map = new Map<string, Solution[]>();
-    for (const lb of lbNodes ?? []) {
+    for (const lb of visibleNodes) {
       map.set(
         lb.id,
         (lb.solutions ?? []).map((s) => ({
@@ -410,7 +453,7 @@ export function useJourneyDataBridge() {
       );
     }
     return map;
-  }, [lbNodes]);
+  }, [visibleNodes]);
 
   // Find a problem's solution. Falls back to a legacy node-scoped solution (no
   // problemId) when the requested problem is the node's first — those were
@@ -431,11 +474,11 @@ export function useJourneyDataBridge() {
 
   const nodeConclusions = useMemo(() => {
     const map = new Map<string, NodeConclusion[]>();
-    for (const lb of lbNodes ?? []) {
+    for (const lb of visibleNodes) {
       map.set(lb.id, lb.conclusions ?? []);
     }
     return map;
-  }, [lbNodes]);
+  }, [visibleNodes]);
 
   const upsertConclusion = useCallback(
     (nodeId: string, id: string, status: ConclusionStatus, content: string) => {
@@ -453,6 +496,8 @@ export function useJourneyDataBridge() {
     onEdgesChange,
     addTriggerNode,
     addChildNode,
+    hasChildren,
+    deleteNode,
     updateNodeData,
     updateEdgeLabel,
     saveProblem,

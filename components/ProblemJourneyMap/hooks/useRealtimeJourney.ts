@@ -44,6 +44,15 @@ export function useRealtimeJourney() {
     []
   );
 
+  // Logical delete: the node keeps all of its data and stays in storage, it just
+  // stops being read. Only childless nodes reach here, so the edge that pointed
+  // at it is left alone — readers drop any edge whose endpoint is deleted.
+  const softDeleteJourneyNode = useMutation(({ storage }, id: string) => {
+    const nodes = (storage.get('journeyNodes') as any).toArray() as Array<any>;
+    const node = nodes.find((n: any) => n.get('id') === id);
+    if (node) node.update({ deletedAt: new Date().toISOString() });
+  }, []);
+
   const addProblem = useMutation(
     (
       { storage },
@@ -168,6 +177,7 @@ export function useRealtimeJourney() {
     addJourneyEdge,
     updateJourneyEdge,
     updateJourneyNode,
+    softDeleteJourneyNode,
     addProblem,
     updateProblem,
     removeProblem,

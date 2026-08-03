@@ -73,6 +73,9 @@ type StoredNode = {
   id?: string;
   type?: string;
   problems?: StoredProblem[];
+  /** Logical delete marker written by the canvas. Set = the node is gone as far
+   * as every reader is concerned, even though its data is still in storage. */
+  deletedAt?: string | null;
 };
 
 type StoredEdge = { source?: string; target?: string };
@@ -162,8 +165,11 @@ async function loadProblemBlocksFrom(
     ]),
   );
 
+  // Logically deleted cards drop out here, which covers prep and both answering
+  // flows at once. Their `problem_interview_questions` rows are left in place —
+  // nothing is physically removed — they simply stop being surfaced.
   const actionNodes = orderActionNodes(
-    storage.journeyNodes ?? [],
+    (storage.journeyNodes ?? []).filter((n) => !n.deletedAt),
     storage.journeyEdges ?? [],
   );
 

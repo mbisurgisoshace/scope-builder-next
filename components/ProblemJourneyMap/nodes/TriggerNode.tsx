@@ -2,7 +2,7 @@
 
 import { memo, useState, useCallback, useRef } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { ZapIcon, PlusIcon } from "lucide-react";
+import { ZapIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import { NodeTypeMenu } from "../components/NodeTypeMenu";
 import { StakeholderPickerModal } from "../components/StakeholderPickerModal";
@@ -40,8 +40,14 @@ function groupSelected(
 
 function TriggerNodeInner({ id, data }: NodeProps) {
   const nodeData = data as unknown as JourneyNodeData;
-  const { readOnly, addChildNode, updateNodeData, stakeholderRows } =
-    useJourneyContext();
+  const {
+    readOnly,
+    addChildNode,
+    updateNodeData,
+    stakeholderRows,
+    hasChildren,
+    requestDeleteNode,
+  } = useJourneyContext();
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [showPicker, setShowPicker] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -67,8 +73,19 @@ function TriggerNodeInner({ id, data }: NodeProps) {
 
   const handleClose = useCallback(() => setAnchorRect(null), []);
 
+  const handleDeleteNode = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      requestDeleteNode(id);
+    },
+    [requestDeleteNode, id],
+  );
+
+  // Only a leaf can go: deleting a card mid-journey would orphan its branch.
+  const canDeleteNode = !readOnly && !hasChildren(id);
+
   return (
-    <div className="nopan nodrag pointer-events-auto bg-white border border-white rounded-xl p-4 relative shadow-sm">
+    <div className="group/card nopan nodrag pointer-events-auto bg-white border border-white rounded-xl p-4 relative shadow-sm">
       <Handle
         id="left"
         type="target"
@@ -102,6 +119,15 @@ function TriggerNodeInner({ id, data }: NodeProps) {
               onSave={(ids) => updateNodeData(id, { stakeholderIds: ids })}
             />
           </>
+        )}
+        {canDeleteNode && (
+          <button
+            onClick={handleDeleteNode}
+            title="Delete card"
+            className="nodrag nopan ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity w-6 h-6 rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 hover:bg-red-50"
+          >
+            <Trash2Icon className="w-4 h-4" />
+          </button>
         )}
       </div>
 

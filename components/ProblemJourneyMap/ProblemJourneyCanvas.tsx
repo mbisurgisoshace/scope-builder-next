@@ -16,7 +16,7 @@ import { journeyNodeTypes } from "./nodes/nodeTypes";
 import { journeyEdgeTypes } from "./edges/edgeTypes";
 import { useJourneyDataBridge } from "./hooks/useJourneyDataBridge";
 import { useLayout } from "./hooks/useLayout";
-import { JourneyContext } from "./JourneyContext";
+import { JourneyContext, type JourneyNodeData } from "./JourneyContext";
 import {
   SelectedNodeContext,
   type SelectedProblem,
@@ -28,6 +28,7 @@ import {
   ActionNodeSheet,
   type ActionSheetTab,
 } from "./components/ActionNodeSheet";
+import { DeleteNodeDialog } from "./components/DeleteNodeDialog";
 import type { StakeholderRow } from "@/services/market";
 import {
   EVIDENCE_SUB_STEP,
@@ -64,6 +65,8 @@ function CanvasInner({
     onEdgesChange,
     addTriggerNode,
     addChildNode,
+    hasChildren,
+    deleteNode,
     updateNodeData,
     updateEdgeLabel,
     saveProblem,
@@ -125,6 +128,33 @@ function CanvasInner({
     setSelectedProblem(null);
   }, []);
 
+  // Id of the card whose delete was requested — the confirmation dialog is open
+  // while this is set. Nothing is written until the user confirms.
+  const [nodePendingDelete, setNodePendingDelete] = useState<string | null>(
+    null,
+  );
+
+  const requestDeleteNode = useCallback((nodeId: string) => {
+    setNodePendingDelete(nodeId);
+  }, []);
+
+  const confirmDeleteNode = useCallback(() => {
+    if (!nodePendingDelete) return;
+    deleteNode(nodePendingDelete);
+    // The sheet outlives the card it was opened from, so close it when its node
+    // is the one going away.
+    setSelectedProblem((current) =>
+      current?.nodeId === nodePendingDelete ? null : current,
+    );
+    setNodePendingDelete(null);
+  }, [nodePendingDelete, deleteNode]);
+
+  const pendingNodeData = nodePendingDelete
+    ? ((nodes.find((n) => n.id === nodePendingDelete)?.data ?? null) as
+        | JourneyNodeData
+        | null)
+    : null;
+
   const selectedProblemData = selectedProblem
     ? (nodeProblems
         .get(selectedProblem.nodeId)
@@ -149,6 +179,8 @@ function CanvasInner({
                 // were somehow reachable.
                 addTriggerNode: readOnly ? noop : addTriggerNode,
                 addChildNode: readOnly ? noop : addChildNode,
+                hasChildren,
+                requestDeleteNode: readOnly ? noop : requestDeleteNode,
                 updateNodeData: readOnly ? noop : updateNodeData,
                 updateEdgeLabel: readOnly ? noop : updateEdgeLabel,
                 stakeholderRows,
@@ -236,6 +268,22 @@ function CanvasInner({
                       questions,
                     );
                 }}
+              />
+
+              <DeleteNodeDialog
+                open={nodePendingDelete !== null}
+                onOpenChange={(open) => {
+                  if (!open) setNodePendingDelete(null);
+                }}
+                nodeType={pendingNodeData?.type ?? null}
+                nodeContent={pendingNodeData?.content ?? ""}
+                problems={
+                  nodePendingDelete
+                    ? (nodeProblems.get(nodePendingDelete) ?? [])
+                    : []
+                }
+                showProblems={problemsUnlocked}
+                onConfirm={confirmDeleteNode}
               />
             </JourneyContext.Provider>
           </SelectedNodeContext.Provider>

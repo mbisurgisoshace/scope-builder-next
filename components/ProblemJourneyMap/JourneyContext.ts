@@ -34,6 +34,12 @@ interface JourneyContextValue {
   isMilestoneUnlocked: (milestone: number) => boolean;
   addTriggerNode: () => void;
   addChildNode: (parentId: string, type: JourneyNodeType) => void;
+  /** Whether a node has at least one child. Only a childless node can be
+   * deleted — removing one in the middle would tear the journey apart. */
+  hasChildren: (nodeId: string) => boolean;
+  /** Ask to delete a card: opens the confirmation dialog, which lists what would
+   * be lost. It does not delete anything on its own. */
+  requestDeleteNode: (nodeId: string) => void;
   updateNodeData: (id: string, patch: Partial<Omit<JourneyNodeData, 'id' | 'type'>>) => void;
   /** Rename a branch connection. An empty string clears it back to "Option n". */
   updateEdgeLabel: (edgeId: string, label: string) => void;
