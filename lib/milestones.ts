@@ -62,6 +62,21 @@ export type MilestoneAccessState = {
   reviewedAt: Date | null;
 };
 
+/** What an instructor typed and ticked in the review dialog on /startups. */
+export type MilestoneReviewInput = {
+  notes?: string;
+  /** Also make milestone + 1 available. Ignored on the last milestone. */
+  unlockNext?: boolean;
+};
+
+/** Outcome of `reviewMilestone`, so the table can reconcile its optimistic row. */
+export type MilestoneReviewResult = {
+  reviewedAt: Date;
+  notes: string | null;
+  /** Milestone number this review made available, or null if none. */
+  unlockedMilestone: number | null;
+};
+
 /** Access for a startup with no rows yet: milestone 1 on, the rest off. */
 export function defaultMilestoneAccess(): MilestoneAccessState[] {
   return MILESTONE_NUMBERS.map((milestone) => ({

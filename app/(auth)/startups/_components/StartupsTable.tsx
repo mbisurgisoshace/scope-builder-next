@@ -26,6 +26,7 @@ import {
   MILESTONE_NUMBERS,
   defaultMilestoneAccess,
   type MilestoneAccessState,
+  type MilestoneReviewInput,
 } from "@/lib/milestones";
 
 export default function StartupsTable({
@@ -41,7 +42,11 @@ export default function StartupsTable({
     milestone: number,
     available: boolean,
   ) => void;
-  onReviewMilestone: (orgId: string, milestone: number) => void;
+  onReviewMilestone: (
+    orgId: string,
+    milestone: number,
+    values: MilestoneReviewInput,
+  ) => void;
 }) {
   const columns = useMemo(
     () => getColumns(onToggleMilestone, onReviewMilestone),
@@ -148,7 +153,11 @@ const getColumns = (
     milestone: number,
     available: boolean,
   ) => void,
-  onReviewMilestone: (orgId: string, milestone: number) => void,
+  onReviewMilestone: (
+    orgId: string,
+    milestone: number,
+    values: MilestoneReviewInput,
+  ) => void,
 ): ColumnDef<any>[] => [
   {
     accessorKey: "name",
@@ -216,13 +225,16 @@ const getColumns = (
       return (
         <MilestoneAccessCell
           milestone={milestone}
+          startupName={row.original.name}
           available={state?.available ?? false}
           submittedAt={state?.submittedAt ?? null}
           reviewedAt={state?.reviewedAt ?? null}
           onToggle={(available) =>
             onToggleMilestone(row.original.org_id, milestone, available)
           }
-          onReview={() => onReviewMilestone(row.original.org_id, milestone)}
+          onReview={(values) =>
+            onReviewMilestone(row.original.org_id, milestone, values)
+          }
         />
       );
     },

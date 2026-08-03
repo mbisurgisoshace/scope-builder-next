@@ -5,8 +5,10 @@ import { useOrganizationList } from "@clerk/nextjs";
 
 import StartupsTable from "./StartupsTable";
 import {
+  MILESTONE_COUNT,
   defaultMilestoneAccess,
   type MilestoneAccessState,
+  type MilestoneReviewInput,
 } from "@/lib/milestones";
 import {
   getAllMilestoneAccess,
@@ -14,14 +16,23 @@ import {
   setMilestoneAvailability,
 } from "@/services/milestoneAccess";
 
-function withReviewedAt(
+/**
+ * The row as it looks after a review: the milestone stamped reviewed, and — when
+ * the instructor left "Unlock next milestone" ticked — the following one switched
+ * on. `unlockedMilestone` is null when nothing was unlocked.
+ */
+function withReview(
   access: MilestoneAccessState[],
   milestone: number,
   reviewedAt: Date,
+  unlockedMilestone: number | null,
 ): MilestoneAccessState[] {
-  return access.map((entry) =>
-    entry.milestone === milestone ? { ...entry, reviewedAt } : entry,
-  );
+  return access.map((entry) => {
+    if (entry.milestone === milestone) return { ...entry, reviewedAt };
+    if (entry.milestone === unlockedMilestone)
+      return { ...entry, available: true };
+    return entry;
+  });
 }
 
 export default function Startups() {
@@ -133,35 +144,46 @@ export default function Startups() {
 
   // Signing off is one-way, so there is no un-review path to model here — the icon
   // stops being clickable the moment this lands. The server returns the real
-  // timestamp (an existing one if it was already reviewed); we take it over the
-  // optimistic `new Date()` so the row agrees with the database.
-  const onReviewMilestone = useCallback((orgId: string, milestone: number) => {
-    let previous: MilestoneAccessState[] | undefined;
+  // timestamp (an existing one if it was already reviewed) and which milestone it
+  // actually unlocked; we take both over the optimistic guess so the row agrees
+  // with the database. A rejection rolls the whole thing back, unlock included.
+  const onReviewMilestone = useCallback(
+    (orgId: string, milestone: number, values: MilestoneReviewInput) => {
+      let previous: MilestoneAccessState[] | undefined;
 
-    setAccessByOrg((current) => {
-      const access = current[orgId] ?? defaultMilestoneAccess();
-      previous = access;
+      const optimisticUnlock =
+        values.unlockNext && milestone < MILESTONE_COUNT ? milestone + 1 : null;
 
-      return { ...current, [orgId]: withReviewedAt(access, milestone, new Date()) };
-    });
+      setAccessByOrg((current) => {
+        const access = current[orgId] ?? defaultMilestoneAccess();
+        previous = access;
 
-    reviewMilestone(orgId, milestone)
-      .then((reviewedAt) =>
-        setAccessByOrg((current) => ({
+        return {
           ...current,
-          [orgId]: withReviewedAt(
-            current[orgId] ?? defaultMilestoneAccess(),
-            milestone,
-            reviewedAt,
-          ),
-        })),
-      )
-      .catch(() => {
-        setAccessByOrg((current) =>
-          previous ? { ...current, [orgId]: previous } : current,
-        );
+          [orgId]: withReview(access, milestone, new Date(), optimisticUnlock),
+        };
       });
-  }, []);
+
+      reviewMilestone(orgId, milestone, values)
+        .then((result) =>
+          setAccessByOrg((current) => ({
+            ...current,
+            [orgId]: withReview(
+              current[orgId] ?? defaultMilestoneAccess(),
+              milestone,
+              result.reviewedAt,
+              result.unlockedMilestone,
+            ),
+          })),
+        )
+        .catch(() => {
+          setAccessByOrg((current) =>
+            previous ? { ...current, [orgId]: previous } : current,
+          );
+        });
+    },
+    [],
+  );
 
   return (
     <StartupsTable

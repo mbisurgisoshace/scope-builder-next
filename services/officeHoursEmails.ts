@@ -17,6 +17,11 @@ import {
   type OfficeHourEmailParams,
   type RenderedEmail,
 } from "@/lib/emails/officeHourBookingEmail";
+import {
+  dedupeRecipients,
+  getStartupContext,
+  EMPTY_STARTUP,
+} from "@/lib/startupRecipients";
 
 /**
  * Everything the emails need, captured up front. `cancelBooking` hard-deletes the
@@ -35,12 +40,6 @@ export interface BookingEmailSnapshot {
   startTime: string;
   endTime: string;
 }
-
-/**
- * Clerk org membership roles that count as "the startup team" for invites.
- * Mirrors how the Startups page counts founders (Startups.tsx).
- */
-const STARTUP_MEMBER_ROLES = new Set(["org:founder", "org:member"]);
 
 /** Loads the snapshot for a booking, or null if it no longer exists. */
 export async function getBookingEmailSnapshot(
@@ -85,72 +84,6 @@ async function getMentorEmail(mentorUserId: string): Promise<string | null> {
     );
     return null;
   }
-}
-
-interface StartupContext {
-  name: string | null;
-  /** The whole team, so the session lands on everyone's calendar. */
-  recipients: MailjetRecipient[];
-}
-
-const EMPTY_STARTUP: StartupContext = { name: null, recipients: [] };
-
-async function getStartupContext(orgId: string): Promise<StartupContext> {
-  try {
-    const client = await clerkClient();
-    const [organization, memberships] = await Promise.all([
-      client.organizations.getOrganization({ organizationId: orgId }),
-      client.organizations.getOrganizationMembershipList({
-        organizationId: orgId,
-        limit: 100,
-      }),
-    ]);
-
-    const userIds = memberships.data
-      .filter((m) => STARTUP_MEMBER_ROLES.has(m.role))
-      .map((m) => m.publicUserData?.userId)
-      .filter((id): id is string => !!id);
-
-    if (userIds.length === 0) {
-      return { name: organization.name ?? null, recipients: [] };
-    }
-
-    // publicUserData.identifier isn't guaranteed to be an email, so resolve the
-    // real addresses.
-    const users = await client.users.getUserList({
-      userId: userIds,
-      limit: userIds.length,
-    });
-
-    const recipients = users.data.flatMap<MailjetRecipient>((user) => {
-      const email =
-        user.primaryEmailAddress?.emailAddress ??
-        user.emailAddresses?.[0]?.emailAddress;
-      if (!email) return [];
-      const name =
-        [user.firstName, user.lastName].filter(Boolean).join(" ") || undefined;
-      return [{ Email: email, Name: name }];
-    });
-
-    return { name: organization.name ?? null, recipients };
-  } catch (err) {
-    console.error(
-      `[office-hours-email] could not resolve startup ${orgId}`,
-      err
-    );
-    return EMPTY_STARTUP;
-  }
-}
-
-/** First occurrence wins, so the attendee keeps their own display name. */
-function dedupeRecipients(recipients: MailjetRecipient[]): MailjetRecipient[] {
-  const seen = new Set<string>();
-  return recipients.filter((r) => {
-    const key = r.Email.trim().toLowerCase();
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
 }
 
 async function deliver(options: {

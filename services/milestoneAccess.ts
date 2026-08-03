@@ -1,16 +1,20 @@
 "use server";
 
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import { checkRole } from "@/lib/auth";
+import { sendMilestoneReviewedEmail } from "@/services/milestoneEmails";
 import {
   MILESTONE_COUNT,
   MILESTONE_NUMBERS,
   ALWAYS_AVAILABLE_MILESTONE,
   type MilestoneAccessState,
+  type MilestoneReviewInput,
+  type MilestoneReviewResult,
 } from "@/lib/milestones";
 
 /**
@@ -204,16 +208,20 @@ export async function submitMilestone(milestone: number): Promise<Date> {
 
 /**
  * The instructor-side counterpart to `submitMilestone`: signs a startup's milestone
- * off. Cross-org like `setMilestoneAvailability`, so it takes an explicit `orgId`
- * rather than reading the caller's active org.
+ * off, records what the instructor wrote in the review dialog, optionally opens the
+ * next milestone, and mails the startup's team. Cross-org like
+ * `setMilestoneAvailability`, so it takes an explicit `orgId` rather than reading
+ * the caller's active org.
  *
- * One-way, same as submitting — an existing `reviewed_at` is returned untouched
- * instead of being bumped to now.
+ * One-way, same as submitting — an existing `reviewed_at` short-circuits the whole
+ * thing: no notes overwritten, no second unlock, no duplicate email. The green icon
+ * on /startups is inert, so in practice this only catches a double submit.
  */
 export async function reviewMilestone(
   orgId: string,
   milestone: number,
-): Promise<Date> {
+  input: MilestoneReviewInput = {},
+): Promise<MilestoneReviewResult> {
   const { userId } = await auth();
 
   if (!userId) redirect("/sign-in");
@@ -230,12 +238,22 @@ export async function reviewMilestone(
 
   const existing = await prisma.milestoneAccess.findUnique({
     where: { org_id_milestone: { org_id: orgId, milestone } },
-    select: { reviewed_at: true },
+    select: { reviewed_at: true, review_notes: true },
   });
 
-  if (existing?.reviewed_at) return existing.reviewed_at;
+  if (existing?.reviewed_at) {
+    return {
+      reviewedAt: existing.reviewed_at,
+      notes: existing.review_notes,
+      unlockedMilestone: null,
+    };
+  }
 
   const reviewedAt = new Date();
+  const notes = input.notes?.trim() || null;
+  // Milestone 5 has no successor to open.
+  const unlockedMilestone =
+    input.unlockNext && milestone < MILESTONE_COUNT ? milestone + 1 : null;
 
   await prisma.milestoneAccess.upsert({
     where: { org_id_milestone: { org_id: orgId, milestone } },
@@ -246,14 +264,31 @@ export async function reviewMilestone(
       milestone,
       available: milestone === ALWAYS_AVAILABLE_MILESTONE,
       reviewed_at: reviewedAt,
+      review_notes: notes,
     },
-    update: { reviewed_at: reviewedAt },
+    update: { reviewed_at: reviewedAt, review_notes: notes },
   });
+
+  if (unlockedMilestone) {
+    // Inlined rather than calling setMilestoneAvailability, which would re-run the
+    // auth check and revalidate a second time. Idempotent: already-available stays
+    // available, and the email still announces it.
+    await prisma.milestoneAccess.upsert({
+      where: {
+        org_id_milestone: { org_id: orgId, milestone: unlockedMilestone },
+      },
+      create: { org_id: orgId, milestone: unlockedMilestone, available: true },
+      update: { available: true },
+    });
+  }
 
   revalidatePath("/startups");
   revalidatePath("/teams-dashboard");
 
-  return reviewedAt;
+  // Deferred so the Mailjet round trip never delays or fails the review.
+  after(() => sendMilestoneReviewedEmail(orgId, milestone, unlockedMilestone));
+
+  return { reviewedAt, notes, unlockedMilestone };
 }
 
 export async function setMilestoneAvailability(

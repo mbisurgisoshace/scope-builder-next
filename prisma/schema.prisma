@@ -326,6 +326,7 @@ model MilestoneAccess {
   available    Boolean   @default(false)
   submitted_at DateTime? // NULL = not submitted yet
   reviewed_at  DateTime? // NULL = no instructor sign-off yet. One-way, never cleared.
+  review_notes String? // What the instructor wrote when signing off. NULL = none given.
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
