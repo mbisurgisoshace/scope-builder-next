@@ -7,7 +7,10 @@ import {
   getInterviewMilestonesWithProgress,
 } from "@/services/participants";
 import { getJobTitles } from "@/services/jobTitles";
-import { getReviewedMilestones } from "@/services/milestoneAccess";
+import {
+  getAvailableMilestones,
+  getReviewedMilestones,
+} from "@/services/milestoneAccess";
 import { checkRole } from "@/lib/auth";
 import { MIN_PAYER_INTERVIEWS } from "@/lib/milestones";
 
@@ -19,6 +22,7 @@ export default async function ParticipantsInterviewPage() {
     isAdmin,
     isMentor,
     reviewedMilestones,
+    availableMilestones,
   ] = await Promise.all([
     getParticipantTags(),
     getJobTitles(),
@@ -26,6 +30,7 @@ export default async function ParticipantsInterviewPage() {
     checkRole("admin"),
     checkRole("mentor"),
     getReviewedMilestones(),
+    getAvailableMilestones(),
   ]);
 
   return (
@@ -41,6 +46,7 @@ export default async function ParticipantsInterviewPage() {
             payerInterviews={MIN_PAYER_INTERVIEWS}
             currentNumber={payerDocumentedCount}
             reviewedMilestones={reviewedMilestones}
+            availableMilestones={availableMilestones}
           />
           <div className="flex-1 min-h-0 px-8 py-4">
             <ParticipantsKanbanView

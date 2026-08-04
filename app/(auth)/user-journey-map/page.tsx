@@ -48,6 +48,7 @@ export default async function ProblemJourneyMapPage() {
             payerInterviews={MIN_PAYER_INTERVIEWS}
             currentNumber={payerDocumentedCount}
             reviewedMilestones={reviewedMilestones}
+            availableMilestones={availableMilestones}
           />
           <JourneyMapTabs
             canvas={

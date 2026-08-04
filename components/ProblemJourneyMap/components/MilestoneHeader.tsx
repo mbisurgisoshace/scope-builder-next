@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Lock } from "lucide-react";
 
 import { MILESTONE_LABELS, SUB_STEPS } from "@/lib/milestones";
 import { useMilestoneSelection } from "../MilestoneSelectionContext";
@@ -29,6 +29,10 @@ interface MilestoneHeaderProps {
   /** Milestone numbers (1-based) an instructor has signed off — these paint
    *  green instead of indigo when selected. */
   reviewedMilestones?: number[];
+  /** Milestone numbers (1-based) the startup has unlocked. The rest get a lock
+   *  icon beside their name — a hint only, the blocks stay clickable. Omit to
+   *  show no locks at all (the /examples mirrors, which gate nothing). */
+  availableMilestones?: number[];
 }
 
 // Number of progress segments rendered under each sub-step.
@@ -167,10 +171,15 @@ export function MilestoneHeader({
   payerInterviews = 8,
   currentNumber = 4,
   reviewedMilestones,
+  availableMilestones,
 }: MilestoneHeaderProps) {
   const reviewed = useMemo(
     () => new Set(reviewedMilestones ?? []),
     [reviewedMilestones],
+  );
+  const available = useMemo(
+    () => (availableMilestones ? new Set(availableMilestones) : null),
+    [availableMilestones],
   );
   // Selected milestone is shared via context so the tab content (Get Started)
   // can react to it. `expandedIndex` here mirrors the selected milestone.
@@ -275,12 +284,19 @@ export function MilestoneHeader({
         ref={scrollRef}
         className="no-scrollbar min-w-0 flex-1 overflow-x-auto"
       >
-        <div className="flex w-full min-w-max items-stretch [--ms-basis:90px] lg:[--ms-basis:110px] xl:[--ms-basis:130px]">
+        {/* Collapsed width. Sized so the longest two-word tail ("Present
+            Findings") still fits on one line — i.e. every label wraps to at most
+            two lines — after the horizontal padding and the neighbouring
+            chevron's overlap are taken out. */}
+        <div className="flex w-full min-w-max items-stretch [--ms-basis:125px] lg:[--ms-basis:142px] xl:[--ms-basis:165px]">
           {milestones.map((milestone, index) => {
             const isExpanded = index === expandedIndex;
             // Sign-off recolours the selected block; a collapsed block stays gray
             // either way, so this only matters while expanded.
             const isReviewed = reviewed.has(index + 1);
+            // Not yet unlocked for this startup. Purely a visual hint — the block
+            // still selects, so the milestone can be previewed.
+            const isLocked = available ? !available.has(index + 1) : false;
             const accent = isReviewed ? GREEN_SOLID : INDIGO;
             const accentLabel = isReviewed ? GREEN_SOLID_LABEL : INDIGO_LABEL;
             // Content-sized while expanded (and while collapsing) so the sub-steps
@@ -330,13 +346,25 @@ export function MilestoneHeader({
                       : "px-1.5 lg:px-2 xl:px-2.5"
                   }`}
                 >
-                  <motion.span
+                  {/* The lock sits on the "#N" line rather than beside the title:
+                      that row has spare width, while the title already wraps to
+                      two lines at these block widths. Color lives on the row so
+                      the icon inherits it through currentColor. */}
+                  <motion.div
                     transition={transition}
                     animate={{ color: isExpanded ? "#ffffff" : GRAY_LABEL }}
-                    className="text-sm font-bold leading-none xl:text-base"
+                    className="flex items-center justify-center gap-1"
                   >
-                    #{index + 1}
-                  </motion.span>
+                    <span className="text-sm font-bold leading-none xl:text-base">
+                      #{index + 1}
+                    </span>
+                    {isLocked && (
+                      <Lock
+                        aria-label="Not activated yet"
+                        className="size-3 shrink-0 xl:size-3.5"
+                      />
+                    )}
+                  </motion.div>
                   <motion.span
                     transition={transition}
                     animate={{ color: isExpanded ? accentLabel : GRAY_TEXT }}
