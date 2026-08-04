@@ -34,7 +34,11 @@ interface GetStartedCardProps {
   onToggleItem: (itemId: number, next: boolean) => void;
   /** When this startup submitted the milestone; null while unsubmitted. */
   milestoneSubmittedAt?: Date | null;
-  /** Submits the milestone for review — only the `steps` card calls this. */
+  /**
+   * Submits the milestone for review — only the `steps` card calls this. Leave
+   * it off to omit the button entirely; the Milestone Steps dialog does, so
+   * submitting stays a deliberate action taken on the Instructions tab.
+   */
   onSubmitMilestone?: () => void;
   /** Reviewed toggles are shown but disabled (Examples pages). */
   readOnly?: boolean;
@@ -199,16 +203,18 @@ export function GetStartedCard({
 
           {/* Submitting is one-way: it puts the milestone in the instructor's
               Pending Review queue on /startups. Not gated on the checklist. */}
-          <Button
-            type="button"
-            className="mt-5 w-full cursor-pointer bg-[#6A35FF] hover:bg-[#5A2BE0]"
-            disabled={readOnly || !!milestoneSubmittedAt}
-            onClick={onSubmitMilestone}
-          >
-            {milestoneSubmittedAt
-              ? `Submitted for Review ${formatSubmittedAt(milestoneSubmittedAt)}`
-              : "Submit for Review"}
-          </Button>
+          {onSubmitMilestone && (
+            <Button
+              type="button"
+              className="mt-5 w-full cursor-pointer bg-[#6A35FF] hover:bg-[#5A2BE0]"
+              disabled={readOnly || !!milestoneSubmittedAt}
+              onClick={onSubmitMilestone}
+            >
+              {milestoneSubmittedAt
+                ? `Submitted for Review ${formatSubmittedAt(milestoneSubmittedAt)}`
+                : "Submit for Review"}
+            </Button>
+          )}
         </>
       )}
     </div>

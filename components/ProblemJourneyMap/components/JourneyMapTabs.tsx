@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Lock } from "lucide-react";
+import { ListChecks, Lock } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { GetStartedCardsProvider } from "../GetStartedCardsContext";
 import { InterviewPrep } from "./InterviewPrep/InterviewPrep";
 import { GetStarted } from "./GetStarted/GetStarted";
 import { Market } from "./Market/Market";
+import { MilestoneStepsDialog } from "./MilestoneStepsDialog";
 
 const STORAGE_KEY = "pjm-active-tab";
 
@@ -56,6 +58,7 @@ export function JourneyMapTabs({
   exampleNumber,
 }: JourneyMapTabsProps) {
   const [value, setValue] = useState<TabValue>(DEFAULT_TAB);
+  const [stepsOpen, setStepsOpen] = useState(false);
 
   // Restore the last-used tab on mount (kept out of the initial state to avoid an
   // SSR/hydration mismatch). Falls back to the default when nothing is stored.
@@ -72,49 +75,71 @@ export function JourneyMapTabs({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      {/* Tab bar — a darker grey band than the content area below it. */}
-      <div className="flex w-full items-end gap-1 bg-[#E2E4EA] px-4 pt-2  border-[#CDCFDE]">
-        {TABS.map((tab) => {
-          const active = value === tab.value;
-          return (
-            <button
-              key={tab.value}
-              type="button"
-              onClick={() => select(tab.value)}
-              className={cn(
-                "flex cursor-pointer flex-col items-center w-[105px] gap-1.5 rounded-t-lg pt-1 pb-2 text-[12px] font-semibold transition-colors",
-                active
-                  ? "bg-[#EFF0F4] text-[#6A35FF] border border-[#CDCFDE] border-b-[#EFF0F4]"
-                  : "text-[#697288] hover:text-[#4B4560]",
-              )}
-            >
-              <span>{tab.label}</span>
-              <span
+    // Get Started cards are cached here rather than fetched per consumer: the
+    // Instructions tab and the Milestone Steps dialog show the same cards and
+    // both mount and unmount often.
+    <GetStartedCardsProvider exampleNumber={exampleNumber} readOnly={readOnly}>
+      <div className="flex min-h-0 flex-1 flex-col">
+        {/* Tab bar — a darker grey band than the content area below it. */}
+        <div className="flex w-full items-end gap-1 bg-[#E2E4EA] px-4 pt-2  border-[#CDCFDE]">
+          {TABS.map((tab) => {
+            const active = value === tab.value;
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => select(tab.value)}
                 className={cn(
-                  "h-1 w-6 rounded-full transition-colors",
-                  active ? "bg-[#6A35FF]" : "bg-[#C4C5D0]",
+                  "flex cursor-pointer flex-col items-center w-[105px] gap-1.5 rounded-t-lg pt-1 pb-2 text-[12px] font-semibold transition-colors",
+                  active
+                    ? "bg-[#EFF0F4] text-[#6A35FF] border border-[#CDCFDE] border-b-[#EFF0F4]"
+                    : "text-[#697288] hover:text-[#4B4560]",
                 )}
-              />
-            </button>
-          );
-        })}
-      </div>
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={cn(
+                    "h-1 w-6 rounded-full transition-colors",
+                    active ? "bg-[#6A35FF]" : "bg-[#C4C5D0]",
+                  )}
+                />
+              </button>
+            );
+          })}
 
-      {/* Content — matches the active folder tab colour so they read as connected. */}
-      <div className="min-h-0 flex-1 bg-[#EFF0F4]">
-        {value === "canvas" ? (
-          canvas
-        ) : value === "get-started" ? (
-          <GetStarted readOnly={readOnly} exampleNumber={exampleNumber} />
-        ) : value === "market" ? (
-          <Market readOnly={readOnly} exampleNumber={exampleNumber} />
-        ) : value === "interview-prep" ? (
-          <InterviewPrep readOnly={readOnly} exampleNumber={exampleNumber} />
-        ) : (
-          <EmptyTab />
-        )}
+          {/* Shortcut to this milestone's checklist, so a step can be read and
+            ticked off without leaving the current tab. Redundant on Instructions
+            (the card is right there), and `readOnly` is what the Examples mirror
+            passes, where there is nothing to tick. */}
+          {value !== "get-started" && !readOnly && (
+            <button
+              type="button"
+              onClick={() => setStepsOpen(true)}
+              className="mb-2 ml-auto flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#CDCFDE] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#4B4560] transition-colors hover:text-[#6A35FF]"
+            >
+              <ListChecks className="size-3.5" />
+              Milestone Steps
+            </button>
+          )}
+        </div>
+
+        <MilestoneStepsDialog open={stepsOpen} onOpenChange={setStepsOpen} />
+
+        {/* Content — matches the active folder tab colour so they read as connected. */}
+        <div className="min-h-0 flex-1 bg-[#EFF0F4]">
+          {value === "canvas" ? (
+            canvas
+          ) : value === "get-started" ? (
+            <GetStarted readOnly={readOnly} exampleNumber={exampleNumber} />
+          ) : value === "market" ? (
+            <Market readOnly={readOnly} exampleNumber={exampleNumber} />
+          ) : value === "interview-prep" ? (
+            <InterviewPrep readOnly={readOnly} exampleNumber={exampleNumber} />
+          ) : (
+            <EmptyTab />
+          )}
+        </div>
       </div>
-    </div>
+    </GetStartedCardsProvider>
   );
 }
