@@ -371,7 +371,12 @@ export function MilestoneHeader({
                     // Capped width so the label wraps onto a second line instead
                     // of stretching the block wide on one. Wide enough that the
                     // longest label ("User, their Journey & Market") fits in two.
-                    className={`max-w-[116px] text-center text-xs leading-tight xl:max-w-[140px] xl:text-sm ${
+                    //
+                    // The height is pinned to two lines (line-height 1.25 at each
+                    // font size) so one-line labels still reserve the second row —
+                    // otherwise they centre themselves and sit off the shared
+                    // baseline of their neighbours.
+                    className={`block min-h-[30px] max-w-[116px] text-center text-xs leading-tight xl:min-h-[35px] xl:max-w-[140px] xl:text-sm ${
                       isExpanded ? "font-bold" : "font-medium"
                     }`}
                   >
