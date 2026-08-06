@@ -6,8 +6,8 @@ export function BeachheadChart({ className }: { className?: string }) {
     <Image
       src="/chart.png"
       alt="Technology adoption lifecycle curve showing the chasm between the early market and the mainstream market"
-      width={1710}
-      height={962}
+      width={600}
+      height={350}
       className={className}
     />
   );

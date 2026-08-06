@@ -32,6 +32,15 @@ interface JourneyContextValue {
    * …) rather than a bare number, so a gate can be re-pointed in one place.
    */
   isMilestoneUnlocked: (milestone: number) => boolean;
+  /**
+   * Whether a finer, sub-step-level gate is open — the milestone is available
+   * *and* the team has marked that sub-step Reviewed on the Instructions tab.
+   * See `isSubStepUnlocked` in `lib/milestones` for why both are required.
+   *
+   * Call it with a named constant (`STAKEHOLDERS_SUB_STEP`, …) for the same
+   * reason as `isMilestoneUnlocked` above.
+   */
+  isSubStepUnlocked: (subStep: string) => boolean;
   addTriggerNode: () => void;
   addChildNode: (parentId: string, type: JourneyNodeType) => void;
   /** Whether a node has at least one child. Only a childless node can be

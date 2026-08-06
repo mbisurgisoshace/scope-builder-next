@@ -14,6 +14,7 @@ import {
 } from "../JourneyContext";
 import type { StakeholderRow } from "@/services/market";
 import { Textarea } from "@/components/ui/textarea";
+import { STAKEHOLDERS_SUB_STEP } from "@/lib/milestones";
 
 // Resolve the node's selected stakeholder ids to rows, grouped by category in
 // `STAKEHOLDER_DEFINITIONS` order. Ids with no matching row (deleted on the
@@ -42,12 +43,19 @@ function TriggerNodeInner({ id, data }: NodeProps) {
   const nodeData = data as unknown as JourneyNodeData;
   const {
     readOnly,
+    isSubStepUnlocked,
     addChildNode,
     updateNodeData,
     stakeholderRows,
     hasChildren,
     requestDeleteNode,
   } = useJourneyContext();
+  // Stakeholders are entered on the Market tab, which stays locked until 1.1 is
+  // marked done — so until then a Trigger card is its text alone and the picker
+  // isn't offered. This is the one gate that hides rather than greys: a card is
+  // too small for a disabled control to read as anything but broken. Anything
+  // already picked still renders below.
+  const stakeholderPickerUnlocked = isSubStepUnlocked(STAKEHOLDERS_SUB_STEP);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [showPicker, setShowPicker] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -102,7 +110,7 @@ function TriggerNodeInner({ id, data }: NodeProps) {
             Trigger / Motivation
           </span>
         </div>
-        {!readOnly && (
+        {!readOnly && stakeholderPickerUnlocked && (
           <>
             <button
               type="button"

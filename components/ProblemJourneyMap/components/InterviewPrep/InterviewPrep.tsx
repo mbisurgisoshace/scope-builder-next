@@ -9,15 +9,27 @@ import {
   upsertProblemInterviewQuestion,
 } from "@/services/interviewPrep";
 
+import { INTERVIEW_PREP_SUB_STEP } from "@/lib/milestones";
+import { LockedRegion, SubStepLockBadge } from "../LockedRegion";
 import { ProblemCard } from "./ProblemCard";
 import type { InterviewQuestion, ProblemBlock } from "./types";
 
 interface InterviewPrepProps {
   readOnly?: boolean;
   exampleNumber?: number;
+  /** Not reached in the curriculum yet: greyed, inert and read-only, but still
+   *  rendered so the team can see what the tab will hold. */
+  locked?: boolean;
 }
 
-export function InterviewPrep({ readOnly = false, exampleNumber }: InterviewPrepProps) {
+export function InterviewPrep({
+  readOnly = false,
+  exampleNumber,
+  locked = false,
+}: InterviewPrepProps) {
+  // A locked tab is a read-only tab as far as every field and write below is
+  // concerned — the greying on top of it is `LockedRegion`'s job.
+  const isReadOnly = readOnly || locked;
   const [blocks, setBlocks] = useState<ProblemBlock[] | null>(null);
 
   // Mirrors `blocks` so a commit always persists the latest value rather than whatever
@@ -41,7 +53,11 @@ export function InterviewPrep({ readOnly = false, exampleNumber }: InterviewPrep
   }, [exampleNumber]);
 
   const handleQuestionChange = useCallback(
-    (blockId: string, hypothesisId: string, patch: Partial<InterviewQuestion>) => {
+    (
+      blockId: string,
+      hypothesisId: string,
+      patch: Partial<InterviewQuestion>,
+    ) => {
       setBlocks((prev) =>
         (prev ?? []).map((block) =>
           block.id !== blockId
@@ -66,7 +82,7 @@ export function InterviewPrep({ readOnly = false, exampleNumber }: InterviewPrep
       hypothesisId: string,
       patch?: Partial<InterviewQuestion>,
     ) => {
-      if (readOnly) return;
+      if (isReadOnly) return;
       const block = blocksRef.current?.find((b) => b.id === blockId);
       const hypothesis = block?.hypotheses.find((h) => h.id === hypothesisId);
       if (!block || !hypothesis) return;
@@ -84,7 +100,7 @@ export function InterviewPrep({ readOnly = false, exampleNumber }: InterviewPrep
         options: question.options,
       });
     },
-    [readOnly],
+    [isReadOnly],
   );
 
   if (!blocks) {
@@ -98,43 +114,48 @@ export function InterviewPrep({ readOnly = false, exampleNumber }: InterviewPrep
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto flex max-w-[1100px] flex-col gap-6 px-6 py-8">
-        <header className="flex flex-col gap-2">
-          <h2 className="text-xl font-semibold text-[#1F2430]">
-            What you will ask
-          </h2>
-          <p className="max-w-3xl text-sm text-[#4E5566]">
-            You have your answers to the problem statement questions that should
-            be validated through user testing. Transform them into actual
-            interview questions that will help determine whether your assumptions
-            are valid.
-          </p>
-        </header>
-
-        {blocks.length === 0 ? (
-          <div className="rounded-2xl bg-white px-8 py-12 text-center shadow-sm">
-            <h3 className="text-base font-semibold text-[#1F2430]">
-              Nothing to prepare yet
-            </h3>
-            <p className="mx-auto mt-2 max-w-md text-sm text-[#4E5566]">
-              Open an action card on the Canvas, describe its problem, then mark the
-              questions you want to validate as hypotheses. They will show up here.
+        {/* Outside the dimmed region below, so it stays legible. */}
+        {locked && <SubStepLockBadge subStep={INTERVIEW_PREP_SUB_STEP} />}
+        <LockedRegion locked={locked} className="flex flex-col gap-6">
+          <header className="flex flex-col gap-2">
+            <h2 className="text-xl font-semibold text-[#1F2430]">
+              What you will ask
+            </h2>
+            <p className="max-w-3xl text-sm text-[#4E5566]">
+              You have your answers to the problem statement questions that
+              should be validated through user testing. Transform them into
+              actual interview questions that will help determine whether your
+              assumptions are valid.
             </p>
-          </div>
-        ) : (
-          blocks.map((block) => (
-            <ProblemCard
-              key={block.id}
-              block={block}
-              readOnly={readOnly}
-              onQuestionChange={(hypothesisId, patch) =>
-                handleQuestionChange(block.id, hypothesisId, patch)
-              }
-              onQuestionCommit={(hypothesisId, patch) =>
-                handleQuestionCommit(block.id, hypothesisId, patch)
-              }
-            />
-          ))
-        )}
+          </header>
+
+          {blocks.length === 0 ? (
+            <div className="rounded-2xl bg-white px-8 py-12 text-center shadow-sm">
+              <h3 className="text-base font-semibold text-[#1F2430]">
+                Nothing to prepare yet
+              </h3>
+              <p className="mx-auto mt-2 max-w-md text-sm text-[#4E5566]">
+                Open an action card on the Canvas, describe its problem, then
+                mark the questions you want to validate as hypotheses. They will
+                show up here.
+              </p>
+            </div>
+          ) : (
+            blocks.map((block) => (
+              <ProblemCard
+                key={block.id}
+                block={block}
+                readOnly={isReadOnly}
+                onQuestionChange={(hypothesisId, patch) =>
+                  handleQuestionChange(block.id, hypothesisId, patch)
+                }
+                onQuestionCommit={(hypothesisId, patch) =>
+                  handleQuestionCommit(block.id, hypothesisId, patch)
+                }
+              />
+            ))
+          )}
+        </LockedRegion>
       </div>
     </div>
   );

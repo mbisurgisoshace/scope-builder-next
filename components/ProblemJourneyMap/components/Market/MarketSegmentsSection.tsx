@@ -166,7 +166,7 @@ export function MarketSegmentsSection({
         Market Segments
       </h2>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Editable spreadsheet-style table — full grid borders on every cell. */}
         <div className="overflow-hidden rounded-lg border border-[#BFC4D2] bg-white">
           <Table className="border-collapse">
@@ -228,11 +228,21 @@ export function MarketSegmentsSection({
         </div>
 
         {/* Beachhead chart + section-level notes */}
-        <div className="flex flex-col gap-4 rounded-lg bg-[#EFF0F4] p-5 justify-between">
-          <BeachheadChart className="h-auto w-full" />
+        <div className="flex flex-col gap-4 col-span-2 rounded-lg bg-[#EFF0F4] p-5 justify-between">
+          <div className="flex flex-row items-center justify-between">
+            <p>
+              Lorem ipsum dolor sit, amet consectetur adipisicing elit. Voluptas
+              fuga amet enim harum, reiciendis quo repellendus vel facilis,
+              dignissimos eaque ut reprehenderit, earum neque ex deserunt
+              veritatis corporis autem minima?
+            </p>
+            <BeachheadChart className="" />
+          </div>
 
           <div>
-            <p className="mb-1.5 text-base font-medium text-[#1F2430]">Notes</p>
+            <p className="mb-1.5 text-base font-medium text-[#1F2430]">
+              Explain why you chose this as your beachead
+            </p>
             <Textarea
               value={noteValue}
               readOnly={readOnly}

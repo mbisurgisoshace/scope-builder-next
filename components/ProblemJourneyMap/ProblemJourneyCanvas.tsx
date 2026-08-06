@@ -31,9 +31,11 @@ import {
 import { DeleteNodeDialog } from "./components/DeleteNodeDialog";
 import type { StakeholderRow } from "@/services/market";
 import {
-  EVIDENCE_SUB_STEP,
-  PROBLEM_DETAIL_SUB_STEP,
-  PROBLEMS_MILESTONE,
+  HYPOTHESIS_SUB_STEP,
+  isSubStepUnlocked as isSubStepUnlockedFor,
+  MARKET_QUESTIONS_MILESTONE,
+  PROBLEMS_SUB_STEP,
+  SOURCE_CONFIDENCE_SUB_STEP,
 } from "@/lib/milestones";
 import { useSubStepProgress } from "./SubStepProgressContext";
 
@@ -91,20 +93,37 @@ function CanvasInner({
     [unlockedMilestones],
   );
 
-  // Problems (the cards on an Action node, "Add a problem", and the sheet they
-  // open) are Milestone 2 work — Milestone 1 is the journey structure alone.
-  // Locked hides them outright rather than greying them: existing problems stay
-  // in storage untouched and reappear when the milestone unlocks.
-  const problemsUnlocked = isMilestoneUnlocked(PROBLEMS_MILESTONE);
-
-  // Inside Milestone 2 the sheet then fills in by sub-step. A fresh Milestone 2
-  // is the description alone; reviewing 2.1 adds the classification, the
-  // answered questions and the bank; 2.3 adds the evidence columns on each
-  // question. Same rule as the milestone gate — locked means absent, and saved
-  // values are left untouched underneath.
+  // The finer gates combine both signals — instructor-granted milestone and the
+  // team's own "Reviewed" toggle — so they're resolved here, where the unlocked
+  // -milestone set already lives, rather than in each node.
   const { progress } = useSubStepProgress();
-  const detailUnlocked = progress[PROBLEM_DETAIL_SUB_STEP] ?? false;
-  const evidenceUnlocked = progress[EVIDENCE_SUB_STEP] ?? false;
+  const isSubStepUnlocked = useCallback(
+    (subStep: string) =>
+      isSubStepUnlockedFor(subStep, progress, unlockedMilestones),
+    [progress, unlockedMilestones],
+  );
+
+  // Problems (the cards on an Action node, "Add a problem", and the sheet they
+  // open) open up at 1.3 — before that the canvas is journey structure alone.
+  const problemsUnlocked = isSubStepUnlocked(PROBLEMS_SUB_STEP);
+
+  // The sheet then fills in below the description. Its own gates are resolved
+  // here so the whole staging reads in one place:
+  //
+  //   1.3  description + type + pain-or-gain  (implied — the sheet is shut before)
+  //   M2   the Market Questions and the bank they're added from
+  //   2.1  each answer's source and confidence
+  //   2.2  the hypothesis toggle
+  //
+  // A locked section is greyed and read-only rather than absent, and its saved
+  // values sit untouched behind it: the editor still hydrates from them and a
+  // save round-trips whatever is stored, so unlocking brings the team's own data
+  // back rather than a blank form.
+  const questionsUnlocked = isMilestoneUnlocked(MARKET_QUESTIONS_MILESTONE);
+  const sourceConfidenceUnlocked = isSubStepUnlocked(
+    SOURCE_CONFIDENCE_SUB_STEP,
+  );
+  const hypothesisUnlocked = isSubStepUnlocked(HYPOTHESIS_SUB_STEP);
 
   const [selectedProblem, setSelectedProblem] =
     useState<SelectedProblem | null>(null);
@@ -150,9 +169,8 @@ function CanvasInner({
   }, [nodePendingDelete, deleteNode]);
 
   const pendingNodeData = nodePendingDelete
-    ? ((nodes.find((n) => n.id === nodePendingDelete)?.data ?? null) as
-        | JourneyNodeData
-        | null)
+    ? ((nodes.find((n) => n.id === nodePendingDelete)?.data ??
+        null) as JourneyNodeData | null)
     : null;
 
   const selectedProblemData = selectedProblem
@@ -174,6 +192,7 @@ function CanvasInner({
               value={{
                 readOnly,
                 isMilestoneUnlocked,
+                isSubStepUnlocked,
                 // Structural/field mutators are hard no-ops in read-only mode so
                 // nothing can write to the shared example room even if a control
                 // were somehow reachable.
@@ -234,8 +253,9 @@ function CanvasInner({
 
               <ActionNodeSheet
                 readOnly={readOnly}
-                detailUnlocked={detailUnlocked}
-                evidenceUnlocked={evidenceUnlocked}
+                questionsUnlocked={questionsUnlocked}
+                sourceConfidenceUnlocked={sourceConfidenceUnlocked}
+                hypothesisUnlocked={hypothesisUnlocked}
                 open={selectedProblem !== null}
                 onOpenChange={(open) => {
                   if (!open) setSelectedProblem(null);

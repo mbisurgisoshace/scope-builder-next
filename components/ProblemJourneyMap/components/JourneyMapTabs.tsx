@@ -1,10 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ListChecks, Lock } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import {
+  INTERVIEW_PREP_SUB_STEP,
+  isSubStepUnlocked,
+  MARKET_SEGMENTS_SUB_STEP,
+  STAKEHOLDERS_SUB_STEP,
+} from "@/lib/milestones";
 import { GetStartedCardsProvider } from "../GetStartedCardsContext";
+import { useSubStepProgress } from "../SubStepProgressContext";
 import { InterviewPrep } from "./InterviewPrep/InterviewPrep";
 import { GetStarted } from "./GetStarted/GetStarted";
 import { Market } from "./Market/Market";
@@ -32,6 +39,17 @@ interface JourneyMapTabsProps {
   readOnly?: boolean;
   /** When set, tabs read example set N's data instead of the active org's. */
   exampleNumber?: number;
+  /**
+   * Milestone numbers the startup has unlocked. Every section below gates on a
+   * sub-step, which needs both this *and* the team's own "Reviewed" toggle — see
+   * `isSubStepUnlocked`. A locked section renders greyed and read-only behind its
+   * own badge, and a tab with nothing open yet gets a lock icon; the tab itself
+   * still opens either way, so a team can see what's coming.
+   *
+   * Omit to lock nothing at all (the /examples mirrors, which gate nothing —
+   * same convention as `MilestoneHeader`).
+   */
+  availableMilestones?: number[];
 }
 
 function EmptyTab() {
@@ -56,9 +74,43 @@ export function JourneyMapTabs({
   canvas,
   readOnly = false,
   exampleNumber,
+  availableMilestones,
 }: JourneyMapTabsProps) {
   const [value, setValue] = useState<TabValue>(DEFAULT_TAB);
   const [stepsOpen, setStepsOpen] = useState(false);
+
+  // No list at all means "gate nothing", which is what the /examples mirrors pass.
+  const unlockedMilestones = useMemo(
+    () => (availableMilestones ? new Set(availableMilestones) : null),
+    [availableMilestones],
+  );
+  // The team's own "Reviewed" toggles, which every gate here reads on top of the
+  // instructor-granted milestones above.
+  const { progress } = useSubStepProgress();
+
+  const stakeholdersLocked = !isSubStepUnlocked(
+    STAKEHOLDERS_SUB_STEP,
+    progress,
+    unlockedMilestones,
+  );
+  const segmentsLocked = !isSubStepUnlocked(
+    MARKET_SEGMENTS_SUB_STEP,
+    progress,
+    unlockedMilestones,
+  );
+  const interviewPrepLocked = !isSubStepUnlocked(
+    INTERVIEW_PREP_SUB_STEP,
+    progress,
+    unlockedMilestones,
+  );
+
+  // The tab's lock icon means "nothing here is open yet". A tab with one section
+  // unlocked loses it, and the still-locked section keeps its own badge — the two
+  // halves of Market open at different points in the curriculum.
+  const lockedTabs: Partial<Record<TabValue, boolean>> = {
+    market: stakeholdersLocked && segmentsLocked,
+    "interview-prep": interviewPrepLocked,
+  };
 
   // Restore the last-used tab on mount (kept out of the initial state to avoid an
   // SSR/hydration mismatch). Falls back to the default when nothing is stored.
@@ -90,13 +142,20 @@ export function JourneyMapTabs({
                 type="button"
                 onClick={() => select(tab.value)}
                 className={cn(
-                  "flex cursor-pointer flex-col items-center w-[105px] gap-1.5 rounded-t-lg pt-1 pb-2 text-[12px] font-semibold transition-colors",
+                  // Wide enough that the longest label plus its lock icon stays
+                  // on one line — a wrapped tab is taller than its neighbours.
+                  "flex cursor-pointer flex-col items-center w-[135px] gap-1.5 rounded-t-lg pt-1 pb-2 text-[12px] font-semibold transition-colors",
                   active
                     ? "bg-[#EFF0F4] text-[#6A35FF] border border-[#CDCFDE] border-b-[#EFF0F4]"
                     : "text-[#697288] hover:text-[#4B4560]",
                 )}
               >
-                <span>{tab.label}</span>
+                <span className="flex items-center gap-1 whitespace-nowrap">
+                  {lockedTabs[tab.value] && (
+                    <Lock aria-label="Locked" className="size-3 shrink-0" />
+                  )}
+                  {tab.label}
+                </span>
                 <span
                   className={cn(
                     "h-1 w-6 rounded-full transition-colors",
@@ -132,9 +191,18 @@ export function JourneyMapTabs({
           ) : value === "get-started" ? (
             <GetStarted readOnly={readOnly} exampleNumber={exampleNumber} />
           ) : value === "market" ? (
-            <Market readOnly={readOnly} exampleNumber={exampleNumber} />
+            <Market
+              readOnly={readOnly}
+              exampleNumber={exampleNumber}
+              stakeholdersLocked={stakeholdersLocked}
+              segmentsLocked={segmentsLocked}
+            />
           ) : value === "interview-prep" ? (
-            <InterviewPrep readOnly={readOnly} exampleNumber={exampleNumber} />
+            <InterviewPrep
+              readOnly={readOnly}
+              exampleNumber={exampleNumber}
+              locked={interviewPrepLocked}
+            />
           ) : (
             <EmptyTab />
           )}

@@ -13,7 +13,7 @@ import {
 import { useSelectedNode } from "../SelectedNodeContext";
 import { useNodeProblems } from "../NodeProblemsContext";
 import { Textarea } from "@/components/ui/textarea";
-import { PROBLEMS_MILESTONE } from "@/lib/milestones";
+import { PROBLEMS_SUB_STEP } from "@/lib/milestones";
 import type { Problem } from "../components/ActionNodeSheet";
 
 // A single problem (+ its solution preview) as it appears stacked on the card.
@@ -112,7 +112,7 @@ function ActionNodeInner({ id, data }: NodeProps) {
   const nodeData = data as unknown as JourneyNodeData;
   const {
     readOnly,
-    isMilestoneUnlocked,
+    isSubStepUnlocked,
     addChildNode,
     updateNodeData,
     openProblem,
@@ -120,9 +120,13 @@ function ActionNodeInner({ id, data }: NodeProps) {
     hasChildren,
     requestDeleteNode,
   } = useJourneyContext();
-  // Until the startup reaches Milestone 2 an Action node is just its text —
-  // problems are hidden entirely, including any already saved on the node.
-  const problemsUnlocked = isMilestoneUnlocked(PROBLEMS_MILESTONE);
+  // Until 1.3 is marked done an Action node is its text alone: both the problem
+  // cards and "Add a problem" are absent rather than greyed. This is the one
+  // place the unlock map hides instead of dimming — a card this size has no room
+  // to explain a disabled control, so it would read as broken rather than as
+  // not-yet. Problems already saved on the node are untouched in storage and
+  // come back when the gate opens.
+  const problemsUnlocked = isSubStepUnlocked(PROBLEMS_SUB_STEP);
   const selected = useSelectedNode();
   const isNodeSelected = selected?.nodeId === id;
   const nodeProblemsMap = useNodeProblems();
@@ -235,7 +239,9 @@ function ActionNodeInner({ id, data }: NodeProps) {
           className="nodrag nopan mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-gray-400 text-base font-medium text-gray-700 hover:border-[#6A35FF] hover:text-[#6A35FF] transition-colors"
         >
           <PlusIcon className="w-3.5 h-3.5" />
-          {problems.length === 0 ? "Add a problem" : "Add an additional problem"}
+          {problems.length === 0
+            ? "Add a problem"
+            : "Add an additional problem"}
         </button>
       )}
 

@@ -24,36 +24,65 @@ export const MILESTONE_NUMBERS = [0, 1, 2, 3, 4, 5] as const;
 export const ALWAYS_AVAILABLE_MILESTONE = 0;
 
 /**
- * Sub-step that reveals the body of the Problem/Solution sheet: the type and
- * pain-or-gain (reliever-or-creator) classification, the Market Questions the
- * team has answered, and the bank they add more from. Until it's reviewed the
- * sheet is the description alone.
+ * Sub-step that opens stakeholder work: the "Stakeholders" section on the Market
+ * tab, and the "Stakeholders" button on a Trigger card that picks from the rows
+ * entered there. Both sit behind the same gate because one feeds the other.
  *
- * Sub-step gates are keyed off the *self-marked* "Reviewed" toggles on the
- * Instructions tab, not `MilestoneAccess` — a team reveals these by working
- * through the curriculum rather than by an instructor unlocking them. They sit
- * behind `PROBLEMS_MILESTONE` regardless, since the sheet itself is unreachable
- * until problems exist.
+ * Note the off-by-one that runs through the whole unlock map: finishing a
+ * sub-step opens the work of the *next* one. 1.1 is "Jobs to be Done", and
+ * ticking it is what lets the team start on stakeholders.
  */
-export const PROBLEM_DETAIL_SUB_STEP = subStepKey(2, 1);
-
-/** Sub-step that reveals the evidence columns on each answered question: the
- * hypothesis toggle, the answer's source and the confidence rating. Reviewing
- * "2.2 Expand on Pains/Gains" is what opens them up — the later "2.3 Source &
- * Confidence Score" is where the team is expected to fill them in, not where
- * they appear. */
-export const EVIDENCE_SUB_STEP = subStepKey(2, 2);
+export const STAKEHOLDERS_SUB_STEP = subStepKey(1, 1);
 
 /**
- * Milestone that unlocks problems on the journey canvas — the problem cards
- * stacked on an Action node, "Add a problem", and the Problem/Solution sheet
- * they open. Until then Milestone 1 is journey structure only: triggers,
- * actions and their text.
- *
- * This is the coarse gate; what the sheet shows *inside* Milestone 2 is then
- * staged by `PROBLEM_DETAIL_SUB_STEP` and `EVIDENCE_SUB_STEP` above.
+ * Sub-step that opens the "Market Segments" section — the segment table, the
+ * beachhead picks and the note explaining them — on the Market tab. 1.2 is
+ * "Stakeholders": segmenting only makes sense once the team knows who is in the
+ * journey, so the section stays greyed and read-only until that's marked done.
  */
-export const PROBLEMS_MILESTONE = 2;
+export const MARKET_SEGMENTS_SUB_STEP = subStepKey(1, 2);
+
+/**
+ * Sub-step that opens problems on the journey canvas — the problem cards stacked
+ * on an Action node, "Add a problem", and the Problem/Solution sheet they open.
+ * 1.3 is "Segments & Beachhead": a problem is only worth stating once the team
+ * knows whose problem it is. 1.4, the step this opens, is "Identify Pains/Gains"
+ * — exactly the work these cards are for.
+ *
+ * Until then an Action node is its text alone. What the sheet shows *inside* is
+ * then staged further by the three gates below.
+ */
+export const PROBLEMS_SUB_STEP = subStepKey(1, 3);
+
+/**
+ * Milestone that opens the "Market Questions" section of the Problem/Solution
+ * sheet: answering the questions already on a problem, and adding more from the
+ * bank. It's the one gate in the sheet an instructor grants rather than the team
+ * ticking off — Milestone 2 is the whole deep-dive into the journey.
+ */
+export const MARKET_QUESTIONS_MILESTONE = 2;
+
+/**
+ * Sub-steps that open the evidence beside each answered question. Each opens the
+ * step named after it: finishing 2.1 "Expand on Pains/Gains" opens the source and
+ * confidence 2.2 is named for, and finishing that opens the hypothesis toggle 2.3
+ * is named for.
+ *
+ * Both sit inside `MARKET_QUESTIONS_MILESTONE` — the questions themselves are
+ * locked before that, so their evidence is doubly so.
+ */
+export const SOURCE_CONFIDENCE_SUB_STEP = subStepKey(2, 1);
+export const HYPOTHESIS_SUB_STEP = subStepKey(2, 2);
+
+/**
+ * Sub-step that opens the Interview Prep tab. 2.3 is "Hypothesis": the tab turns
+ * the answers a team has flagged as beliefs into interview questions, which is
+ * 2.4's work, so there's nothing to prepare until those flags exist.
+ *
+ * This is the last gate in the unlock map. Locked means visible but greyed and
+ * read-only, so a team can see what's coming; see `JourneyMapTabs`.
+ */
+export const INTERVIEW_PREP_SUB_STEP = subStepKey(2, 3);
 
 /** Payer interviews a startup has to document — the denominator the MilestoneHeader
  * counts toward. Read here rather than at each call site so the interviews board and
@@ -177,41 +206,41 @@ const SUB_STEP_CONTENT: { label: string; description: string }[][] = [
         "Group your users into segments and pick the one narrow beachhead you'll pursue first. Say out loud why the others can wait.",
     },
     {
-      label: "Instructor Check-in / Review Journey & Market",
+      label: "Identify Pains/Gains",
       description:
-        "Walk your instructor through the journey and the beachhead you chose. Expect to defend the segment you picked and the ones you set aside.",
-    },
-    {
-      label: "Interviewee List",
-      description:
-        "Build a list of real people in your beachhead segment you can reach. Names and how you'll contact them — not job titles in the abstract.",
-    },
-  ],
-  [
-    {
-      label: "Identify Jobs/Pains/Gains",
-      description:
-        "For each step of the journey, capture the job the user is trying to get done, what hurts along the way, and what a win looks like.",
-    },
-    {
-      label: "Expand on Pains/Gains",
-      description:
-        "Go a level deeper on the pains and gains that matter most. Vague pains produce vague interviews later.",
-    },
-    {
-      label: "Source & Confidence Score",
-      description:
-        "Mark where each pain and gain came from and how sure you are. Anything sourced only from your own assumptions is what interviews should target first.",
-    },
-    {
-      label: "Instructor Check-in / Review Journey Details",
-      description:
-        "Review the detailed journey with your instructor and agree on which assumptions are the riskiest.",
+        "Walk the journey step by step and name what your user is trying to fix at each one — what hurts today, and what a win would look like.",
     },
     {
       label: "Schedule Interviews",
       description:
-        "Turn your interviewee list into booked calls. Aim for more slots than you need — some will fall through.",
+        "Build a list of real people in your beachhead segment and turn it into booked calls. Names and dates, not job titles in the abstract.",
+    },
+  ],
+  [
+    {
+      label: "Expand on Pains/Gains",
+      description:
+        "Go a level deeper on the pains and gains that matter most, answering the market questions on each one. Vague pains produce vague interviews later.",
+    },
+    {
+      label: "Source & Confidence Score",
+      description:
+        "Mark where each answer came from and how sure you are. Anything sourced only from your own assumptions is what interviews should target first.",
+    },
+    {
+      label: "Hypothesis",
+      description:
+        "Pick out the answers you're treating as beliefs rather than facts. Those are the ones an interview can prove wrong, so they're what you'll build questions around.",
+    },
+    {
+      label: "Interview Questions",
+      description:
+        "Turn each hypothesis into an open question about what people have already done, not what they would hypothetically do.",
+    },
+    {
+      label: "Instructor Check-In",
+      description:
+        "Review the detailed journey and your question set with your instructor, and agree on which assumptions are the riskiest.",
     },
   ],
   [
@@ -295,4 +324,46 @@ export const SUB_STEPS: SubStepDef[] = SUB_STEP_CONTENT.flatMap(
 
 export function subStepsForMilestone(milestone: number): SubStepDef[] {
   return SUB_STEPS.filter((subStep) => subStep.milestone === milestone);
+}
+
+const SUB_STEP_BY_KEY = new Map(
+  SUB_STEPS.map((subStep) => [subStep.key, subStep]),
+);
+
+/** The sub-step a key names, or null if it names none. */
+export function subStepDef(key: string): SubStepDef | null {
+  return SUB_STEP_BY_KEY.get(key) ?? null;
+}
+
+/** Numbered display label of a sub-step — e.g. "1.1 Jobs to be Done". Falls back
+ *  to the bare key so a stale gate constant reads as itself rather than blank. */
+export function subStepLabel(key: string): string {
+  return subStepDef(key)?.label ?? key;
+}
+
+/**
+ * Whether a sub-step gate is open. Two conditions, both required:
+ *
+ * 1. an instructor has activated the sub-step's milestone, and
+ * 2. the team has ticked that sub-step's "Reviewed" toggle on the Instructions tab.
+ *
+ * The second alone isn't enough: the steps card for a milestone is readable
+ * before the instructor opens it, so a team could otherwise tick 1.1 early and
+ * unlock stakeholder work ahead of the cohort.
+ *
+ * `availableMilestones` of null/undefined means "gate nothing" — the convention
+ * the read-only /examples mirrors pass, same as `JourneyMapTabs` and
+ * `MilestoneHeader` already use.
+ */
+export function isSubStepUnlocked(
+  key: string,
+  progress: Record<string, boolean>,
+  availableMilestones: Set<number> | null | undefined,
+): boolean {
+  if (!availableMilestones) return true;
+
+  const milestone = subStepDef(key)?.milestone;
+  if (milestone == null || !availableMilestones.has(milestone)) return false;
+
+  return progress[key] ?? false;
 }

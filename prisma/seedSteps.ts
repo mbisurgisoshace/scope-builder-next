@@ -7,7 +7,15 @@
  * the sub-step checklist without re-seeding (and so wiping the reviews of) the
  * other Get Started cards:
  *
- *   npx tsx prisma/seedSteps.ts     # needs DATABASE_URL in the environment
+ *   npx tsx --env-file=.env prisma/seedSteps.ts
+ *
+ * The flag is not optional: nothing here imports dotenv, so without it
+ * DATABASE_URL has to already be exported in the shell.
+ *
+ * Run this after any label or description edit in lib/milestones.ts. The header
+ * strip renders from that constant directly, but the Instructions steps card and
+ * the milestone steps dialog read GetStartedItem.title — so until this runs the
+ * two disagree.
  *
  * The sync is in-place — cards/items are updated, never deleted and recreated —
  * because deleting cascades through GetStartedReview and would wipe every

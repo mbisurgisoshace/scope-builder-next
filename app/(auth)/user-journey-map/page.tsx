@@ -51,6 +51,7 @@ export default async function ProblemJourneyMapPage() {
             availableMilestones={availableMilestones}
           />
           <JourneyMapTabs
+            availableMilestones={availableMilestones}
             canvas={
               <Room roomId={roomId}>
                 <ProblemJourneyCanvas
