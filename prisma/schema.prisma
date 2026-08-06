@@ -316,13 +316,13 @@ model TopicProgress {
   @@map("topic_progress")
 }
 
-// Per-startup unlock flag for the 5 milestones. The milestones themselves stay
-// hardcoded in MilestoneHeader; this table only says which ones a startup can
+// Per-startup unlock flag for the 6 milestones. The milestones themselves stay
+// hardcoded in lib/milestones.ts; this table only says which ones a startup can
 // reach, plus a slot for the (future) submission flow.
 model MilestoneAccess {
   id           Int       @id @default(autoincrement())
   org_id       String
-  milestone    Int // 1..5, matches MilestoneHeader index+1
+  milestone    Int // 0..5, the milestone number in lib/milestones.ts
   available    Boolean   @default(false)
   submitted_at DateTime? // NULL = not submitted yet
   reviewed_at  DateTime? // NULL = no instructor sign-off yet. One-way, never cleared.
@@ -337,7 +337,7 @@ model MilestoneAccess {
 
 model GetStartedCard {
   id        Int     @id @default(autoincrement())
-  milestone Int // 1..5, matches MilestoneHeader index+1
+  milestone Int // 0..5, the milestone number in lib/milestones.ts
   type      String // "steps" | "paragraph" | "image" | "video"
   title     String
   body      String? // extra text shown on every non-"steps" card

@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader } from "@/components/ui/loader";
-import { MILESTONE_LABELS } from "@/lib/milestones";
+import { milestoneLabel } from "@/lib/milestones";
 import { useMilestoneSelection } from "../MilestoneSelectionContext";
 import { useGetStartedCards } from "../GetStartedCardsContext";
 import { GetStartedCard } from "./GetStarted/GetStartedCard";
@@ -31,8 +31,7 @@ export function MilestoneStepsDialog({
   open,
   onOpenChange,
 }: MilestoneStepsDialogProps) {
-  const { selectedMilestone } = useMilestoneSelection();
-  const milestone = selectedMilestone + 1;
+  const { selectedMilestone: milestone } = useMilestoneSelection();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -41,7 +40,7 @@ export function MilestoneStepsDialog({
           {/* The card renders its own "Milestone Steps" heading, so the dialog
               titles the milestone instead of repeating it. */}
           <DialogTitle>
-            Milestone {milestone} — {MILESTONE_LABELS[milestone - 1]}
+            Milestone {milestone} — {milestoneLabel(milestone)}
           </DialogTitle>
           <DialogDescription>
             Read a step and mark it completed without leaving the tab you were

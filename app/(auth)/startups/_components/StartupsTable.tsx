@@ -220,7 +220,8 @@ const getColumns = (
     cell: ({ row }) => {
       const access: MilestoneAccessState[] =
         row.original.milestones ?? defaultMilestoneAccess();
-      const state = access[milestone - 1];
+      // Slots come from MILESTONE_NUMBERS, so the index is the milestone number.
+      const state = access[milestone];
 
       return (
         <MilestoneAccessCell

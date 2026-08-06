@@ -9,7 +9,8 @@ import { prisma } from "@/lib/prisma";
 import { checkRole } from "@/lib/auth";
 import { sendMilestoneReviewedEmail } from "@/services/milestoneEmails";
 import {
-  MILESTONE_COUNT,
+  FIRST_MILESTONE,
+  LAST_MILESTONE,
   MILESTONE_NUMBERS,
   ALWAYS_AVAILABLE_MILESTONE,
   type MilestoneAccessState,
@@ -41,7 +42,7 @@ export async function getAllMilestoneAccess(): Promise<
 
   for (const row of rows) {
     if (!byOrg[row.org_id]) {
-      // Seed all 5 slots so consumers can index by milestone without holes.
+      // Seed all 6 slots so consumers can index by milestone without holes.
       byOrg[row.org_id] = MILESTONE_NUMBERS.map((milestone) => ({
         milestone,
         available: milestone === ALWAYS_AVAILABLE_MILESTONE,
@@ -50,7 +51,8 @@ export async function getAllMilestoneAccess(): Promise<
       }));
     }
 
-    const slot = byOrg[row.org_id][row.milestone - 1];
+    // Slots are seeded from MILESTONE_NUMBERS, so the index is the milestone.
+    const slot = byOrg[row.org_id][row.milestone];
 
     if (!slot) continue;
 
@@ -65,7 +67,7 @@ export async function getAllMilestoneAccess(): Promise<
 
 /**
  * Whether the active startup has this milestone unlocked. Same read rule as
- * `getAllMilestoneAccess`: milestone 1 is always on, a missing row means locked.
+ * `getAllMilestoneAccess`: milestone 0 is always on, a missing row means locked.
  *
  * Admins and mentors browse without an active org — milestone access is a
  * startup-progression concept, so nothing is gated for them.
@@ -96,7 +98,7 @@ export async function isMilestoneAvailable(
  *
  * Availability is toggled per milestone from /startups and is *not* guaranteed
  * contiguous, so this is a set rather than a "highest reached" number. Same read
- * rules as `isMilestoneAvailable`: milestone 1 is always on, a missing row means
+ * rules as `isMilestoneAvailable`: milestone 0 is always on, a missing row means
  * locked, and admins/mentors browsing without an active org get everything.
  */
 export async function getAvailableMilestones(): Promise<number[]> {
@@ -174,7 +176,7 @@ export async function submitMilestone(milestone: number): Promise<Date> {
 
   if (!orgId) redirect("/pick-startup");
 
-  if (milestone < 1 || milestone > MILESTONE_COUNT) {
+  if (milestone < FIRST_MILESTONE || milestone > LAST_MILESTONE) {
     throw new Error(`Invalid milestone: ${milestone}`);
   }
 
@@ -189,7 +191,7 @@ export async function submitMilestone(milestone: number): Promise<Date> {
 
   await prisma.milestoneAccess.upsert({
     where: { org_id_milestone: { org_id: orgId, milestone } },
-    // Milestone 1 has no row until now for most startups; `available` is forced
+    // Milestone 0 has no row until now for most startups; `available` is forced
     // true for it on read (see getAllMilestoneAccess), so false here is fine.
     create: {
       org_id: orgId,
@@ -226,7 +228,7 @@ export async function reviewMilestone(
 
   if (!userId) redirect("/sign-in");
 
-  if (milestone < 1 || milestone > MILESTONE_COUNT) {
+  if (milestone < FIRST_MILESTONE || milestone > LAST_MILESTONE) {
     throw new Error(`Invalid milestone: ${milestone}`);
   }
 
@@ -253,11 +255,11 @@ export async function reviewMilestone(
   const notes = input.notes?.trim() || null;
   // Milestone 5 has no successor to open.
   const unlockedMilestone =
-    input.unlockNext && milestone < MILESTONE_COUNT ? milestone + 1 : null;
+    input.unlockNext && milestone < LAST_MILESTONE ? milestone + 1 : null;
 
   await prisma.milestoneAccess.upsert({
     where: { org_id_milestone: { org_id: orgId, milestone } },
-    // Same reasoning as submitMilestone: `available` is forced true for milestone 1
+    // Same reasoning as submitMilestone: `available` is forced true for milestone 0
     // on read, so seeding it false here is fine.
     create: {
       org_id: orgId,
@@ -300,12 +302,12 @@ export async function setMilestoneAvailability(
 
   if (!userId) redirect("/sign-in");
 
-  if (milestone < 1 || milestone > MILESTONE_COUNT) {
+  if (milestone < FIRST_MILESTONE || milestone > LAST_MILESTONE) {
     throw new Error(`Invalid milestone: ${milestone}`);
   }
 
   if (milestone === ALWAYS_AVAILABLE_MILESTONE) {
-    throw new Error("Milestone 1 is always available and cannot be changed");
+    throw new Error("Milestone 0 is always available and cannot be changed");
   }
 
   await prisma.milestoneAccess.upsert({

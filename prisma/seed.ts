@@ -68,7 +68,7 @@ async function main() {
   });
 
   console.log(
-    "Seeded steps cards for milestones 1-5 and Get Started content for milestones 1 and 2.",
+    "Seeded steps cards for milestones 0-5 and Get Started content for milestones 1 and 2.",
   );
 }
 

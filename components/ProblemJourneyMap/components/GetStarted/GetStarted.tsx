@@ -24,8 +24,7 @@ interface GetStartedProps {
 }
 
 export function GetStarted({ readOnly = false, exampleNumber }: GetStartedProps) {
-  const { selectedMilestone } = useMilestoneSelection();
-  const milestone = selectedMilestone + 1;
+  const { selectedMilestone: milestone } = useMilestoneSelection();
   const prefersReducedMotion = useReducedMotion();
   const transition = prefersReducedMotion ? INSTANT : TRANSITION;
 

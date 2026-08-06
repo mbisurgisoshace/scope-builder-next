@@ -1,19 +1,27 @@
 /**
- * The 5 milestones and their 21 sub-steps — the single source of truth for the
+ * The 6 milestones and their 25 sub-steps — the single source of truth for the
  * curriculum. `MilestoneHeader.tsx` renders from here, and the seeded "steps"
  * Get Started card mirrors it (one item per sub-step, linked by position).
+ *
+ * Milestones are numbered from 0 ("Program Onboarding", the pre-program week),
+ * which is why the arrays here are indexed by the milestone number itself rather
+ * than `number - 1`. Same for `MilestoneAccessState[]` everywhere else.
  *
  * This module is deliberately data-only and free of React/lucide imports:
  * `services/milestoneAccess.ts` is a `"use server"` module (which may only export
  * async functions) and imports it, so sub-step icons live in `MilestoneHeader`.
  */
 
-export const MILESTONE_COUNT = 5;
+/** Inclusive bounds of a valid milestone number. Six milestones, last one is 5 —
+ *  a "count" would be ambiguous here, so the bounds are named instead. */
+export const FIRST_MILESTONE = 0;
+export const LAST_MILESTONE = 5;
 
-export const MILESTONE_NUMBERS = [1, 2, 3, 4, 5] as const;
+export const MILESTONE_NUMBERS = [0, 1, 2, 3, 4, 5] as const;
 
-/** Milestone 1 ships unlocked for every startup and cannot be turned off. */
-export const ALWAYS_AVAILABLE_MILESTONE = 1;
+/** Milestone 0 ships unlocked for every startup and cannot be turned off. Every
+ *  later milestone — including 1 — has to be activated by an instructor. */
+export const ALWAYS_AVAILABLE_MILESTONE = 0;
 
 /**
  * Sub-step that reveals the body of the Problem/Solution sheet: the type and
@@ -77,7 +85,7 @@ export type MilestoneReviewResult = {
   unlockedMilestone: number | null;
 };
 
-/** Access for a startup with no rows yet: milestone 1 on, the rest off. */
+/** Access for a startup with no rows yet: milestone 0 on, the rest off. */
 export function defaultMilestoneAccess(): MilestoneAccessState[] {
   return MILESTONE_NUMBERS.map((milestone) => ({
     milestone,
@@ -87,8 +95,9 @@ export function defaultMilestoneAccess(): MilestoneAccessState[] {
   }));
 }
 
-/** Milestone titles, indexed by milestone number - 1. */
+/** Milestone titles, indexed by milestone number (milestone 0 is first). */
 export const MILESTONE_LABELS = [
+  "Program Onboarding",
   "User, their Journey & Market",
   "Deep Dive into Journey",
   "Interview Preparation",
@@ -96,10 +105,16 @@ export const MILESTONE_LABELS = [
   "Analyze & Present Findings",
 ] as const;
 
+/** Title of a milestone. Wrapped so the index-is-the-number rule lives in one
+ *  place rather than at every call site. */
+export function milestoneLabel(milestone: number): string {
+  return MILESTONE_LABELS[milestone] ?? "";
+}
+
 export type SubStepDef = {
   /** Stable identity, `${milestone}.${position}` — e.g. "1.1". */
   key: string;
-  /** 1..5. */
+  /** 0..5. */
   milestone: number;
   /** 1-based position within the milestone. */
   position: number;
@@ -114,9 +129,9 @@ export function subStepKey(milestone: number, position: number) {
 }
 
 /**
- * Sub-step content per milestone, in order. A sub-step's identity is its
- * position here, so appending is safe but reordering/removing re-points existing
- * progress.
+ * Sub-step content per milestone, indexed by milestone number — the first entry
+ * is Milestone 0. A sub-step's identity is its position within its milestone, so
+ * appending is safe but reordering/removing re-points existing progress.
  *
  * Descriptions are placeholder copy — they're seeded onto GetStartedItem by
  * prisma/seedSteps.ts and shown when a sub-step is expanded on the Instructions
@@ -125,9 +140,31 @@ export function subStepKey(milestone: number, position: number) {
 const SUB_STEP_CONTENT: { label: string; description: string }[][] = [
   [
     {
+      label: "Educational Content",
+      description:
+        "Work through the program's intro material before the first session, so the vocabulary and the method are familiar when the cohort starts.",
+    },
+    {
       label: "Visualize User Journey",
       description:
-        "Map every step your user takes, from first noticing the problem to living with a solution. Keep it to the path you can actually observe today.",
+        "Take a first rough pass at the steps your user goes through today. It will be wrong in places — Milestone 1 is where you rebuild it properly.",
+    },
+    {
+      label: "Schedule Interviews",
+      description:
+        "Line up your first conversations now. Aim for three booked before the program starts; booking always takes longer than you expect.",
+    },
+    {
+      label: "Schedule Instructor Check-In",
+      description:
+        "Book your first check-in with your instructor so you begin the program with a slot already on the calendar.",
+    },
+  ],
+  [
+    {
+      label: "Jobs to be Done",
+      description:
+        "For the journey you sketched in onboarding, name the job your user is actually hiring a solution to do at each step. Keep it to jobs you can observe today.",
     },
     {
       label: "Stakeholders",
@@ -240,11 +277,11 @@ const SUB_STEP_CONTENT: { label: string; description: string }[][] = [
   ],
 ];
 
-/** All 21 sub-steps, milestone 1 first. */
+/** All 25 sub-steps, milestone 0 first. */
 export const SUB_STEPS: SubStepDef[] = SUB_STEP_CONTENT.flatMap(
   (subSteps, milestoneIndex) =>
     subSteps.map((subStep, subStepIndex) => {
-      const milestone = milestoneIndex + 1;
+      const milestone = milestoneIndex;
       const position = subStepIndex + 1;
       return {
         key: subStepKey(milestone, position),

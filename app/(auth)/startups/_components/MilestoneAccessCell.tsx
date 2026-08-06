@@ -48,7 +48,7 @@ export default function MilestoneAccessCell({
         onCheckedChange={onToggle}
         title={
           locked
-            ? "Milestone 1 is always available"
+            ? "Milestone 0 is always available"
             : `Milestone ${milestone} ${available ? "available" : "not available"}`
         }
       />

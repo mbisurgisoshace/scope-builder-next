@@ -96,7 +96,7 @@ if (process.argv[1]?.endsWith("seedSteps.ts")) {
   const prisma = new PrismaClient();
 
   seedStepsCards(prisma)
-    .then(() => console.log("Synced steps cards for milestones 1-5."))
+    .then(() => console.log("Synced steps cards for milestones 0-5."))
     .catch((e) => {
       console.error(e);
       process.exit(1);

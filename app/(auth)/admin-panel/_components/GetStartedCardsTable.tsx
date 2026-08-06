@@ -53,7 +53,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { MILESTONE_LABELS, MILESTONE_NUMBERS } from "@/lib/milestones";
+import { milestoneLabel, MILESTONE_NUMBERS } from "@/lib/milestones";
 import {
   getStartedCardFormSchema,
   stepsCardFormSchema,
@@ -77,7 +77,7 @@ const columns: ColumnDef<GetStartedCard>[] = [
     header: "Milestone",
     cell: ({ row }) => {
       const milestone = row.original.milestone;
-      return `${milestone}. ${MILESTONE_LABELS[milestone - 1] ?? ""}`;
+      return `${milestone}. ${milestoneLabel(milestone)}`;
     },
   },
   {
@@ -195,7 +195,7 @@ export default function GetStartedCardsTable({
               <SelectContent>
                 {MILESTONE_NUMBERS.map((milestone) => (
                   <SelectItem key={milestone} value={milestone.toString()}>
-                    {milestone}. {MILESTONE_LABELS[milestone - 1]}
+                    {milestone}. {milestoneLabel(milestone)}
                   </SelectItem>
                 ))}
               </SelectContent>

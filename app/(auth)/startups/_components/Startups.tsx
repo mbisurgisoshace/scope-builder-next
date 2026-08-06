@@ -5,7 +5,7 @@ import { useOrganizationList } from "@clerk/nextjs";
 
 import StartupsTable from "./StartupsTable";
 import {
-  MILESTONE_COUNT,
+  LAST_MILESTONE,
   defaultMilestoneAccess,
   type MilestoneAccessState,
   type MilestoneReviewInput,
@@ -106,7 +106,7 @@ export default function Startups() {
     getAllMilestoneAccess().then(setAccessByOrg);
   }, []);
 
-  // Startups with no rows yet fall back to "only milestone 1 unlocked".
+  // Startups with no rows yet fall back to "only milestone 0 unlocked".
   const rows = useMemo(
     () =>
       data.map((startup) => ({
@@ -152,7 +152,7 @@ export default function Startups() {
       let previous: MilestoneAccessState[] | undefined;
 
       const optimisticUnlock =
-        values.unlockNext && milestone < MILESTONE_COUNT ? milestone + 1 : null;
+        values.unlockNext && milestone < LAST_MILESTONE ? milestone + 1 : null;
 
       setAccessByOrg((current) => {
         const access = current[orgId] ?? defaultMilestoneAccess();

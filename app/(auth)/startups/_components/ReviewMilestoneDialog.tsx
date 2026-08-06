@@ -14,8 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  MILESTONE_COUNT,
-  MILESTONE_LABELS,
+  LAST_MILESTONE,
+  milestoneLabel,
   type MilestoneReviewInput,
 } from "@/lib/milestones";
 
@@ -45,7 +45,7 @@ export default function ReviewMilestoneDialog({
   const [unlockNext, setUnlockNext] = useState(true);
 
   // Milestone 5 has no successor, so there is nothing to offer unlocking.
-  const nextMilestone = milestone < MILESTONE_COUNT ? milestone + 1 : null;
+  const nextMilestone = milestone < LAST_MILESTONE ? milestone + 1 : null;
 
   // Each open is a fresh review — an abandoned draft shouldn't leak into the next one.
   useEffect(() => {
@@ -67,7 +67,7 @@ export default function ReviewMilestoneDialog({
         <DialogHeader>
           <DialogTitle>Review Milestone {milestone}</DialogTitle>
           <DialogDescription>
-            {MILESTONE_LABELS[milestone - 1]} · {startupName}
+            {milestoneLabel(milestone)} · {startupName}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -97,7 +97,7 @@ export default function ReviewMilestoneDialog({
                 className="text-sm font-medium cursor-pointer"
               >
                 Unlock Milestone {nextMilestone} (
-                {MILESTONE_LABELS[nextMilestone - 1]})
+                {milestoneLabel(nextMilestone)})
               </label>
             </div>
           )}

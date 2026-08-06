@@ -1,7 +1,7 @@
 import { sendEmail } from "@/lib/mailjet";
 import { dedupeRecipients, getStartupContext } from "@/lib/startupRecipients";
 import { milestoneReviewedEmail } from "@/lib/emails/milestoneReviewedEmail";
-import { MILESTONE_LABELS } from "@/lib/milestones";
+import { milestoneLabel } from "@/lib/milestones";
 
 /**
  * Notifies a startup that an instructor signed one of their milestones off.
@@ -28,12 +28,12 @@ export async function sendMilestoneReviewedEmail(
 
     const { subject, html, text } = milestoneReviewedEmail({
       milestone,
-      milestoneLabel: MILESTONE_LABELS[milestone - 1] ?? "",
+      milestoneLabel: milestoneLabel(milestone),
       startupName: startup.name,
       unlocked: unlockedMilestone
         ? {
             milestone: unlockedMilestone,
-            label: MILESTONE_LABELS[unlockedMilestone - 1] ?? "",
+            label: milestoneLabel(unlockedMilestone),
           }
         : null,
     });

@@ -1,6 +1,8 @@
 import z from "zod";
 
-import { MILESTONE_COUNT } from "@/lib/milestones";
+import { FIRST_MILESTONE, LAST_MILESTONE } from "@/lib/milestones";
+
+const MILESTONE_RANGE_MESSAGE = `Milestone must be between ${FIRST_MILESTONE} and ${LAST_MILESTONE}.`;
 
 /**
  * Card types an admin can author. "steps" is deliberately absent — those cards
@@ -23,13 +25,12 @@ export const GET_STARTED_CARD_TYPE_LABELS: Record<GetStartedCardType, string> =
 
 export const getStartedCardFormSchema = z
   .object({
+    // 0 is Program Onboarding and a valid choice, so neither bound can carry a
+    // "required" message — an unset field would read as milestone 0.
     milestone: z
       .number()
-      .min(1, "Milestone is required.")
-      .max(
-        MILESTONE_COUNT,
-        `Milestone must be between 1 and ${MILESTONE_COUNT}.`,
-      ),
+      .min(FIRST_MILESTONE, MILESTONE_RANGE_MESSAGE)
+      .max(LAST_MILESTONE, MILESTONE_RANGE_MESSAGE),
     type: z.enum(GET_STARTED_CARD_TYPES),
     title: z.string().min(1, "Title is required."),
     body: z.string().optional(),

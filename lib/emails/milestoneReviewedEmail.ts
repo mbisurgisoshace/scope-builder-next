@@ -13,7 +13,7 @@ import type { RenderedEmail } from "@/lib/emails/officeHourBookingEmail";
 
 export interface MilestoneReviewedEmailParams {
   milestone: number;
-  /** MILESTONE_LABELS[milestone - 1] */
+  /** `milestoneLabel(milestone)` from lib/milestones.ts */
   milestoneLabel: string;
   startupName: string | null;
   /** The milestone this review opened up, or null when nothing was unlocked. */

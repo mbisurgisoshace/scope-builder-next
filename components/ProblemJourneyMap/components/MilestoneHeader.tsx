@@ -26,12 +26,13 @@ interface MilestoneHeaderProps {
   milestones?: Milestone[];
   payerInterviews?: number;
   currentNumber?: number;
-  /** Milestone numbers (1-based) an instructor has signed off — these paint
-   *  green instead of indigo when selected. */
+  /** Milestone numbers (0-based — milestone 0 is Program Onboarding) an
+   *  instructor has signed off. These paint green instead of indigo when
+   *  selected. */
   reviewedMilestones?: number[];
-  /** Milestone numbers (1-based) the startup has unlocked. The rest get a lock
-   *  icon beside their name — a hint only, the blocks stay clickable. Omit to
-   *  show no locks at all (the /examples mirrors, which gate nothing). */
+  /** Milestone numbers the startup has unlocked. The rest get a lock icon beside
+   *  their name — a hint only, the blocks stay clickable. Omit to show no locks
+   *  at all (the /examples mirrors, which gate nothing). */
   availableMilestones?: number[];
 }
 
@@ -182,7 +183,8 @@ export function MilestoneHeader({
     [availableMilestones],
   );
   // Selected milestone is shared via context so the tab content (Get Started)
-  // can react to it. `expandedIndex` here mirrors the selected milestone.
+  // can react to it. Milestones start at 0, so the milestone number and its
+  // index into MILESTONE_LABELS are the same value — hence no ±1 below.
   const { selectedMilestone: expandedIndex, setSelectedMilestone } =
     useMilestoneSelection();
   // A sub-step is Done when its item on the milestone's steps card (Instructions
@@ -194,13 +196,13 @@ export function MilestoneHeader({
     () =>
       MILESTONE_LABELS.map((label, index) => ({
         label,
-        subSteps: SUB_STEPS.filter(
-          (subStep) => subStep.milestone === index + 1,
-        ).map((subStep) => ({
-          label: subStep.label,
-          status: progress[subStep.key] ? "done" : "active",
-          filled: progress[subStep.key] ? SEGMENTS : 0,
-        })),
+        subSteps: SUB_STEPS.filter((subStep) => subStep.milestone === index).map(
+          (subStep) => ({
+            label: subStep.label,
+            status: progress[subStep.key] ? "done" : "active",
+            filled: progress[subStep.key] ? SEGMENTS : 0,
+          }),
+        ),
       })),
     [progress],
   );
@@ -293,10 +295,10 @@ export function MilestoneHeader({
             const isExpanded = index === expandedIndex;
             // Sign-off recolours the selected block; a collapsed block stays gray
             // either way, so this only matters while expanded.
-            const isReviewed = reviewed.has(index + 1);
+            const isReviewed = reviewed.has(index);
             // Not yet unlocked for this startup. Purely a visual hint — the block
             // still selects, so the milestone can be previewed.
-            const isLocked = available ? !available.has(index + 1) : false;
+            const isLocked = available ? !available.has(index) : false;
             const accent = isReviewed ? GREEN_SOLID : INDIGO;
             const accentLabel = isReviewed ? GREEN_SOLID_LABEL : INDIGO_LABEL;
             // Content-sized while expanded (and while collapsing) so the sub-steps
@@ -356,7 +358,7 @@ export function MilestoneHeader({
                     className="flex items-center justify-center gap-1"
                   >
                     <span className="text-sm font-bold leading-none xl:text-base">
-                      #{index + 1}
+                      #{index}
                     </span>
                     {isLocked && (
                       <Lock

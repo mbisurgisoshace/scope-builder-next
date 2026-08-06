@@ -18,7 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  MILESTONE_LABELS,
+  milestoneLabel,
   MILESTONE_NUMBERS,
   subStepsForMilestone,
   type MilestoneAccessState,
@@ -41,11 +41,11 @@ export interface MilestoneProgressRow {
   interviews: InterviewCounts;
   /** Sub-step key ("1.1", "2.3"…) → reviewed. Absent key means not reviewed. */
   subSteps: Record<string, boolean>;
-  /** All 5 slots, indexed by milestone - 1. */
+  /** All 6 slots, indexed by milestone number (milestone 0 is first). */
   milestones: MilestoneAccessState[];
 }
 
-/** Sub-step columns are narrow enough to fit 21 of them; the milestone columns get
+/** Sub-step columns are narrow enough to fit 25 of them; the milestone columns get
  * a little more room and a tint so each group reads as a block. */
 const SUB_STEP_WIDTH = 52;
 const MILESTONE_WIDTH = 64;
@@ -187,13 +187,13 @@ const columns: ColumnDef<MilestoneProgressRow>[] = [
     cell: ({ row }) => <InterviewProgress {...row.original.interviews} />,
   },
   // One group per milestone: its sub-steps, then the milestone sign-off itself.
-  // The grouped header is what keeps 26 columns readable — `getHeaderGroups()`
+  // The grouped header is what keeps 31 columns readable — `getHeaderGroups()`
   // renders the extra row for free.
   ...MILESTONE_NUMBERS.map<ColumnDef<MilestoneProgressRow>>((milestone) => ({
     id: `milestone-group-${milestone}`,
     header: () => (
       <span className="whitespace-nowrap">
-        M{milestone} · {MILESTONE_LABELS[milestone - 1]}
+        M{milestone} · {milestoneLabel(milestone)}
       </span>
     ),
     columns: [
@@ -213,7 +213,7 @@ const columns: ColumnDef<MilestoneProgressRow>[] = [
         size: MILESTONE_WIDTH,
         cell: ({ row }) => (
           <ProgressCheck
-            done={row.original.milestones[milestone - 1]?.reviewedAt != null}
+            done={row.original.milestones[milestone]?.reviewedAt != null}
           />
         ),
       },
