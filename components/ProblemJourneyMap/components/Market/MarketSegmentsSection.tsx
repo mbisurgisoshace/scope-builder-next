@@ -10,7 +10,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -38,7 +37,7 @@ interface EditableSegment {
   beachhead: boolean;
 }
 
-const MIN_ROWS = 8;
+const MIN_ROWS = 4;
 
 let localKeySeq = 0;
 const nextLocalKey = () => `seg-${localKeySeq++}`;
@@ -189,29 +188,31 @@ export function MarketSegmentsSection({
                   key={row.localKey}
                   className="border-0 hover:bg-transparent"
                 >
-                  <TableCell className="border-b border-r border-[#BFC4D2] p-0">
-                    <Input
+                  <TableCell className="border-b border-r border-[#BFC4D2] p-0 align-top">
+                    <Textarea
+                      rows={2}
                       value={row.name}
                       readOnly={readOnly}
                       onChange={(e) =>
                         patchRow(row.localKey, { name: e.target.value })
                       }
                       onBlur={() => commitRow(row.localKey)}
-                      className="h-9 w-full rounded-none border-0 bg-transparent text-base shadow-none focus-visible:ring-0"
+                      className="min-h-16 w-full resize-none rounded-none border-0 bg-transparent px-3 py-2 text-base leading-6 shadow-none focus-visible:ring-0 md:text-base"
                     />
                   </TableCell>
-                  <TableCell className="border-b border-r border-[#BFC4D2] p-0">
-                    <Input
+                  <TableCell className="border-b border-r border-[#BFC4D2] p-0 align-top">
+                    <Textarea
+                      rows={2}
                       value={row.notes}
                       readOnly={readOnly}
                       onChange={(e) =>
                         patchRow(row.localKey, { notes: e.target.value })
                       }
                       onBlur={() => commitRow(row.localKey)}
-                      className="h-9 w-full rounded-none border-0 bg-transparent text-base shadow-none focus-visible:ring-0"
+                      className="min-h-16 w-full resize-none rounded-none border-0 bg-transparent px-3 py-2 text-base leading-6 shadow-none focus-visible:ring-0 md:text-base"
                     />
                   </TableCell>
-                  <TableCell className="border-b border-[#BFC4D2] text-center">
+                  <TableCell className="border-b border-[#BFC4D2] text-center align-middle">
                     <Checkbox
                       checked={row.beachhead}
                       disabled={readOnly}
