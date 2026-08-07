@@ -92,8 +92,12 @@ function TriggerNodeInner({ id, data }: NodeProps) {
   // Only a leaf can go: deleting a card mid-journey would orphan its branch.
   const canDeleteNode = !readOnly && !hasChildren(id);
 
+  // The card width is fixed rather than shrink-to-fit: the content textarea sizes
+  // itself to its content, so on an auto-width card every character widens the
+  // node, which re-runs the tree layout mid-keystroke. Pinned to the same width as
+  // an Action card, the text wraps and only the height grows.
   return (
-    <div className="group/card nopan nodrag pointer-events-auto bg-white border border-white rounded-xl p-4 relative shadow-sm">
+    <div className="group/card nopan nodrag pointer-events-auto w-[370px] bg-white border border-white rounded-xl p-4 relative shadow-sm">
       <Handle
         id="left"
         type="target"
@@ -101,8 +105,10 @@ function TriggerNodeInner({ id, data }: NodeProps) {
         className="!opacity-0 !pointer-events-none"
       />
 
-      <div className="flex items-center gap-10 mb-3">
-        <div className="flex items-center gap-2">
+      {/* The title takes what it needs and the controls sit hard right — a fixed
+          gap between them would overflow the card once both are present. */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 min-w-0">
           <div className="w-[30px] h-[30px] bg-[#F4F0FF] rounded-full flex items-center justify-center flex-shrink-0">
             <ZapIcon className="w-3.5 h-3.5 text-[#6A35FF]" />
           </div>
@@ -110,33 +116,35 @@ function TriggerNodeInner({ id, data }: NodeProps) {
             Trigger / Motivation
           </span>
         </div>
-        {!readOnly && stakeholderPickerUnlocked && (
-          <>
+        <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+          {!readOnly && stakeholderPickerUnlocked && (
+            <>
+              <button
+                type="button"
+                className="nodrag nopan text-base font-medium text-[#6A35FF] whitespace-nowrap hover:underline"
+                onClick={() => setShowPicker(true)}
+              >
+                Stakeholders
+              </button>
+              <StakeholderPickerModal
+                open={showPicker}
+                onOpenChange={setShowPicker}
+                stakeholderRows={stakeholderRows}
+                selectedIds={selectedIds}
+                onSave={(ids) => updateNodeData(id, { stakeholderIds: ids })}
+              />
+            </>
+          )}
+          {canDeleteNode && (
             <button
-              type="button"
-              className="nodrag nopan text-base font-medium text-[#6A35FF] hover:underline"
-              onClick={() => setShowPicker(true)}
+              onClick={handleDeleteNode}
+              title="Delete card"
+              className="nodrag nopan opacity-0 group-hover/card:opacity-100 transition-opacity w-6 h-6 rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 hover:bg-red-50"
             >
-              Stakeholders
+              <Trash2Icon className="w-4 h-4" />
             </button>
-            <StakeholderPickerModal
-              open={showPicker}
-              onOpenChange={setShowPicker}
-              stakeholderRows={stakeholderRows}
-              selectedIds={selectedIds}
-              onSave={(ids) => updateNodeData(id, { stakeholderIds: ids })}
-            />
-          </>
-        )}
-        {canDeleteNode && (
-          <button
-            onClick={handleDeleteNode}
-            title="Delete card"
-            className="nodrag nopan ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity w-6 h-6 rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 hover:bg-red-50"
-          >
-            <Trash2Icon className="w-4 h-4" />
-          </button>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Selected stakeholders, grouped by category, comma-separated. */}
