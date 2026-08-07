@@ -514,10 +514,6 @@ export function MilestoneHeader({
                   // block's width is what changes on expand, not its padding.
                   className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 lg:py-3 [--ms-pad:14px] lg:[--ms-pad:16px] xl:[--ms-pad:18px]"
                 >
-                  {/* The lock sits on the "#N" line rather than beside the title:
-                      that row has spare width, while the title already wraps to
-                      two lines at these block widths. Color lives on the row so
-                      the icon inherits it through currentColor. */}
                   <motion.div
                     transition={transition}
                     animate={{ color: isExpanded ? "#ffffff" : restNumber }}
@@ -526,12 +522,6 @@ export function MilestoneHeader({
                     <span className="text-sm font-bold leading-none xl:text-base">
                       #{index}
                     </span>
-                    {isLocked && (
-                      <Lock
-                        aria-label="Not activated yet"
-                        className="size-3 shrink-0 xl:size-3.5"
-                      />
-                    )}
                   </motion.div>
                   <motion.span
                     transition={transition}
@@ -550,6 +540,28 @@ export function MilestoneHeader({
                   >
                     {milestone.label}
                   </motion.span>
+
+                  {/* Lock row, under the title — same placement and height as the
+                      one on a sub-step cell, so the two read as the same mark.
+                      Reserved on EVERY block as soon as locking is in play (i.e.
+                      `availableMilestones` was passed), empty or not: the column
+                      is centred, so a row present on some blocks only would lift
+                      their "#N" and title off the shared baseline. Color lives on
+                      the row so the icon inherits it through currentColor. */}
+                  {available && (
+                    <motion.div
+                      transition={transition}
+                      animate={{ color: isExpanded ? "#ffffff" : restNumber }}
+                      className="relative flex h-[18px] items-center justify-center"
+                    >
+                      {isLocked && (
+                        <Lock
+                          aria-label="Not activated yet"
+                          className="size-3 shrink-0 xl:size-3.5"
+                        />
+                      )}
+                    </motion.div>
+                  )}
                 </ArrowSegment>
 
                 {/* Fixed sub-steps — fade + slide in only while expanded. The
