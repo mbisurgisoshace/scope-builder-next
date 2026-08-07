@@ -47,8 +47,22 @@ const SEGMENTS = 3;
 // flip it back on if sub-steps ever gain sub-items to count.
 const SHOW_PROGRESS_SEGMENTS = false;
 
-// Width of the chevron arrow that terminates / separates each block.
-const CHEVRON_W = 14;
+// Depth of the arrow tip / notch, as a length. Lives in a CSS variable rather
+// than a JS constant because the clip-path polygons below are plain strings that
+// have to resolve it at paint time, and the horizontal paddings derive from it
+// with calc().
+const ARROW = "var(--ms-arrow)";
+
+// Every segment of the strip — a milestone's label block and each of its
+// sub-step cells — is one of these two shapes, applied to the element's OWN box
+// via clip-path rather than drawn as an SVG sitting outside it. That's what makes
+// the background, the hover color and the hit area follow the arrow instead of
+// the bounding rectangle. Segments overlap their left neighbour by exactly
+// ARROW, so a block's notch and its predecessor's tip are complementary and tile
+// without a seam.
+const CLIP_ARROW = `polygon(0 0, calc(100% - ${ARROW}) 0, 100% 50%, calc(100% - ${ARROW}) 100%, 0 100%, ${ARROW} 50%)`;
+// First block in the strip: nothing to its left, so no notch (per design).
+const CLIP_ARROW_FLAT_LEFT = `polygon(0 0, calc(100% - ${ARROW}) 0, 100% 50%, calc(100% - ${ARROW}) 100%, 0 100%)`;
 
 const INDIGO = "#6935FD";
 const CHEVRON_GRAY = "#C9CDD9"; // divider / tip outline on the gray blocks
@@ -83,42 +97,100 @@ const TRANSITION = { duration: 0.28, ease: [0.4, 0, 0.2, 1] } as const;
 const INSTANT = { duration: 0 } as const;
 
 /**
- * The arrow tip / divider drawn on the right edge of a block. `fill` paints the
- * triangle (use to extend a colored block or cover the seam); `stroke` draws the
- * two diagonal border lines. Both animate so the tip crossfades with its block.
+ * One arrow-shaped cell of the strip. Two stacked clipped layers:
+ *
+ *   - the outer element, clipped to the full arrow and painted `edge` — the 1px
+ *     outline color;
+ *   - an absolute fill layer, clipped to the same arrow but inset 1px on the
+ *     right only, painted `fill`.
+ *
+ * The 1px the fill doesn't cover is the diagonal border along the tip. The notch
+ * side is left flush on purpose: a notch always sits on top of the previous
+ * segment's tip, which has already drawn that line, so outlining both would make
+ * every divider read 2px.
+ *
+ * Horizontal borders are NOT drawn here — the milestone block paints its own
+ * top/bottom rules across all of its segments, matching the old behaviour where
+ * those belonged to the block and the diagonals to the chevrons.
+ *
+ * Content sits above the fill layer, horizontally centred on the arrow's area
+ * centroid — which is NOT the same as the centre of its mid-height slice. The
+ * notch and the tip are congruent triangles, so removing one near the left edge
+ * and adding one past the right edge cancel out exactly: a notched arrow's
+ * centroid is its plain box centre, and symmetric padding centres the label. (An
+ * un-notched arrow keeps the tip without the cancelling notch, so its centroid
+ * sits A/4 to the LEFT of the box centre — hence the nudge below.)
+ *
+ * Centring on the mid-height slice instead would push labels A/2 to the right.
+ * That reads as off-centre here because the labels are ~60px tall in an ~80px
+ * block, so most of the text sits well away from mid-height, where the diagonals
+ * have already closed in.
+ *
+ * The pad also has to clear those diagonals over the content's full height: a
+ * content box C tall in a block H tall needs at least A·C/H of right padding, or
+ * the corners of the top and bottom lines get clipped. See each caller's values.
  */
-function Chevron({
+function ArrowSegment({
   fill,
-  stroke,
-  width = CHEVRON_W,
-  transition = TRANSITION,
+  edge,
+  notched,
+  overlap,
+  transition,
+  className = "",
+  style,
+  children,
 }: {
+  /** Interior color of the arrow. */
   fill: string;
-  stroke?: string;
-  width?: number;
-  transition?: typeof TRANSITION | typeof INSTANT;
+  /** 1px outline along the tip diagonal. Pass the same value as `fill` for no
+   *  visible divider. */
+  edge: string;
+  /** Bite a notch out of the left edge. False only for the very first block. */
+  notched: boolean;
+  /** Pull left by one arrow depth so this segment's notch lands on its
+   *  neighbour's tip. False for the first segment inside a block — the block
+   *  itself carries that offset. */
+  overlap: boolean;
+  transition: typeof TRANSITION | typeof INSTANT;
+  className?: string;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
 }) {
+  const clipPath = notched ? CLIP_ARROW : CLIP_ARROW_FLAT_LEFT;
   return (
-    <svg
-      className="pointer-events-none absolute top-0 z-10 h-full"
-      style={{ right: -width, width }}
-      viewBox={`0 0 ${width} 100`}
-      preserveAspectRatio="none"
+    <motion.div
+      initial={false}
+      transition={transition}
+      animate={{ backgroundColor: edge }}
+      style={{
+        clipPath,
+        marginLeft: overlap ? `calc(${ARROW} * -1)` : 0,
+        paddingLeft: notched
+          ? "var(--ms-pad)"
+          : `calc(var(--ms-pad) - ${ARROW} / 4)`,
+        paddingRight: notched
+          ? "var(--ms-pad)"
+          : `calc(var(--ms-pad) + ${ARROW} / 4)`,
+        ...style,
+      }}
+      className={`relative ${className}`}
     >
-      <motion.path
-        d={`M0 0 L${width} 50 L0 100 Z`}
-        animate={{ fill }}
+      <motion.div
+        aria-hidden
+        initial={false}
         transition={transition}
+        animate={{ backgroundColor: fill }}
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 1,
+          clipPath,
+        }}
       />
-      <motion.path
-        d={`M0 0 L${width} 50 L0 100`}
-        fill="none"
-        animate={{ stroke: stroke ?? "rgba(0,0,0,0)" }}
-        strokeWidth={1}
-        vectorEffect="non-scaling-stroke"
-        transition={transition}
-      />
-    </svg>
+      {children}
+    </motion.div>
   );
 }
 
@@ -139,36 +211,47 @@ function ProgressSegments({ filled }: { filled: number }) {
 
 function SubStepCell({
   subStep,
-  showDivider,
+  isLast,
+  accent,
   isLocked,
+  transition,
 }: {
   subStep: SubStep;
-  showDivider: boolean;
+  /** Terminates the milestone, so its tip is the block's tip and takes the
+   *  block's accent outline rather than a pale internal divider. */
+  isLast: boolean;
+  accent: string;
   /** Its milestone hasn't been activated for this startup. The whole cell greys
    *  out and shows a lock, overriding any Done tint — a sub-step ticked ahead of
    *  the instructor unlocks nothing (see `isSubStepUnlocked`), so showing it as
    *  Completed here would claim progress the team doesn't have. */
   isLocked: boolean;
+  transition: typeof TRANSITION | typeof INSTANT;
 }) {
-  // The cell's own tint. The divider chevron is filled with the same color so the
-  // arrow reads as an extension of this cell over its neighbour's left corner.
   const isDone = !isLocked && subStep.status === "done";
   const bg = isLocked ? BLOCK_GRAY : isDone ? GREEN_TINT : INDIGO_TINT;
-  const chevronStroke = isLocked
+  const divider = isLocked
     ? CHEVRON_GRAY
     : isDone
       ? CHEVRON_GREEN
       : CHEVRON_INDIGO;
   return (
-    <div
-      style={{ backgroundColor: bg }}
-      className="relative flex flex-col items-center justify-center gap-1.5 px-2 py-2 lg:px-3 lg:py-3 xl:px-4"
+    <ArrowSegment
+      fill={bg}
+      edge={isLast ? accent : divider}
+      notched
+      overlap
+      transition={transition}
+      // Tallest content in the strip — ~59px (label + status row) in a 75-83px
+      // block — so the tip diagonal has closed in by ~16px by the time it reaches
+      // the top and bottom lines. That, not visual balance, sets the minimum.
+      className="flex shrink-0 flex-col items-center justify-center gap-1.5 py-2 lg:py-3 [--ms-pad:18px] lg:[--ms-pad:20px] xl:[--ms-pad:22px]"
     >
       {/* Capped narrow so labels wrap onto a second line instead of stretching
           the cell wide on one. */}
       <span
         style={isLocked ? { color: GRAY_LABEL } : undefined}
-        className="h-[35px] block line-clamp-2 max-w-[112px] text-center text-xs font-medium leading-tight text-gray-700 xl:max-w-[132px] xl:text-sm"
+        className="relative h-[35px] block line-clamp-2 max-w-[112px] text-center text-xs font-medium leading-tight text-gray-700 xl:max-w-[132px] xl:text-sm"
       >
         {subStep.label}
       </span>
@@ -177,26 +260,29 @@ function SubStepCell({
         // Same row the check / segments occupy, so locked cells keep the strip's
         // shared baseline.
         <div
-          className="flex h-[18px] items-center"
+          className="relative flex h-[18px] items-center"
           style={{ color: GRAY_LABEL }}
         >
           <Lock aria-label="Not activated yet" size={13} />
         </div>
       ) : isDone ? (
-        <div className="flex items-center gap-1" style={{ color: GREEN_TEXT }}>
+        <div
+          className="relative flex items-center gap-1"
+          style={{ color: GREEN_TEXT }}
+        >
           <CheckCircle2 size={13} />
           <span className="text-xs">Completed</span>
         </div>
       ) : SHOW_PROGRESS_SEGMENTS ? (
-        <ProgressSegments filled={subStep.filled} />
+        <div className="relative">
+          <ProgressSegments filled={subStep.filled} />
+        </div>
       ) : (
         // Placeholder matching the height of the "Completed" row / segments, so
         // pending cells don't shrink and shift the strip.
-        <span aria-hidden className="h-[18px]" />
+        <span aria-hidden className="relative h-[18px]" />
       )}
-
-      {showDivider && <Chevron fill={bg} stroke={chevronStroke} />}
-    </div>
+    </ArrowSegment>
   );
 }
 
@@ -250,6 +336,12 @@ export function MilestoneHeader({
   // finished exiting — otherwise it snaps narrow immediately and the outgoing
   // sub-steps overlap the neighbouring blocks for the length of the exit.
   const [exitingIndex, setExitingIndex] = useState<number | null>(null);
+
+  // Hover is tracked in state rather than with `whileHover` because two elements
+  // have to react to it together — the label segment's fill and its 1px tip
+  // outline — and they are siblings, not one box. Hit testing follows the
+  // clip-path, so this only fires over the actual arrow.
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const spacerRef = useRef<HTMLDivElement | null>(null);
@@ -321,9 +413,11 @@ export function MilestoneHeader({
       >
         {/* Collapsed width. Sized so the longest two-word tail ("Present
             Findings") still fits on one line — i.e. every label wraps to at most
-            two lines — after the horizontal padding and the neighbouring
-            chevron's overlap are taken out. */}
-        <div className="flex w-full min-w-max items-stretch [--ms-basis:125px] lg:[--ms-basis:142px] xl:[--ms-basis:165px]">
+            two lines — after the horizontal padding and the notch are taken out.
+            Note that a block overlaps its neighbour by one arrow depth, so the
+            width it actually advances the strip by is the basis minus that
+            depth. */}
+        <div className="flex w-full min-w-max items-stretch [--ms-arrow:20px] [--ms-basis:145px] lg:[--ms-basis:162px] xl:[--ms-basis:185px]">
           {milestones.map((milestone, index) => {
             const isExpanded = index === expandedIndex;
             // Sign-off recolours the block green in both states — solid while
@@ -343,8 +437,33 @@ export function MilestoneHeader({
             // Content-sized while expanded (and while collapsing) so the sub-steps
             // widen the block instead of overflowing onto the next one.
             const sizeToContent = isExpanded || index === exitingIndex;
-            // Left blocks stack above right ones so their chevrons overlay the next block.
+            // Left blocks stack above right ones. With complementary clip-paths
+            // nothing overdraws, but this keeps the paint order predictable.
             const zIndex = total - index;
+            const isFirst = index === 0;
+            const isHovered = !isExpanded && hoveredIndex === index;
+            const labelFill = isExpanded
+              ? accent
+              : isHovered
+                ? restHoverBg
+                : restBg;
+            // While collapsed the label segment IS the whole block, so its tip
+            // carries the block's outline. While expanded its tip is an internal
+            // divider against the first sub-step, which the old design drew
+            // unstroked — matching `edge` to `fill` reproduces that.
+            const labelEdge = isExpanded ? accent : restChevron;
+            const blockBorder = isExpanded ? accent : "rgba(0,0,0,0)";
+            // Painted behind the segments, so it only shows in the sliver the
+            // sub-steps briefly vacate while they slide in and out. Matched to the
+            // colour of whichever segment ends the block, so that sliver reads as
+            // part of the tip instead of flashing the page background through it.
+            const tailFill = !isExpanded
+              ? labelFill
+              : isLocked
+                ? BLOCK_GRAY
+                : milestone.subSteps.at(-1)?.status === "done"
+                  ? GREEN_TINT
+                  : INDIGO_TINT;
 
             return (
               <motion.div
@@ -353,6 +472,10 @@ export function MilestoneHeader({
                   blockRefs.current[index] = el;
                 }}
                 onClick={() => setSelectedMilestone(index)}
+                onHoverStart={() => setHoveredIndex(index)}
+                onHoverEnd={() =>
+                  setHoveredIndex((cur) => (cur === index ? null : cur))
+                }
                 initial={false}
                 transition={transition}
                 // Animate flexGrow (a real layout property) rather than framer's
@@ -362,30 +485,34 @@ export function MilestoneHeader({
                 // width; grow=1 lets the expanded one absorb the free space.
                 animate={{
                   flexGrow: isExpanded ? 1 : 0,
-                  borderColor: isExpanded ? accent : "rgba(0,0,0,0)",
+                  backgroundColor: tailFill,
                 }}
                 style={{
                   zIndex,
                   flexBasis: "var(--ms-basis)",
                   flexShrink: 0,
                   minWidth: sizeToContent ? "max-content" : 0,
+                  // The block is clipped to the union of its segments. It has no
+                  // background of its own, but the clip is what makes clicks and
+                  // hovers land on the arrow rather than the bounding rectangle —
+                  // without it the shoulders above and below a neighbour's tip
+                  // would still be hit by this block.
+                  clipPath: isFirst ? CLIP_ARROW_FLAT_LEFT : CLIP_ARROW,
+                  marginLeft: isFirst ? 0 : `calc(${ARROW} * -1)`,
                 }}
-                className="relative flex cursor-pointer items-stretch border-y border-l"
+                className="relative flex cursor-pointer items-stretch"
               >
-                {/* Milestone label — arrow-shaped block. Purple when expanded. */}
-                <motion.div
+                {/* Milestone label — the arrow's head. Purple when expanded. */}
+                <ArrowSegment
+                  fill={labelFill}
+                  edge={labelEdge}
+                  notched={!isFirst}
+                  overlap={false}
                   transition={transition}
-                  animate={{
-                    backgroundColor: isExpanded ? accent : restBg,
-                  }}
-                  whileHover={
-                    isExpanded ? undefined : { backgroundColor: restHoverBg }
-                  }
-                  className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 lg:py-3 ${
-                    isExpanded
-                      ? "px-2 lg:px-2.5 xl:px-3"
-                      : "px-1.5 lg:px-2 xl:px-2.5"
-                  }`}
+                  // Shorter content than a sub-step cell (~46px), so it needs
+                  // less clearance — but the same pad in both states, since the
+                  // block's width is what changes on expand, not its padding.
+                  className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 lg:py-3 [--ms-pad:14px] lg:[--ms-pad:16px] xl:[--ms-pad:18px]"
                 >
                   {/* The lock sits on the "#N" line rather than beside the title:
                       that row has spare width, while the title already wraps to
@@ -394,7 +521,7 @@ export function MilestoneHeader({
                   <motion.div
                     transition={transition}
                     animate={{ color: isExpanded ? "#ffffff" : restNumber }}
-                    className="flex items-center justify-center gap-1"
+                    className="relative flex items-center justify-center gap-1"
                   >
                     <span className="text-sm font-bold leading-none xl:text-base">
                       #{index}
@@ -417,20 +544,17 @@ export function MilestoneHeader({
                     // font size) so one-line labels still reserve the second row —
                     // otherwise they centre themselves and sit off the shared
                     // baseline of their neighbours.
-                    className={`block min-h-[30px] max-w-[116px] text-center text-xs leading-tight xl:min-h-[35px] xl:max-w-[140px] xl:text-sm ${
+                    className={`relative block min-h-[30px] max-w-[116px] text-center text-xs leading-tight xl:min-h-[35px] xl:max-w-[140px] xl:text-sm ${
                       isExpanded ? "font-bold" : "font-medium"
                     }`}
                   >
                     {milestone.label}
                   </motion.span>
-                  <Chevron
-                    fill={isExpanded ? accent : restBg}
-                    stroke={isExpanded ? undefined : restChevron}
-                    transition={transition}
-                  />
-                </motion.div>
+                </ArrowSegment>
 
-                {/* Fixed sub-steps — fade + slide in only while expanded. */}
+                {/* Fixed sub-steps — fade + slide in only while expanded. The
+                    last one's tip is the block's tip, so the milestone ends in
+                    that sub-step's own tint. */}
                 <AnimatePresence
                   initial={false}
                   onExitComplete={() =>
@@ -450,27 +574,41 @@ export function MilestoneHeader({
                         <SubStepCell
                           key={subStep.label}
                           subStep={subStep}
-                          showDivider={i < milestone.subSteps.length - 1}
+                          isLast={i === milestone.subSteps.length - 1}
+                          accent={accent}
                           isLocked={isLocked}
+                          transition={transition}
                         />
                       ))}
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                {/* Arrow tip terminating the expanded block — tinted to match the
-                    last sub-step so the block ends in its own color. */}
-                {isExpanded && (
-                  <Chevron
-                    fill={
-                      isLocked
-                        ? BLOCK_GRAY
-                        : milestone.subSteps.at(-1)?.status === "done"
-                          ? GREEN_TINT
-                          : INDIGO_TINT
-                    }
-                    stroke={accent}
+                {/* Top / bottom (and, on the first block, left) rules. Drawn at
+                    block level rather than per segment so an expanded milestone
+                    gets one continuous accent outline instead of one per cell;
+                    the block's clip-path terminates them on the diagonals. */}
+                <motion.div
+                  aria-hidden
+                  initial={false}
+                  transition={transition}
+                  animate={{ backgroundColor: blockBorder }}
+                  className="pointer-events-none absolute inset-x-0 top-0 z-20 h-px"
+                />
+                <motion.div
+                  aria-hidden
+                  initial={false}
+                  transition={transition}
+                  animate={{ backgroundColor: blockBorder }}
+                  className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-px"
+                />
+                {isFirst && (
+                  <motion.div
+                    aria-hidden
+                    initial={false}
                     transition={transition}
+                    animate={{ backgroundColor: blockBorder }}
+                    className="pointer-events-none absolute inset-y-0 left-0 z-20 w-px"
                   />
                 )}
               </motion.div>
