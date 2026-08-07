@@ -28,11 +28,14 @@ interface MilestoneHeaderProps {
   currentNumber?: number;
   /** Milestone numbers (0-based — milestone 0 is Program Onboarding) an
    *  instructor has signed off. These paint green instead of indigo when
-   *  selected. */
+   *  selected, and a lighter green instead of gray when not — so completed
+   *  milestones are recognisable across the whole strip at a glance. */
   reviewedMilestones?: number[];
   /** Milestone numbers the startup has unlocked. The rest get a lock icon beside
-   *  their name — a hint only, the blocks stay clickable. Omit to show no locks
-   *  at all (the /examples mirrors, which gate nothing). */
+   *  their name, and their sub-step cells grey out with a lock of their own once
+   *  the block is expanded — a hint only, the blocks stay clickable so a team can
+   *  preview what's coming. Omit to show no locks at all (the /examples mirrors,
+   *  which gate nothing). */
   availableMilestones?: number[];
 }
 
@@ -59,6 +62,14 @@ const INDIGO_LABEL = "#C7D2FE"; // indigo-200, used for the milestone title
 // completion rather than instructor sign-off.
 const GREEN_SOLID = "#2F9E63"; // label block of a reviewed, selected milestone
 const GREEN_SOLID_LABEL = "#C7EBD5"; // its title text, mirroring INDIGO_LABEL
+
+// The same state while collapsed: a lighter green standing in for BLOCK_GRAY,
+// with green counterparts of GRAY_LABEL / GRAY_TEXT so the whole block reads as
+// done without competing with the selected one.
+const GREEN_BLOCK = "#D7EFE0"; // unselected reviewed milestone
+const GREEN_BLOCK_HOVER = "#C6E7D3";
+const GREEN_BLOCK_NUMBER = "#1F7A4C"; // its "#N" caption
+const GREEN_BLOCK_LABEL = "#2F9E63"; // its title text
 
 const INDIGO_TINT = "#F1ECFF"; // sub-step cells of the selected milestone
 const GREEN_TINT = "#E7F7EC"; // completed sub-step cells
@@ -129,15 +140,25 @@ function ProgressSegments({ filled }: { filled: number }) {
 function SubStepCell({
   subStep,
   showDivider,
+  isLocked,
 }: {
   subStep: SubStep;
   showDivider: boolean;
+  /** Its milestone hasn't been activated for this startup. The whole cell greys
+   *  out and shows a lock, overriding any Done tint — a sub-step ticked ahead of
+   *  the instructor unlocks nothing (see `isSubStepUnlocked`), so showing it as
+   *  Completed here would claim progress the team doesn't have. */
+  isLocked: boolean;
 }) {
   // The cell's own tint. The divider chevron is filled with the same color so the
   // arrow reads as an extension of this cell over its neighbour's left corner.
-  const isDone = subStep.status === "done";
-  const bg = isDone ? GREEN_TINT : INDIGO_TINT;
-  const chevronStroke = isDone ? CHEVRON_GREEN : CHEVRON_INDIGO;
+  const isDone = !isLocked && subStep.status === "done";
+  const bg = isLocked ? BLOCK_GRAY : isDone ? GREEN_TINT : INDIGO_TINT;
+  const chevronStroke = isLocked
+    ? CHEVRON_GRAY
+    : isDone
+      ? CHEVRON_GREEN
+      : CHEVRON_INDIGO;
   return (
     <div
       style={{ backgroundColor: bg }}
@@ -145,11 +166,23 @@ function SubStepCell({
     >
       {/* Capped narrow so labels wrap onto a second line instead of stretching
           the cell wide on one. */}
-      <span className="h-[35px] block line-clamp-2 max-w-[112px] text-center text-xs font-medium leading-tight text-gray-700 xl:max-w-[132px] xl:text-sm">
+      <span
+        style={isLocked ? { color: GRAY_LABEL } : undefined}
+        className="h-[35px] block line-clamp-2 max-w-[112px] text-center text-xs font-medium leading-tight text-gray-700 xl:max-w-[132px] xl:text-sm"
+      >
         {subStep.label}
       </span>
 
-      {isDone ? (
+      {isLocked ? (
+        // Same row the check / segments occupy, so locked cells keep the strip's
+        // shared baseline.
+        <div
+          className="flex h-[18px] items-center"
+          style={{ color: GRAY_LABEL }}
+        >
+          <Lock aria-label="Not activated yet" size={13} />
+        </div>
+      ) : isDone ? (
         <div className="flex items-center gap-1" style={{ color: GREEN_TEXT }}>
           <CheckCircle2 size={13} />
           <span className="text-xs">Completed</span>
@@ -196,13 +229,13 @@ export function MilestoneHeader({
     () =>
       MILESTONE_LABELS.map((label, index) => ({
         label,
-        subSteps: SUB_STEPS.filter((subStep) => subStep.milestone === index).map(
-          (subStep) => ({
-            label: subStep.label,
-            status: progress[subStep.key] ? "done" : "active",
-            filled: progress[subStep.key] ? SEGMENTS : 0,
-          }),
-        ),
+        subSteps: SUB_STEPS.filter(
+          (subStep) => subStep.milestone === index,
+        ).map((subStep) => ({
+          label: subStep.label,
+          status: progress[subStep.key] ? "done" : "active",
+          filled: progress[subStep.key] ? SEGMENTS : 0,
+        })),
       })),
     [progress],
   );
@@ -293,14 +326,20 @@ export function MilestoneHeader({
         <div className="flex w-full min-w-max items-stretch [--ms-basis:125px] lg:[--ms-basis:142px] xl:[--ms-basis:165px]">
           {milestones.map((milestone, index) => {
             const isExpanded = index === expandedIndex;
-            // Sign-off recolours the selected block; a collapsed block stays gray
-            // either way, so this only matters while expanded.
+            // Sign-off recolours the block green in both states — solid while
+            // selected, a lighter tint while collapsed.
             const isReviewed = reviewed.has(index);
             // Not yet unlocked for this startup. Purely a visual hint — the block
             // still selects, so the milestone can be previewed.
             const isLocked = available ? !available.has(index) : false;
             const accent = isReviewed ? GREEN_SOLID : INDIGO;
             const accentLabel = isReviewed ? GREEN_SOLID_LABEL : INDIGO_LABEL;
+            // Collapsed palette — green for a reviewed milestone, gray otherwise.
+            const restBg = isReviewed ? GREEN_BLOCK : BLOCK_GRAY;
+            const restHoverBg = isReviewed ? GREEN_BLOCK_HOVER : "#E4E5ED";
+            const restNumber = isReviewed ? GREEN_BLOCK_NUMBER : GRAY_LABEL;
+            const restLabel = isReviewed ? GREEN_BLOCK_LABEL : GRAY_TEXT;
+            const restChevron = isReviewed ? CHEVRON_GREEN : CHEVRON_GRAY;
             // Content-sized while expanded (and while collapsing) so the sub-steps
             // widen the block instead of overflowing onto the next one.
             const sizeToContent = isExpanded || index === exitingIndex;
@@ -337,10 +376,10 @@ export function MilestoneHeader({
                 <motion.div
                   transition={transition}
                   animate={{
-                    backgroundColor: isExpanded ? accent : BLOCK_GRAY,
+                    backgroundColor: isExpanded ? accent : restBg,
                   }}
                   whileHover={
-                    isExpanded ? undefined : { backgroundColor: "#E4E5ED" }
+                    isExpanded ? undefined : { backgroundColor: restHoverBg }
                   }
                   className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 lg:py-3 ${
                     isExpanded
@@ -354,7 +393,7 @@ export function MilestoneHeader({
                       the icon inherits it through currentColor. */}
                   <motion.div
                     transition={transition}
-                    animate={{ color: isExpanded ? "#ffffff" : GRAY_LABEL }}
+                    animate={{ color: isExpanded ? "#ffffff" : restNumber }}
                     className="flex items-center justify-center gap-1"
                   >
                     <span className="text-sm font-bold leading-none xl:text-base">
@@ -369,7 +408,7 @@ export function MilestoneHeader({
                   </motion.div>
                   <motion.span
                     transition={transition}
-                    animate={{ color: isExpanded ? accentLabel : GRAY_TEXT }}
+                    animate={{ color: isExpanded ? accentLabel : restLabel }}
                     // Capped width so the label wraps onto a second line instead
                     // of stretching the block wide on one. Wide enough that the
                     // longest label ("User, their Journey & Market") fits in two.
@@ -385,8 +424,8 @@ export function MilestoneHeader({
                     {milestone.label}
                   </motion.span>
                   <Chevron
-                    fill={isExpanded ? accent : BLOCK_GRAY}
-                    stroke={isExpanded ? undefined : CHEVRON_GRAY}
+                    fill={isExpanded ? accent : restBg}
+                    stroke={isExpanded ? undefined : restChevron}
                     transition={transition}
                   />
                 </motion.div>
@@ -412,6 +451,7 @@ export function MilestoneHeader({
                           key={subStep.label}
                           subStep={subStep}
                           showDivider={i < milestone.subSteps.length - 1}
+                          isLocked={isLocked}
                         />
                       ))}
                     </motion.div>
@@ -423,9 +463,11 @@ export function MilestoneHeader({
                 {isExpanded && (
                   <Chevron
                     fill={
-                      milestone.subSteps.at(-1)?.status === "done"
-                        ? GREEN_TINT
-                        : INDIGO_TINT
+                      isLocked
+                        ? BLOCK_GRAY
+                        : milestone.subSteps.at(-1)?.status === "done"
+                          ? GREEN_TINT
+                          : INDIGO_TINT
                     }
                     stroke={accent}
                     transition={transition}
