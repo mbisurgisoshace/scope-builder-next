@@ -35,9 +35,8 @@ interface GetStartedCardProps {
   /** When this startup submitted the milestone; null while unsubmitted. */
   milestoneSubmittedAt?: Date | null;
   /**
-   * Submits the milestone for review — only the `steps` card calls this. Leave
-   * it off to omit the button entirely; the Milestone Steps dialog does, so
-   * submitting stays a deliberate action taken on the Instructions tab.
+   * Submits the milestone for review — only the `steps` card renders a button
+   * for it, and leaving this off omits the button entirely.
    */
   onSubmitMilestone?: () => void;
   /** Reviewed toggles are shown but disabled (Examples pages). */

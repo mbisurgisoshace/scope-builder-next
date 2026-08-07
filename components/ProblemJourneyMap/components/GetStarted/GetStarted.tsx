@@ -1,13 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { Loader } from "@/components/ui/loader";
-import {
-  getMilestoneSubmission,
-  submitMilestone,
-} from "@/services/milestoneAccess";
 import { useMilestoneSelection } from "../../MilestoneSelectionContext";
 import { useGetStartedCards } from "../../GetStartedCardsContext";
 import { GetStartedCard } from "./GetStartedCard";
@@ -20,47 +15,28 @@ const INSTANT = { duration: 0 } as const;
 
 interface GetStartedProps {
   readOnly?: boolean;
-  exampleNumber?: number;
 }
 
-export function GetStarted({ readOnly = false, exampleNumber }: GetStartedProps) {
+// The example set is no longer read here: cards and submission both come from
+// GetStartedCardsProvider, which is the one that knows about /examples.
+export function GetStarted({ readOnly = false }: GetStartedProps) {
   const { selectedMilestone: milestone } = useMilestoneSelection();
   const prefersReducedMotion = useReducedMotion();
   const transition = prefersReducedMotion ? INSTANT : TRANSITION;
 
   // Cached page-wide and shared with MilestoneStepsDialog, which renders this
-  // milestone's steps card from the journey tab bar. Leaving and returning to
-  // this tab doesn't re-query.
-  const { cards, loading, cardReviewed, itemReviewed, toggleCard, toggleItem } =
-    useGetStartedCards(milestone);
-
-  const [submittedAt, setSubmittedAt] = useState<Date | null>(null);
-
-  useEffect(() => {
-    let active = true;
-
-    // Submission is per-org and has no example-set mirror, so the Examples
-    // pages just show the button disabled and unsubmitted.
-    if (exampleNumber != null) {
-      setSubmittedAt(null);
-    } else {
-      getMilestoneSubmission(milestone).then((result) => {
-        if (active) setSubmittedAt(result);
-      });
-    }
-
-    return () => {
-      active = false;
-    };
-  }, [milestone, exampleNumber]);
-
-  const submit = () => {
-    if (readOnly || submittedAt) return;
-    setSubmittedAt(new Date()); // optimistic; the server timestamp wins below
-    submitMilestone(milestone)
-      .then(setSubmittedAt)
-      .catch(() => setSubmittedAt(null));
-  };
+  // milestone's steps card — submission included — from the journey tab bar.
+  // Leaving and returning to this tab doesn't re-query.
+  const {
+    cards,
+    loading,
+    cardReviewed,
+    itemReviewed,
+    submittedAt,
+    toggleCard,
+    toggleItem,
+    submitMilestone,
+  } = useGetStartedCards(milestone);
 
   return (
     <AnimatePresence mode="wait">
@@ -107,7 +83,7 @@ export function GetStarted({ readOnly = false, exampleNumber }: GetStartedProps)
                 onToggleCard={toggleCard}
                 onToggleItem={toggleItem}
                 milestoneSubmittedAt={submittedAt}
-                onSubmitMilestone={submit}
+                onSubmitMilestone={submitMilestone}
                 readOnly={readOnly}
               />
             ))}

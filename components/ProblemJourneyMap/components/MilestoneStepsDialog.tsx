@@ -24,8 +24,9 @@ interface MilestoneStepsDialogProps {
  * Startups kept bouncing to Instructions to tick a sub-step off and back again —
  * and ticking is what unlocks parts of the tab they came from. Toggling here
  * writes through the same context the header and canvas read, so those unlock in
- * place. Deliberately narrower than the Instructions tab: the steps card only,
- * with no Submit for Review button.
+ * place. Narrower than the Instructions tab in that it shows the steps card
+ * alone, but that card is the whole thing: sub-steps and Submit for Review, with
+ * submission state shared with the tab so the two never disagree.
  */
 export function MilestoneStepsDialog({
   open,
@@ -59,8 +60,15 @@ export function MilestoneStepsDialog({
 }
 
 function StepsCardBody({ milestone }: { milestone: number }) {
-  const { cards, loading, itemReviewed, toggleCard, toggleItem } =
-    useGetStartedCards(milestone);
+  const {
+    cards,
+    loading,
+    itemReviewed,
+    submittedAt,
+    toggleCard,
+    toggleItem,
+    submitMilestone,
+  } = useGetStartedCards(milestone);
 
   const stepsCard = cards.find((card) => card.type === "steps");
 
@@ -71,13 +79,14 @@ function StepsCardBody({ milestone }: { milestone: number }) {
           <Loader />
         </div>
       ) : stepsCard ? (
-        // No onSubmitMilestone: that omits the Submit for Review button.
         <GetStartedCard
           card={stepsCard}
           cardReviewed={false}
           itemReviewed={itemReviewed}
           onToggleCard={toggleCard}
           onToggleItem={toggleItem}
+          milestoneSubmittedAt={submittedAt}
+          onSubmitMilestone={submitMilestone}
         />
       ) : (
         <p className="py-8 text-center text-base text-[#4E5566]">

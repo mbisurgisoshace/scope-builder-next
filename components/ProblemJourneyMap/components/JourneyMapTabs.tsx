@@ -189,7 +189,7 @@ export function JourneyMapTabs({
           {value === "canvas" ? (
             canvas
           ) : value === "get-started" ? (
-            <GetStarted readOnly={readOnly} exampleNumber={exampleNumber} />
+            <GetStarted readOnly={readOnly} />
           ) : value === "market" ? (
             <Market
               readOnly={readOnly}
