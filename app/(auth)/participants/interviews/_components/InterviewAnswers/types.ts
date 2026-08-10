@@ -25,6 +25,8 @@ export interface AnswerableQuestion {
 
 export interface AnswerableProblem {
   id: string;
+  /** The action card's text, as typed on the canvas. "" = never filled in. */
+  action: string;
   /** Pill label, e.g. "Problem". */
   label: string;
   description: string;

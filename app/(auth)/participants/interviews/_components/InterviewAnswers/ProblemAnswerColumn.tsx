@@ -1,5 +1,7 @@
 "use client";
 
+import { ActionLabel } from "@/components/ProblemJourneyMap/components/InterviewPrep/ActionLabel";
+
 import { AnswerInput } from "./AnswerInput";
 import type { AnswerableProblem } from "./types";
 
@@ -20,6 +22,9 @@ export function ProblemAnswerColumn({
     <div className="flex w-full flex-col">
       {/* Problem summary — read-only; it's authored on the journey map. */}
       <div className="rounded-lg bg-[#F5F5F8] p-4">
+        {/* The action this problem hangs off — context only, so it sits above
+            the pill rather than competing with the problem itself. */}
+        <ActionLabel action={problem.action} className="mb-2" />
         <div className="flex items-start justify-between gap-4">
           <span className="inline-flex w-fit shrink-0 items-center rounded-full border border-[#F0E4C9] bg-[#FBF3DE] px-2.5 py-0.5 text-xs font-medium text-[#8A6D1E]">
             {problem.label}

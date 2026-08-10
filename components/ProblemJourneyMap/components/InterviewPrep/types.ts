@@ -34,6 +34,8 @@ export interface ProblemBlock {
   id: string;
   /** The action node the problem hangs off; needed to address the interview question. */
   nodeId: string;
+  /** The action card's text, as typed on the canvas. "" = never filled in. */
+  action: string;
   /** Pill label, e.g. "Problem". */
   label: string;
   description: string;

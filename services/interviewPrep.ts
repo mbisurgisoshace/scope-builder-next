@@ -72,6 +72,8 @@ type StoredProblem = {
 type StoredNode = {
   id?: string;
   type?: string;
+  /** The action text the user typed on the card. */
+  content?: string;
   problems?: StoredProblem[];
   /** Logical delete marker written by the canvas. Set = the node is gone as far
    * as every reader is concerned, even though its data is still in storage. */
@@ -217,6 +219,7 @@ async function loadProblemBlocksFrom(
       blocks.push({
         id: problem.id,
         nodeId: node.id,
+        action: node.content ?? "",
         label: "Problem",
         description: problem.description,
         tags: [
@@ -327,6 +330,7 @@ async function buildAnswerableProblems(
 
   return answerable.map(({ block, authored }) => ({
     id: block.id,
+    action: block.action,
     label: block.label,
     description: block.description,
     tags: block.tags,

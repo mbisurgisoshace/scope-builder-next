@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
+import { ActionLabel } from "./ActionLabel";
 import { HypothesisRow } from "./HypothesisRow";
 import type { InterviewQuestion, ProblemBlock } from "./types";
 
@@ -36,6 +37,9 @@ export function ProblemCard({
       <div className="flex">
         {/* Left column — the problem summary (read-only). */}
         <aside className="flex w-[260px] shrink-0 flex-col gap-4 border-r border-[#CFD3E0] px-6 py-6">
+          {/* The action this problem hangs off — context only, so it sits above
+              the pill rather than competing with the problem itself. */}
+          <ActionLabel action={block.action} className="-mb-2" />
           <span className="inline-flex w-fit items-center rounded-full border border-[#E0CDA1] bg-[#FBF3DE] px-2.5 py-0.5 text-sm font-medium text-[#6F5615]">
             {block.label}
           </span>
