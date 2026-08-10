@@ -67,7 +67,8 @@ function CanvasInner({
     onEdgesChange,
     addTriggerNode,
     addChildNode,
-    hasChildren,
+    canDeleteNode,
+    childCount,
     deleteNode,
     updateNodeData,
     updateEdgeLabel,
@@ -217,7 +218,7 @@ function CanvasInner({
                 // were somehow reachable.
                 addTriggerNode: readOnly ? noop : addTriggerNode,
                 addChildNode: readOnly ? noop : addChildNode,
-                hasChildren,
+                canDeleteNode,
                 requestDeleteNode: readOnly ? noop : requestDeleteNode,
                 updateNodeData: readOnly ? noop : updateNodeData,
                 updateEdgeLabel: readOnly ? noop : updateEdgeLabel,
@@ -327,6 +328,9 @@ function CanvasInner({
                   nodePendingDelete
                     ? (nodeProblems.get(nodePendingDelete) ?? [])
                     : []
+                }
+                childCount={
+                  nodePendingDelete ? childCount(nodePendingDelete) : 0
                 }
                 showProblems={problemsUnlocked}
                 onConfirm={confirmDeleteNode}

@@ -43,9 +43,12 @@ interface JourneyContextValue {
   isSubStepUnlocked: (subStep: string) => boolean;
   addTriggerNode: () => void;
   addChildNode: (parentId: string, type: JourneyNodeType) => void;
-  /** Whether a node has at least one child. Only a childless node can be
-   * deleted — removing one in the middle would tear the journey apart. */
-  hasChildren: (nodeId: string) => boolean;
+  /** Whether a card can be removed. A card in the middle of a chain can: its
+   * children move up to its parent. The two that can't are the head of a chain
+   * with anything below it (nowhere to move them) and a Scenarios card with
+   * branches (its children are the fork). See `canDeleteNode` in
+   * `hooks/useJourneyDataBridge`. */
+  canDeleteNode: (nodeId: string) => boolean;
   /** Ask to delete a card: opens the confirmation dialog, which lists what would
    * be lost. It does not delete anything on its own. */
   requestDeleteNode: (nodeId: string) => void;

@@ -47,7 +47,7 @@ function TriggerNodeInner({ id, data }: NodeProps) {
     addChildNode,
     updateNodeData,
     stakeholderRows,
-    hasChildren,
+    canDeleteNode: canDelete,
     requestDeleteNode,
   } = useJourneyContext();
   // Stakeholders are entered on the Market tab, which stays locked until 1.1 is
@@ -89,8 +89,9 @@ function TriggerNodeInner({ id, data }: NodeProps) {
     [requestDeleteNode, id],
   );
 
-  // Only a leaf can go: deleting a card mid-journey would orphan its branch.
-  const canDeleteNode = !readOnly && !hasChildren(id);
+  // A Trigger heads its chain, so once anything hangs off it there's nowhere to
+  // move those cards to and it stays put. One further down a chain can still go.
+  const canDeleteNode = !readOnly && canDelete(id);
 
   // The card width is fixed rather than shrink-to-fit: the content textarea sizes
   // itself to its content, so on an auto-width card every character widens the

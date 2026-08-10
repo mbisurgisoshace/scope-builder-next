@@ -38,6 +38,10 @@ interface DeleteNodeDialogProps {
   nodeContent: string;
   /** Problems on the card, each listed with the market questions answered for it. */
   problems: Problem[];
+  /** How many cards hang directly off this one. They aren't deleted — they move
+   * up to this card's parent — so the dialog says so rather than staying silent
+   * about a change to the shape of the map. */
+  childCount: number;
   /** False while Milestone 2 is locked — the problem list is then left out
    * entirely rather than shown, matching how the canvas hides locked content. */
   showProblems: boolean;
@@ -50,6 +54,7 @@ export function DeleteNodeDialog({
   nodeType,
   nodeContent,
   problems,
+  childCount,
   showProblems,
   onConfirm,
 }: DeleteNodeDialogProps) {
@@ -63,6 +68,16 @@ export function DeleteNodeDialog({
           <AlertDialogDescription>
             The card is removed from your journey map, together with everything
             captured on it.
+            {childCount > 0 && (
+              <>
+                {" "}
+                The {childCount === 1 ? "card" : `${childCount} cards`} that
+                {childCount === 1 ? " follows" : " follow"} it
+                {childCount === 1 ? " stays" : " stay"} on the map and
+                {childCount === 1 ? " connects" : " connect"} to the card before
+                it instead.
+              </>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
 

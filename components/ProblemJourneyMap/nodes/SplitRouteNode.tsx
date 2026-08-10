@@ -8,7 +8,7 @@ import { NodeTypeMenu } from '../components/NodeTypeMenu';
 import { useJourneyContext, type JourneyNodeType } from '../JourneyContext';
 
 function SplitRouteNodeInner({ id }: NodeProps) {
-  const { readOnly, addChildNode, hasChildren, requestDeleteNode } =
+  const { readOnly, addChildNode, canDeleteNode: canDelete, requestDeleteNode } =
     useJourneyContext();
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -39,8 +39,10 @@ function SplitRouteNodeInner({ id }: NodeProps) {
     [requestDeleteNode, id]
   );
 
-  // Branch cards hold everything downstream, so only an empty one can be removed.
-  const canDeleteNode = !readOnly && !hasChildren(id);
+  // A Scenarios card *is* the fork — its children are the branches, and moving
+  // them onto a card that doesn't fork would misread the journey. So unlike the
+  // other cards this one is still removable only while it's empty.
+  const canDeleteNode = !readOnly && canDelete(id);
 
   return (
     <div className="group/card nopan nodrag pointer-events-auto w-[180px] bg-[#FFF7ED] border border-orange-300 rounded-xl p-4 relative shadow-sm flex items-center gap-3">

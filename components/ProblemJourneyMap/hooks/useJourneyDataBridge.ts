@@ -84,6 +84,7 @@ export function useJourneyDataBridge() {
     updateJourneyEdge,
     updateJourneyNode,
     softDeleteJourneyNode,
+    reparentJourneyEdges,
     addProblem: lbAddProblem,
     updateProblem: lbUpdateProblem,
     removeProblem: lbRemoveProblem,
@@ -183,20 +184,39 @@ export function useJourneyDataBridge() {
       );
 
       if (remoteAdditions.length === 0 && removedIds.size === 0) {
-        // No structural change, so the only thing that can differ is the branch
-        // label. Return the same array reference when nothing changed — that
-        // identity is what keeps the canvas from blinking on every sync tick.
+        // No edge came or went, so what can still differ on an edge already here
+        // is its branch label or its endpoints — a delete in the middle of a
+        // chain re-points the children's edges onto the deleted node's parent
+        // without changing any id. Return the same array reference when nothing
+        // changed: that identity is what keeps the canvas from blinking on
+        // every sync tick.
         const hasDataChange = visibleEdges.some((lb) => {
           const rf = currentEdges.find((e) => e.id === lb.id);
           if (!rf) return false;
-          return labelOf(rf) !== (lb.label ?? '');
+          return (
+            labelOf(rf) !== (lb.label ?? '') ||
+            rf.source !== lb.source ||
+            rf.target !== lb.target
+          );
         });
         if (!hasDataChange) return currentEdges;
 
         return currentEdges.map((e) => {
           const lb = visibleEdges.find((lb) => lb.id === e.id);
-          if (!lb || labelOf(e) === (lb.label ?? '')) return e;
-          return { ...e, data: { ...e.data, label: lb.label } as unknown as Record<string, unknown> };
+          if (!lb) return e;
+          if (
+            labelOf(e) === (lb.label ?? '') &&
+            e.source === lb.source &&
+            e.target === lb.target
+          ) {
+            return e;
+          }
+          return {
+            ...e,
+            source: lb.source,
+            target: lb.target,
+            data: { ...e.data, label: lb.label } as unknown as Record<string, unknown>,
+          };
         });
       }
 
@@ -273,30 +293,65 @@ export function useJourneyDataBridge() {
     [setNodes, setEdges, addJourneyNode, addJourneyEdge]
   );
 
-  // Ids that are somebody's parent. Only a childless node can be deleted, so
-  // this is what the delete affordance on each card is gated on.
-  const parentIds = useMemo(
-    () => new Set(visibleEdges.map((e) => e.source)),
-    [visibleEdges]
+  // Who hangs off whom, and who each node hangs off. The graph is a tree, so a
+  // node has at most one parent.
+  const childCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of visibleEdges) map.set(e.source, (map.get(e.source) ?? 0) + 1);
+    return map;
+  }, [visibleEdges]);
+
+  const parentOf = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const e of visibleEdges) map.set(e.target, e.source);
+    return map;
+  }, [visibleEdges]);
+
+  const childCount = useCallback(
+    (nodeId: string) => childCounts.get(nodeId) ?? 0,
+    [childCounts]
   );
 
-  const hasChildren = useCallback(
-    (nodeId: string) => parentIds.has(nodeId),
-    [parentIds]
+  // What the delete affordance on each card is gated on. A childless card can
+  // always go. A card with children can go too — its children move up to its
+  // parent — except in two cases that would leave the map worse off:
+  //
+  //   • no parent to move them to: the head of a chain keeps everything below it
+  //   • a Scenarios card: its children *are* its branches, and reparenting them
+  //     would spread the fork onto a card that isn't a fork
+  const canDeleteNode = useCallback(
+    (nodeId: string) => {
+      if (childCount(nodeId) === 0) return true;
+      if (!parentOf.has(nodeId)) return false;
+      const type = visibleNodes.find((n) => n.id === nodeId)?.type;
+      return type !== 'split_route';
+    },
+    [childCount, parentOf, visibleNodes]
   );
 
-  // Logical delete. Drops the node locally right away — along with the edge that
-  // hung it off its parent — then marks it deleted in storage; collaborators pick
-  // the removal up through the same diff sync as any other remote change.
+  // Logical delete. Locally the node goes right away: the edge that hung it off
+  // its parent is dropped, and every edge leaving it is re-pointed at that parent
+  // so its children close the gap rather than disappearing with it. Storage gets
+  // the same two writes — reparent first, then the delete marker — and
+  // collaborators pick both up through the usual diff sync.
   const deleteNode = useCallback(
     (nodeId: string) => {
+      const parentId = parentOf.get(nodeId) ?? null;
+
       setNodes((current) => current.filter((n) => n.id !== nodeId));
-      setEdges((current) =>
-        current.filter((e) => e.source !== nodeId && e.target !== nodeId)
-      );
+      setEdges((current) => {
+        if (!parentId) {
+          return current.filter((e) => e.source !== nodeId && e.target !== nodeId);
+        }
+        return current
+          .filter((e) => e.target !== nodeId)
+          .map((e) => (e.source === nodeId ? { ...e, source: parentId } : e));
+      });
+
+      if (parentId) reparentJourneyEdges(nodeId, parentId);
       softDeleteJourneyNode(nodeId);
     },
-    [setNodes, setEdges, softDeleteJourneyNode]
+    [setNodes, setEdges, parentOf, reparentJourneyEdges, softDeleteJourneyNode]
   );
 
   const updateNodeData = useCallback(
@@ -496,7 +551,8 @@ export function useJourneyDataBridge() {
     onEdgesChange,
     addTriggerNode,
     addChildNode,
-    hasChildren,
+    canDeleteNode,
+    childCount,
     deleteNode,
     updateNodeData,
     updateEdgeLabel,

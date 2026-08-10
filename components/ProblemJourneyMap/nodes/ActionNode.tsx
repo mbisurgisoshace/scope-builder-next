@@ -117,7 +117,7 @@ function ActionNodeInner({ id, data }: NodeProps) {
     updateNodeData,
     openProblem,
     addEmptyProblem,
-    hasChildren,
+    canDeleteNode: canDelete,
     requestDeleteNode,
   } = useJourneyContext();
   // Until 1.3 is marked done an Action node is its text alone: both the problem
@@ -188,9 +188,9 @@ function ActionNodeInner({ id, data }: NodeProps) {
     [requestDeleteNode, id],
   );
 
-  // Deleting a card with children would tear the journey apart, so the control
-  // only exists on a leaf.
-  const canDeleteNode = !readOnly && !hasChildren(id);
+  // A card in the middle of a chain can go — whatever hangs off it moves up to
+  // its parent. Only the head of a chain has to keep its children.
+  const canDeleteNode = !readOnly && canDelete(id);
 
   return (
     <div
