@@ -2,8 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { PlusIcon, CircleHelpIcon, CheckIcon, LockIcon } from "lucide-react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import {
+  PlusIcon,
+  CircleHelpIcon,
+  CheckIcon,
+  LockIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  XIcon,
+} from "lucide-react";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -140,6 +149,21 @@ interface ActionNodeSheetProps {
   nodeId: string | null;
   problemId: string | null;
   problem: Problem | null;
+  /**
+   * The Action card's own text, edited from the sheet header. It writes straight
+   * through to the node as you type — the card's textarea does the same — so the
+   * two stay in sync and the Save button has no say over it.
+   */
+  actionTitle: string;
+  onActionTitleChange: (content: string) => void;
+  /**
+   * Every problem on the same Action card, in the order they're stacked on it.
+   * The header arrows walk this list, so the sheet can move between a card's
+   * problems without going back to the canvas. It never crosses to another card.
+   */
+  problems: Problem[];
+  /** Switch the sheet to another problem on the same card. */
+  onSelectProblem: (problemId: string) => void;
   onSaveProblem: (
     description: string,
     type: string,
@@ -539,6 +563,94 @@ function BankOfQuestions({
   );
 }
 
+// ─── Sheet header (navigation + Action title) ─────────────────────────────────
+
+interface SheetHeaderBarProps {
+  actionTitle: string;
+  onActionTitleChange: (content: string) => void;
+  /** 0-based position of the open problem in `total`. -1 while none resolves. */
+  index: number;
+  total: number;
+  onPrev: () => void;
+  onNext: () => void;
+  onClose: () => void;
+  readOnly?: boolean;
+}
+
+/**
+ * Sits above the tabs: which Action card you're in, and a way to step through
+ * that card's problems from here.
+ *
+ * The arrows stop at the ends rather than wrapping, and stay mounted-but-
+ * disabled on a single-problem card so the bar keeps its shape whichever card
+ * the sheet was opened from.
+ */
+function SheetHeaderBar({
+  actionTitle,
+  onActionTitleChange,
+  index,
+  total,
+  onPrev,
+  onNext,
+  onClose,
+  readOnly = false,
+}: SheetHeaderBarProps) {
+  const arrowClass =
+    "shrink-0 w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-700 transition-colors hover:border-[#6A35FF] hover:text-[#6A35FF] disabled:opacity-40 disabled:pointer-events-none";
+
+  return (
+    <div className="shrink-0 border-b border-gray-200 px-4 pt-4 pb-3">
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          onClick={onPrev}
+          disabled={index <= 0}
+          title="Previous problem"
+          className={`${arrowClass} mt-0.5`}
+        >
+          <ChevronLeftIcon className="w-4 h-4" />
+        </button>
+
+        {/* The Action's text is the header's title *and* its editor — the same
+            field the card shows, so a fix typed here lands on the card. */}
+        <Textarea
+          className="nodrag min-h-0 flex-1 resize-none border-transparent bg-transparent px-2 py-1 text-lg font-semibold text-[#111827] shadow-none placeholder-gray-500 md:text-lg hover:border-gray-300 focus-visible:border-[#6A35FF] focus-visible:ring-0"
+          rows={1}
+          placeholder="Type your action..."
+          value={actionTitle}
+          readOnly={readOnly}
+          onChange={(e) => onActionTitleChange(e.target.value)}
+        />
+
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={index < 0 || index >= total - 1}
+          title="Next problem"
+          className={`${arrowClass} mt-0.5`}
+        >
+          <ChevronRightIcon className="w-4 h-4" />
+        </button>
+
+        <button
+          type="button"
+          onClick={onClose}
+          title="Close"
+          className="shrink-0 mt-0.5 ml-1 w-8 h-8 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+        >
+          <XIcon className="w-4 h-4" />
+        </button>
+      </div>
+
+      {total > 0 && index >= 0 && (
+        <p className="mt-1 text-center text-sm text-gray-600">
+          Problem {index + 1} of {total}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ─── Main sheet ───────────────────────────────────────────────────────────────
 
 export function ActionNodeSheet({
@@ -553,6 +665,10 @@ export function ActionNodeSheet({
   nodeId,
   problemId,
   problem,
+  actionTitle,
+  onActionTitleChange,
+  problems,
+  onSelectProblem,
   onSaveProblem,
   solution,
   onSaveSolution,
@@ -701,6 +817,19 @@ export function ActionNodeSheet({
     }));
   }
 
+  // Where the open problem sits on its card. Switching problems only moves this
+  // index: the hydration effects above are keyed on `problemId`, so both editors
+  // refill from the problem you land on and an unsaved draft is dropped — the
+  // arrows navigate, they don't save.
+  const problemIndex = problemId
+    ? problems.findIndex((p) => p.id === problemId)
+    : -1;
+
+  function goToProblem(offset: number) {
+    const target = problems[problemIndex + offset];
+    if (target) onSelectProblem(target.id);
+  }
+
   function handleSaveProblem() {
     const trimmed = problemDraft.trim();
     if (!trimmed) {
@@ -743,6 +872,23 @@ export function ActionNodeSheet({
         side="right"
         className="w-[820px] sm:max-w-[820px] flex flex-col p-0 gap-0 [&>button:last-of-type]:hidden"
       >
+        {/* The visible title is the editable Action field below, which can't
+            double as the dialog's accessible name. */}
+        <SheetTitle className="sr-only">
+          {actionTitle?.trim() || "Action"}
+        </SheetTitle>
+
+        <SheetHeaderBar
+          actionTitle={actionTitle}
+          onActionTitleChange={onActionTitleChange}
+          index={problemIndex}
+          total={problems.length}
+          onPrev={() => goToProblem(-1)}
+          onNext={() => goToProblem(1)}
+          onClose={() => onOpenChange(false)}
+          readOnly={readOnly}
+        />
+
         <Tabs
           value={activeTab}
           onValueChange={(v) => onActiveTabChange(v as ActionSheetTab)}

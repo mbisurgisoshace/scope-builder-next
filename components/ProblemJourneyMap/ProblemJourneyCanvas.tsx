@@ -183,6 +183,25 @@ function CanvasInner({
     ? solutionForProblem(selectedProblem.nodeId, selectedProblem.problemId)
     : null;
 
+  // What the sheet header needs from the card the open problem belongs to: the
+  // Action's own text (editable up there) and its full list of problems, which
+  // the header arrows step through.
+  const selectedNodeData = selectedProblem
+    ? ((nodes.find((n) => n.id === selectedProblem.nodeId)?.data ??
+        null) as JourneyNodeData | null)
+    : null;
+
+  const selectedNodeProblems = selectedProblem
+    ? (nodeProblems.get(selectedProblem.nodeId) ?? [])
+    : [];
+
+  // Same node, different problem — the sheet stays open and re-hydrates.
+  const selectProblem = useCallback((problemId: string) => {
+    setSelectedProblem((current) =>
+      current ? { ...current, problemId } : current,
+    );
+  }, []);
+
   return (
     <NodeConclusionsContext.Provider value={nodeConclusions}>
       <NodeSolutionsContext.Provider value={nodeSolutions}>
@@ -265,6 +284,13 @@ function CanvasInner({
                 nodeId={selectedProblem?.nodeId ?? null}
                 problemId={selectedProblem?.problemId ?? null}
                 problem={selectedProblemData}
+                actionTitle={selectedNodeData?.content ?? ""}
+                onActionTitleChange={(content) => {
+                  if (selectedProblem && !readOnly)
+                    updateNodeData(selectedProblem.nodeId, { content });
+                }}
+                problems={selectedNodeProblems}
+                onSelectProblem={selectProblem}
                 onSaveProblem={(desc, type, painOrGain, questions) => {
                   if (selectedProblem)
                     saveProblem(
