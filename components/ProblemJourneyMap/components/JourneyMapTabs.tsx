@@ -46,8 +46,10 @@ interface JourneyMapTabsProps {
    * own badge, and a tab with nothing open yet gets a lock icon; the tab itself
    * still opens either way, so a team can see what's coming.
    *
-   * Omit to lock nothing at all (the /examples mirrors, which gate nothing —
-   * same convention as `MilestoneHeader`).
+   * Omit to lock nothing at all — same convention as `MilestoneHeader`. The
+   * /examples journey mirror does pass it (the viewer's own access), so a
+   * showcase locks the same sections the viewer's own page does; `readOnly` is
+   * what makes it a viewer, not the absence of gates.
    */
   availableMilestones?: number[];
 }

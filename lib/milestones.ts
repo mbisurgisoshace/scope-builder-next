@@ -352,8 +352,10 @@ export function subStepLabel(key: string): string {
  * unlock stakeholder work ahead of the cohort.
  *
  * `availableMilestones` of null/undefined means "gate nothing" — the convention
- * the read-only /examples mirrors pass, same as `JourneyMapTabs` and
- * `MilestoneHeader` already use.
+ * `JourneyMapTabs` and `MilestoneHeader` use for callers that show the strip
+ * without gating on it. The /examples journey mirror is NOT one of them: it
+ * passes the viewer's own access so its locks match the viewer's real page, and
+ * only the sub-step half of the gate is example-scoped.
  */
 export function isSubStepUnlocked(
   key: string,
