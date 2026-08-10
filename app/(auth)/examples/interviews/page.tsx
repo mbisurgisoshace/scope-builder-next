@@ -7,6 +7,10 @@ import {
   getExampleJobTitles,
   getExampleInterviewMilestonesWithProgress,
 } from "@/services/examples";
+import {
+  getAvailableMilestones,
+  getReviewedMilestones,
+} from "@/services/milestoneAccess";
 import { MIN_PAYER_INTERVIEWS } from "@/lib/milestones";
 
 // Read-only showcase mirror of /participants/interviews. Same Kanban, but sourced
@@ -14,10 +18,21 @@ import { MIN_PAYER_INTERVIEWS } from "@/lib/milestones";
 const EXAMPLE_NUMBER = 1;
 
 export default async function ExampleInterviewsPage() {
-  const [tags, jobTitles, { payerDocumentedCount }] = await Promise.all([
+  const [
+    tags,
+    jobTitles,
+    { payerDocumentedCount },
+    reviewedMilestones,
+    availableMilestones,
+  ] = await Promise.all([
     getExampleParticipantTags(EXAMPLE_NUMBER),
     getExampleJobTitles(EXAMPLE_NUMBER),
     getExampleInterviewMilestonesWithProgress(EXAMPLE_NUMBER),
+    // The Kanban below is example data, but the header's locks and sign-off
+    // follow the *viewer's* own access — same rule as the journey mirror, so the
+    // strip reads the same on both example pages and on the real ones.
+    getReviewedMilestones(),
+    getAvailableMilestones(),
   ]);
 
   return (
@@ -27,6 +42,8 @@ export default async function ExampleInterviewsPage() {
           <MilestoneHeader
             payerInterviews={MIN_PAYER_INTERVIEWS}
             currentNumber={payerDocumentedCount}
+            reviewedMilestones={reviewedMilestones}
+            availableMilestones={availableMilestones}
           />
           <div className="flex-1 min-h-0 px-8 py-4">
             <ParticipantsKanbanView

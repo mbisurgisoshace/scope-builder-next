@@ -34,9 +34,9 @@ interface MilestoneHeaderProps {
   /** Milestone numbers the startup has unlocked. The rest get a lock icon beside
    *  their name, and their sub-step cells grey out with a lock of their own once
    *  the block is expanded — a hint only, the blocks stay clickable so a team can
-   *  preview what's coming. Omit to show no locks at all. The /examples journey
-   *  mirror passes the viewer's own access here rather than omitting, so its
-   *  strip carries the same locks as the viewer's real page. */
+   *  preview what's coming. Omit to show no locks at all. The /examples mirrors
+   *  pass the viewer's own access here rather than omitting, so a showcase strip
+   *  carries the same locks as the viewer's real page. */
   availableMilestones?: number[];
 }
 
