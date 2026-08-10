@@ -138,6 +138,14 @@ function ActionNodeInner({ id, data }: NodeProps) {
   // node from growing.
   const hasOnlyBlankProblem =
     problems.length === 1 && !problems[0].description.trim();
+  // Every question the user flagged in the sheet, across every problem on the
+  // card. It counts the raw flag rather than answered-ness: the badge reflects
+  // what was marked, not how far along the answer is.
+  const hypothesisCount = problems.reduce(
+    (total, problem) =>
+      total + problem.questions.filter((q) => q.isHypothesis).length,
+    0,
+  );
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -202,15 +210,26 @@ function ActionNodeInner({ id, data }: NodeProps) {
         <span className="text-lg font-semibold text-[#111827] tracking-wide">
           Action
         </span>
-        {canDeleteNode && (
-          <button
-            onClick={handleDeleteNode}
-            title="Delete card"
-            className="nodrag nopan ml-auto opacity-0 group-hover/card:opacity-100 transition-opacity w-6 h-6 rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 hover:bg-red-50"
-          >
-            <Trash2Icon className="w-4 h-4" />
-          </button>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          {/* Follows the same gate as the problem cards: while 1.3 is locked the
+              problems themselves are hidden, so a count of them would point at
+              something the user cannot see. */}
+          {problemsUnlocked && hypothesisCount > 0 && (
+            <span className="bg-[#F4F0FF] text-[#6A35FF] text-sm font-semibold rounded-full px-2.5 py-0.5 whitespace-nowrap">
+              {hypothesisCount}{" "}
+              {hypothesisCount === 1 ? "Hypothesis" : "Hypotheses"}
+            </span>
+          )}
+          {canDeleteNode && (
+            <button
+              onClick={handleDeleteNode}
+              title="Delete card"
+              className="nodrag nopan opacity-0 group-hover/card:opacity-100 transition-opacity w-6 h-6 rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 hover:bg-red-50"
+            >
+              <Trash2Icon className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       <Textarea
