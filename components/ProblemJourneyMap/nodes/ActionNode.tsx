@@ -194,7 +194,7 @@ function ActionNodeInner({ id, data }: NodeProps) {
 
   return (
     <div
-      className={`group/card nopan nodrag pointer-events-auto w-[370px] bg-white border rounded-xl p-4 relative shadow-sm ${isNodeSelected ? "border-purple-500 " : "border-gray-300"}`}
+      className={`group/card nopan nodrag pointer-events-auto w-[370px] bg-white border rounded-xl p-4 relative shadow-[0_1px_3px_0_rgba(16,24,40,0.06),0_6px_14px_-2px_rgba(16,24,40,0.12)] ${isNodeSelected ? "border-purple-500 " : "border-gray-400"}`}
     >
       <Handle
         id="left"

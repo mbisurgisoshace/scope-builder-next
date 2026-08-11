@@ -98,7 +98,7 @@ function TriggerNodeInner({ id, data }: NodeProps) {
   // node, which re-runs the tree layout mid-keystroke. Pinned to the same width as
   // an Action card, the text wraps and only the height grows.
   return (
-    <div className="group/card nopan nodrag pointer-events-auto w-[370px] bg-white border border-white rounded-xl p-4 relative shadow-sm">
+    <div className="group/card nopan nodrag pointer-events-auto w-[370px] bg-white border border-gray-400 rounded-xl p-4 relative shadow-[0_1px_3px_0_rgba(16,24,40,0.06),0_6px_14px_-2px_rgba(16,24,40,0.12)]">
       <Handle
         id="left"
         type="target"
