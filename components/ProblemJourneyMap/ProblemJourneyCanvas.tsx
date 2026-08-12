@@ -113,8 +113,7 @@ function CanvasInner({
   //
   //   1.3  description + type + pain-or-gain  (implied — the sheet is shut before)
   //   M2   the Market Questions and the bank they're added from
-  //   2.1  each answer's source and confidence
-  //   2.2  the hypothesis toggle
+  //   2.1  each answer's source and confidence, and the hypothesis toggle
   //
   // A locked section is greyed and read-only rather than absent, and its saved
   // values sit untouched behind it: the editor still hydrates from them and a

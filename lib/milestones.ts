@@ -1,5 +1,5 @@
 /**
- * The 6 milestones and their 25 sub-steps — the single source of truth for the
+ * The 6 milestones and their 24 sub-steps — the single source of truth for the
  * curriculum. `MilestoneHeader.tsx` renders from here, and the seeded "steps"
  * Get Started card mirrors it (one item per sub-step, linked by position).
  *
@@ -63,26 +63,31 @@ export const PROBLEMS_SUB_STEP = subStepKey(1, 3);
 export const MARKET_QUESTIONS_MILESTONE = 2;
 
 /**
- * Sub-steps that open the evidence beside each answered question. Each opens the
- * step named after it: finishing 2.1 "Expand on Pains/Gains" opens the source and
- * confidence 2.2 is named for, and finishing that opens the hypothesis toggle 2.3
- * is named for.
+ * Sub-steps that open the evidence beside each answered question. Both are 2.1
+ * "Expand on Pains/Gains": ticking it opens the source select, the confidence
+ * stars and the hypothesis toggle in one go. They stay two constants because the
+ * sheet gates the three controls separately and they need not move together.
+ *
+ * The break from the off-by-one that runs through the rest of the unlock map is
+ * deliberate — source, confidence and hypothesis are all part of the same pass
+ * over a question's answer, so splitting them across two sub-steps only made a
+ * team tick a box mid-pass.
  *
  * Both sit inside `MARKET_QUESTIONS_MILESTONE` — the questions themselves are
  * locked before that, so their evidence is doubly so.
  */
 export const SOURCE_CONFIDENCE_SUB_STEP = subStepKey(2, 1);
-export const HYPOTHESIS_SUB_STEP = subStepKey(2, 2);
+export const HYPOTHESIS_SUB_STEP = subStepKey(2, 1);
 
 /**
- * Sub-step that opens the Interview Prep tab. 2.3 is "Hypothesis": the tab turns
+ * Sub-step that opens the Interview Prep tab. 2.2 is "Hypothesis": the tab turns
  * the answers a team has flagged as beliefs into interview questions, which is
- * 2.4's work, so there's nothing to prepare until those flags exist.
+ * 2.3's work, so there's nothing to prepare until those flags exist.
  *
  * This is the last gate in the unlock map. Locked means visible but greyed and
  * read-only, so a team can see what's coming; see `JourneyMapTabs`.
  */
-export const INTERVIEW_PREP_SUB_STEP = subStepKey(2, 3);
+export const INTERVIEW_PREP_SUB_STEP = subStepKey(2, 2);
 
 /** Payer interviews a startup has to document — the denominator the MilestoneHeader
  * counts toward. Read here rather than at each call site so the interviews board and
@@ -220,12 +225,7 @@ const SUB_STEP_CONTENT: { label: string; description: string }[][] = [
     {
       label: "Expand on Pains/Gains",
       description:
-        "Go a level deeper on the pains and gains that matter most, answering the market questions on each one. Vague pains produce vague interviews later.",
-    },
-    {
-      label: "Source & Confidence Score",
-      description:
-        "Mark where each answer came from and how sure you are. Anything sourced only from your own assumptions is what interviews should target first.",
+        "Go a level deeper on the pains and gains that matter most, answering the market questions on each one. Mark where every answer came from and how sure you are as you go — anything sourced only from your own assumptions is what interviews should target first.",
     },
     {
       label: "Hypothesis",
@@ -306,7 +306,7 @@ const SUB_STEP_CONTENT: { label: string; description: string }[][] = [
   ],
 ];
 
-/** All 25 sub-steps, milestone 0 first. */
+/** All 24 sub-steps, milestone 0 first. */
 export const SUB_STEPS: SubStepDef[] = SUB_STEP_CONTENT.flatMap(
   (subSteps, milestoneIndex) =>
     subSteps.map((subStep, subStepIndex) => {
