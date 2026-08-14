@@ -308,7 +308,7 @@ export default function BookingView({
         {visibleWeeks.map((week) => (
           <div
             key={week.weekStart.toISOString()}
-            className="bg-white border border-gray-100 rounded-2xl overflow-hidden"
+            className="bg-white border-2 border-white rounded-2xl overflow-hidden"
           >
             <div className="bg-[#F4F0FF] px-4 py-3">
               <p className="text-sm font-bold text-gray-800">{week.label}</p>
@@ -339,7 +339,7 @@ export default function BookingView({
                               key={`${block.start_time}-${block.end_time}`}
                               className="flex items-center gap-3 flex-wrap"
                             >
-                              <span className="text-xs text-gray-500 w-36 shrink-0">
+                              <span className="text-sm text-gray-500 w-36 shrink-0">
                                 {formatTimeDisplay(block.start_time)} –{" "}
                                 {formatTimeDisplay(block.end_time)}
                               </span>
