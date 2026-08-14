@@ -146,8 +146,8 @@ export default function AddParticipant({
         </SheetTrigger>
       )}
       <SheetContent>
-        <SheetHeader className="border-b">
-          <SheetTitle className="text-[26px] font-medium text-[#162A4F]">
+        <SheetHeader className="border-b p-3">
+          <SheetTitle className="text-[20px] font-medium text-[#111827]">
             New Participant
           </SheetTitle>
         </SheetHeader>
@@ -248,7 +248,7 @@ export default function AddParticipant({
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} className="shadow-none" />
                     </FormControl>
 
                     <FormMessage />
@@ -263,7 +263,7 @@ export default function AddParticipant({
                   <FormItem>
                     <FormLabel>Organization</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Where they work" />
+                      <Input {...field} placeholder="Where they work" className="shadow-none" />
                     </FormControl>
 
                     <FormMessage />
@@ -325,7 +325,7 @@ export default function AddParticipant({
                     <FormLabel>Relationship</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full shadow-none">
                           <SelectValue placeholder="Select a relationship" />
                         </SelectTrigger>
                       </FormControl>
@@ -376,7 +376,7 @@ export default function AddParticipant({
                   <FormItem>
                     <FormLabel>Contact Info</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea {...field} className="shadow-none" />
                     </FormControl>
 
                     <FormMessage />
@@ -391,7 +391,7 @@ export default function AddParticipant({
                   <FormItem>
                     <FormLabel>Rationale</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea {...field} className="shadow-none" />
                     </FormControl>
 
                     <FormMessage />
@@ -406,7 +406,7 @@ export default function AddParticipant({
                   <FormItem>
                     <FormLabel>Blocking Issues</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea {...field} className="shadow-none" />
                     </FormControl>
 
                     <FormMessage />
@@ -421,7 +421,7 @@ export default function AddParticipant({
                   <FormItem>
                     <FormLabel>Hypothesis to Validate</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea {...field} className="shadow-none" />
                     </FormControl>
 
                     <FormMessage />
@@ -436,7 +436,7 @@ export default function AddParticipant({
                   <FormItem>
                     <FormLabel>Learnings</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea {...field} className="shadow-none" />
                     </FormControl>
 
                     <FormMessage />
@@ -451,7 +451,7 @@ export default function AddParticipant({
                   <FormItem>
                     <FormLabel>Notes</FormLabel>
                     <FormControl>
-                      <Textarea {...field} />
+                      <Textarea {...field} className="shadow-none" />
                     </FormControl>
 
                     <FormMessage />

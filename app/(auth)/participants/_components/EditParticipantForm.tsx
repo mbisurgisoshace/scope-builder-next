@@ -219,7 +219,7 @@ export default function EditParticipantForm({
               <FormItem>
                 <FormLabel>Name</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input {...field} className="shadow-none" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -233,7 +233,7 @@ export default function EditParticipantForm({
               <FormItem>
                 <FormLabel>Organization</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="Where they work" />
+                  <Input {...field} placeholder="Where they work" className="shadow-none" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -290,7 +290,7 @@ export default function EditParticipantForm({
                 <FormLabel>Relationship</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full shadow-none">
                       <SelectValue placeholder="Select a relationship" />
                     </SelectTrigger>
                   </FormControl>
@@ -341,7 +341,7 @@ export default function EditParticipantForm({
               <FormItem>
                 <FormLabel>Contact Info</FormLabel>
                 <FormControl>
-                  <Textarea {...field} />
+                  <Textarea {...field} className="shadow-none" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -355,7 +355,7 @@ export default function EditParticipantForm({
               <FormItem>
                 <FormLabel>Notes</FormLabel>
                 <FormControl>
-                  <Textarea {...field} />
+                  <Textarea {...field} className="shadow-none" />
                 </FormControl>
                 <FormMessage />
               </FormItem>

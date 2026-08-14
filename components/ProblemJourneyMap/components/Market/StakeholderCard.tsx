@@ -185,12 +185,8 @@ export function StakeholderCard({
         >
           {rows.map((row) => (
             <div key={row.localKey} className="flex items-center gap-1">
-              {/* The box tracks the input beside it state for state: #CDD1DC at
-                  rest, the same #6A35FF the input takes on focus once checked.
-                  White on that purple is 5.9:1, so the tick keeps its default. */}
               {selectable && row.id !== null && (
                 <Checkbox
-                  className="size-5 shrink-0 border-[#CDD1DC] shadow-none data-[state=checked]:border-[#6A35FF] data-[state=checked]:bg-[#6A35FF] data-[state=checked]:text-white"
                   checked={selectedIds?.has(row.id) ?? false}
                   onCheckedChange={() => onToggleSelect?.(row.id as number)}
                 />

@@ -68,19 +68,25 @@ function CardField({
   label,
   value,
   asBadge = false,
+  badgeColor,
 }: {
   label: string;
   value?: string | null;
   asBadge?: boolean;
+  /** Column header tint, so the bubble reads as belonging to its column. */
+  badgeColor?: string;
 }) {
   const filled = value != null && value.trim() !== "";
   return (
     <div className="flex items-start justify-between gap-2">
-      <span className="text-xs font-semibold shrink-0">{label}:</span>
+      <span className="text-sm font-semibold shrink-0">{label}:</span>
       {asBadge && filled ? (
         // The base Badge is `whitespace-nowrap shrink-0`, which pushes long labels
         // past the card edge — let this one wrap and shrink instead.
-        <Badge className="bg-[#EEEFF5] text-[#111827] min-w-0 shrink whitespace-normal text-right leading-snug">
+        <Badge
+          style={badgeColor ? { backgroundColor: badgeColor } : undefined}
+          className="bg-[#EEEFF5] text-[#111827] min-w-0 shrink whitespace-normal text-right leading-snug"
+        >
           {value}
         </Badge>
       ) : (
@@ -95,14 +101,17 @@ function CardField({
 function ParticipantCard({
   participant,
   color,
+  headerColor,
   hideRelationship = false,
   onCardClick,
   onEditClick,
   onReviewClick,
 }: {
   participant: Participant;
-  /** Matches the header of the column the card sits in. */
+  /** Card tint for the column the card sits in. */
   color: string;
+  /** That column's header tint — used for the relationship bubble. */
+  headerColor?: string;
   hideRelationship?: boolean;
   onCardClick?: () => void;
   onEditClick?: () => void;
@@ -162,6 +171,7 @@ function ParticipantCard({
           label="Relationship to Founder"
           value={relationshipLabel(participant.relationship)}
           asBadge
+          badgeColor={headerColor}
         />
       )}
       {!participant.scheduled_date && (
@@ -231,6 +241,7 @@ function KanbanBoard({
                   key={participant.id}
                   participant={participant}
                   color={colors.card}
+                  headerColor={colors.header}
                   hideRelationship={hideRelationship}
                   onCardClick={() => onCardClick?.(participant)}
                   onEditClick={
@@ -357,8 +368,8 @@ export default function ParticipantsKanbanView({
             }}
           >
             <SheetContent>
-              <SheetHeader className="border-b">
-                <SheetTitle className="text-[26px] font-medium text-[#162A4F]">
+              <SheetHeader className="border-b p-3">
+                <SheetTitle className="text-[20px] font-medium text-[#111827]">
                   {editParticipant?.name}
                 </SheetTitle>
               </SheetHeader>

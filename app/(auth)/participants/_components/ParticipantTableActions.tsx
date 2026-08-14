@@ -104,8 +104,8 @@ export default function ParticipantTableActions({
           </DropdownMenuContent>
         </DropdownMenu>
         <SheetContent>
-          <SheetHeader className="border-b">
-            <SheetTitle className="text-[26px] font-medium text-[#162A4F]">
+          <SheetHeader className="border-b p-3">
+            <SheetTitle className="text-[20px] font-medium text-[#111827]">
               Edit Participant
             </SheetTitle>
           </SheetHeader>
