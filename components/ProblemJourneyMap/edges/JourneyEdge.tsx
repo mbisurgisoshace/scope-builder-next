@@ -66,8 +66,14 @@ export function JourneyEdge({
   const labelX = (centerX + targetX) / 2;
   const labelY = targetY;
 
+  // 1.3 is Geist's own em height (ascent 1.005 + descent 0.295). `leading-none`
+  // gave the line box only 1em, so the descender in "Option" spilled past the
+  // padding onto the bottom border while the capitals kept their space above —
+  // the label read as sitting low. At 1.3 the glyphs fit and, because Geist puts
+  // exactly `descent` between its ascent and cap height, the cap block lands
+  // dead centre.
   const pillClasses =
-    "text-sm leading-none font-medium text-[#111827] bg-white px-1.5 py-0.5 rounded-full border border-gray-300";
+    "text-sm leading-[1.3] font-medium text-[#111827] bg-white px-1.5 py-0.5 rounded-full border border-gray-300";
 
   return (
     <>
@@ -80,11 +86,15 @@ export function JourneyEdge({
       {showLabel && (
         <EdgeLabelRenderer>
           <div
-            className={`nodrag nopan absolute ${
+            // `flex` so the wrapper's height is the pill's own box. As a plain
+            // block it would take the height of an inherited line box instead —
+            // the pill is inline, whose vertical padding paints without adding
+            // height — and the -50% would centre the wrong box on the edge.
+            className={`nodrag nopan absolute flex items-center ${
               readOnly ? "pointer-events-none" : "pointer-events-auto"
             }`}
             style={{
-              transform: `translate(${labelX}px, ${labelY}px) translate(-50%, -55%)`,
+              transform: `translate(${labelX}px, ${labelY}px) translate(-50%, -50%)`,
             }}
           >
             {editing ? (

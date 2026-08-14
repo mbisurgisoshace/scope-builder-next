@@ -150,7 +150,7 @@ export function StakeholderCard({
   };
 
   return (
-    <div className="flex min-w-0 flex-col rounded-2xl border border-[#CDD1DC] bg-white p-5">
+    <div className="flex min-w-0 flex-col rounded-2xl border border-[#CDD1DC] bg-white p-4">
       <div className="mb-2 flex items-center gap-2">
         <span className="flex size-6 items-center justify-center rounded-md bg-[#F1ECFF] text-[#6A35FF]">
           <User className="size-3.5" />
@@ -160,7 +160,7 @@ export function StakeholderCard({
         </h3>
       </div>
 
-      <p className="mb-3 text-sm leading-relaxed text-[#4E5566]">
+      <p className="mb-3 text-sm leading-snug text-[#4E5566]">
         {definition.description}
       </p>
 
@@ -185,9 +185,12 @@ export function StakeholderCard({
         >
           {rows.map((row) => (
             <div key={row.localKey} className="flex items-center gap-1">
+              {/* The box tracks the input beside it state for state: #CDD1DC at
+                  rest, the same #6A35FF the input takes on focus once checked.
+                  White on that purple is 5.9:1, so the tick keeps its default. */}
               {selectable && row.id !== null && (
                 <Checkbox
-                  className="shrink-0"
+                  className="size-5 shrink-0 border-[#CDD1DC] shadow-none data-[state=checked]:border-[#6A35FF] data-[state=checked]:bg-[#6A35FF] data-[state=checked]:text-white"
                   checked={selectedIds?.has(row.id) ?? false}
                   onCheckedChange={() => onToggleSelect?.(row.id as number)}
                 />
@@ -201,7 +204,7 @@ export function StakeholderCard({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") e.currentTarget.blur();
                 }}
-                className="h-8 border-[#CDD1DC] text-base focus-visible:border-[#6A35FF] focus-visible:ring-0"
+                className="h-8 border-[#CDD1DC] text-base shadow-none focus-visible:border-[#6A35FF] focus-visible:ring-0"
               />
               {!readOnly && (
                 <button

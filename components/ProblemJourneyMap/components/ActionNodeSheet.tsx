@@ -600,7 +600,7 @@ function SheetHeaderBar({
 
   return (
     <div className="shrink-0 border-b border-gray-200 px-4 pt-4 pb-3">
-      <div className="flex items-start gap-2">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={onPrev}
@@ -622,6 +622,15 @@ function SheetHeaderBar({
           onChange={(e) => onActionTitleChange(e.target.value)}
         />
 
+        {/* Reads as the label for the arrow it sits beside. `shrink-0` and
+            `whitespace-nowrap` keep "Problem 1 of 12" on one line — the Action
+            textarea beside it is `flex-1` and would otherwise win the space. */}
+        {total > 0 && index >= 0 && (
+          <p className="mt-0.5 shrink-0 whitespace-nowrap text-sm text-gray-600">
+            Problem {index + 1} of {total}
+          </p>
+        )}
+
         <button
           type="button"
           onClick={onNext}
@@ -641,12 +650,6 @@ function SheetHeaderBar({
           <XIcon className="w-4 h-4" />
         </button>
       </div>
-
-      {total > 0 && index >= 0 && (
-        <p className="mt-1 text-center text-sm text-gray-600">
-          Problem {index + 1} of {total}
-        </p>
-      )}
     </div>
   );
 }

@@ -84,8 +84,8 @@ export function StakeholderPickerModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[55vh] overflow-y-auto bg-[#F7F8FA] p-6">
-          <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="max-h-[55vh] overflow-y-auto bg-[#F7F8FA] p-4">
+          <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {STAKEHOLDER_DEFINITIONS.map((definition) => (
               <StakeholderCard
                 key={definition.key}

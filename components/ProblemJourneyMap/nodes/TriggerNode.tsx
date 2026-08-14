@@ -2,8 +2,9 @@
 
 import { memo, useState, useCallback, useRef } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { ZapIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { PlusIcon, Trash2Icon } from "lucide-react";
 
+import { TriggerIcon } from "../icons/TriggerIcon";
 import { NodeTypeMenu } from "../components/NodeTypeMenu";
 import { StakeholderPickerModal } from "../components/StakeholderPickerModal";
 import { STAKEHOLDER_DEFINITIONS } from "../components/Market/constants";
@@ -98,7 +99,7 @@ function TriggerNodeInner({ id, data }: NodeProps) {
   // node, which re-runs the tree layout mid-keystroke. Pinned to the same width as
   // an Action card, the text wraps and only the height grows.
   return (
-    <div className="group/card nopan nodrag pointer-events-auto w-[370px] bg-white border border-gray-400 rounded-xl p-4 relative shadow-[0_1px_3px_0_rgba(16,24,40,0.06),0_6px_14px_-2px_rgba(16,24,40,0.12)]">
+    <div className="group/card nopan nodrag pointer-events-auto w-[370px] bg-[#E2E2E8] border-2 border-white rounded-xl p-4 relative shadow-[0_1px_3px_0_rgba(16,24,40,0.06),0_6px_14px_-2px_rgba(16,24,40,0.12)]">
       <Handle
         id="left"
         type="target"
@@ -111,7 +112,7 @@ function TriggerNodeInner({ id, data }: NodeProps) {
       <div className="flex items-center gap-2 mb-3">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-[30px] h-[30px] bg-[#F4F0FF] rounded-full flex items-center justify-center flex-shrink-0">
-            <ZapIcon className="w-3.5 h-3.5 text-[#6A35FF]" />
+            <TriggerIcon className="text-[#6A35FF]" />
           </div>
           <span className="text-lg font-semibold text-[#111827] tracking-wide">
             Trigger / Motivation
@@ -152,7 +153,7 @@ function TriggerNodeInner({ id, data }: NodeProps) {
       {groups.length > 0 ? (
         <div className="mb-3 flex flex-col gap-0.5">
           {groups.map((group) => (
-            <p key={group.title} className="text-sm leading-snug text-gray-800">
+            <p key={group.title} className="text-base leading-snug text-gray-800">
               <span className="font-semibold text-gray-700">
                 {group.title}:
               </span>{" "}
@@ -161,14 +162,14 @@ function TriggerNodeInner({ id, data }: NodeProps) {
           ))}
         </div>
       ) : (
-        readOnly && <p className="mb-3 text-sm text-gray-600">—</p>
+        readOnly && <p className="mb-3 text-base text-gray-600">—</p>
       )}
 
       <Textarea
         value={nodeData.content ?? ""}
         placeholder="Type your trigger..."
         readOnly={readOnly}
-        className="nodrag nopan w-full text-base text-gray-800 bg-transparent resize-none placeholder-gray-500 focus:outline-none leading-snug"
+        className="nodrag nopan w-full text-base md:text-base text-gray-800 bg-transparent resize-none placeholder-gray-500 focus:outline-none leading-snug"
         onChange={(e) => updateNodeData(id, { content: e.target.value })}
       />
 

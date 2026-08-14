@@ -2,8 +2,9 @@
 
 import { memo, useState, useCallback, useRef } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { PlayIcon, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
+import { PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 
+import { ActionIcon } from "../icons/ActionIcon";
 import { NodeTypeMenu } from "../components/NodeTypeMenu";
 import {
   useJourneyContext,
@@ -67,7 +68,7 @@ function ProblemCard({
       className="mt-3 pt-3 border-t border-gray-300 cursor-pointer group"
     >
       <div className="flex items-center justify-between mb-1.5">
-        <p className="text-sm text-gray-600">What is the problem/pain?</p>
+        <p className="text-base text-gray-600">What is the problem/pain?</p>
         {canDelete && (
           <button
             onClick={handleDelete}
@@ -194,7 +195,7 @@ function ActionNodeInner({ id, data }: NodeProps) {
 
   return (
     <div
-      className={`group/card nopan nodrag pointer-events-auto w-[370px] bg-white border rounded-xl p-4 relative shadow-[0_1px_3px_0_rgba(16,24,40,0.06),0_6px_14px_-2px_rgba(16,24,40,0.12)] ${isNodeSelected ? "border-purple-500 " : "border-gray-400"}`}
+      className={`group/card nopan nodrag pointer-events-auto w-[370px] bg-[#E6DEFA] border-2 rounded-xl p-4 relative shadow-[0_1px_3px_0_rgba(16,24,40,0.06),0_6px_14px_-2px_rgba(16,24,40,0.12)] ${isNodeSelected ? "border-purple-500" : "border-white"}`}
     >
       <Handle
         id="left"
@@ -203,23 +204,20 @@ function ActionNodeInner({ id, data }: NodeProps) {
         className="!opacity-0 !pointer-events-none"
       />
 
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-[30px] h-[30px] bg-[#F4F0FF] rounded-full flex items-center justify-center flex-shrink-0">
-          <PlayIcon className="w-3.5 h-3.5 text-[#6A35FF]" />
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-[30px] h-[30px] bg-[#F4F0FF] rounded-full flex items-center justify-center flex-shrink-0">
+            <ActionIcon className="text-[#6A35FF]" />
+          </div>
+          <span className="text-lg font-semibold text-[#111827] tracking-wide">
+            Action
+          </span>
         </div>
-        <span className="text-lg font-semibold text-[#111827] tracking-wide">
-          Action
-        </span>
-        <div className="ml-auto flex items-center gap-2">
-          {/* Follows the same gate as the problem cards: while 1.3 is locked the
-              problems themselves are hidden, so a count of them would point at
-              something the user cannot see. */}
-          {problemsUnlocked && hypothesisCount > 0 && (
-            <span className="bg-[#F4F0FF] text-[#6A35FF] text-sm font-semibold rounded-full px-2.5 py-0.5 whitespace-nowrap">
-              {hypothesisCount}{" "}
-              {hypothesisCount === 1 ? "Hypothesis" : "Hypotheses"}
-            </span>
-          )}
+        {/* Delete sits *before* the badge so the badge can end flush with the
+            card's padding, matching the icon's inset on the left. The button is
+            only visible on hover but still occupies its width — parked here it
+            eats into the row's slack instead of pushing the badge inward. */}
+        <div className="flex items-center gap-2 flex-shrink-0">
           {canDeleteNode && (
             <button
               onClick={handleDeleteNode}
@@ -229,11 +227,20 @@ function ActionNodeInner({ id, data }: NodeProps) {
               <Trash2Icon className="w-4 h-4" />
             </button>
           )}
+          {/* Follows the same gate as the problem cards: while 1.3 is locked the
+              problems themselves are hidden, so a count of them would point at
+              something the user cannot see. */}
+          {problemsUnlocked && hypothesisCount > 0 && (
+            <span className="bg-[#F4F0FF] text-[#6A35FF] text-sm font-semibold rounded-full px-2.5 py-0.5 whitespace-nowrap">
+              {hypothesisCount}{" "}
+              {hypothesisCount === 1 ? "Hypothesis" : "Hypotheses"}
+            </span>
+          )}
         </div>
       </div>
 
       <Textarea
-        className="nodrag nopan w-full text-base text-gray-800 bg-transparent resize-none placeholder-gray-500 focus:outline-none leading-snug"
+        className="nodrag nopan w-full text-base md:text-base text-gray-800 bg-transparent resize-none placeholder-gray-500 focus:outline-none leading-snug"
         placeholder="Type your action..."
         value={nodeData.content ?? ""}
         readOnly={readOnly}
