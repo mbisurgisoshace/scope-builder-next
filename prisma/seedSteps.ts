@@ -24,8 +24,11 @@
 import { PrismaClient } from "../lib/generated/prisma";
 import { MILESTONE_NUMBERS, subStepsForMilestone } from "../lib/milestones";
 
-// Title of the default first card on every milestone's Instructions tab.
-export const STEPS_CARD_TITLE = "Milestone Steps";
+// Title of the default first card on every milestone's Instructions tab. The
+// number is baked in so the card names its milestone on the Instructions tab,
+// where several milestones' worth of cards look otherwise identical.
+export const stepsCardTitle = (milestone: number) =>
+  `Milestone #${milestone} Steps`;
 
 export async function seedStepsCards(prisma: PrismaClient) {
   for (const milestone of MILESTONE_NUMBERS) {
@@ -41,7 +44,7 @@ export async function seedStepsCards(prisma: PrismaClient) {
         data: {
           milestone,
           type: "steps",
-          title: STEPS_CARD_TITLE,
+          title: stepsCardTitle(milestone),
           order: 0,
           items: {
             create: subSteps.map((subStep, index) => ({
@@ -58,7 +61,7 @@ export async function seedStepsCards(prisma: PrismaClient) {
 
     await prisma.getStartedCard.update({
       where: { id: existing.id },
-      data: { title: STEPS_CARD_TITLE, order: 0 },
+      data: { title: stepsCardTitle(milestone), order: 0 },
     });
 
     for (const [index, subStep] of subSteps.entries()) {

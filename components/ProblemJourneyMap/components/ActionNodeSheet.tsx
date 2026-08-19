@@ -15,6 +15,11 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -356,16 +361,38 @@ const SECTION_PADDING = "px-6";
 function SectionHeader({
   title,
   badge,
+  tooltip,
 }: {
   title: string;
   badge?: React.ReactNode;
+  /** Hover help for the question. Without it the heading is plain text. */
+  tooltip?: string;
 }) {
+  const heading = (
+    <span className="flex items-center gap-1.5">
+      <CircleHelpIcon className="w-4 h-4 text-gray-600 shrink-0" />
+      <span className="text-base font-semibold text-gray-800">{title}</span>
+    </span>
+  );
+
   return (
     <div
       className={`flex items-center gap-1.5 bg-[#F3F3F6] ${SECTION_PADDING} py-2.5`}
     >
-      <CircleHelpIcon className="w-4 h-4 text-gray-600 shrink-0" />
-      <span className="text-base font-semibold text-gray-800">{title}</span>
+      {tooltip ? (
+        <Tooltip>
+          {/* The whole heading is the target, icon included — the icon alone is
+              a 16px hit area and nothing marks it as the hoverable part. */}
+          <TooltipTrigger asChild>
+            <span className="cursor-help">{heading}</span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" align="start" className="max-w-xs">
+            {tooltip}
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        heading
+      )}
       {badge && <span className="ml-auto shrink-0">{badge}</span>}
     </div>
   );
@@ -600,6 +627,10 @@ function SheetHeaderBar({
 
   return (
     <div className="shrink-0 border-b border-gray-200 px-4 pt-4 pb-3">
+      {/* Names the panel. The row below is the Action's own text — it reads as a
+          heading, which left nothing saying what kind of thing is open. */}
+      <p className="mb-2 text-sm font-semibold text-[#697288]">Action</p>
+
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -920,7 +951,10 @@ export function ActionNodeSheet({
             <TabsContent value="problem" className="p-0">
               <div>
                 {/* What the problem? */}
-                <SectionHeader title="What is the pain/gain you intend to address?" />
+                <SectionHeader
+                  title="What is the pain/gain you intend to address?"
+                  tooltip="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+                />
                 <div className={`${SECTION_PADDING} py-4`}>
                   <span className="inline-block mb-2 text-sm font-semibold bg-[#F5E7D0] text-[#7A5C33] rounded-full px-2.5 py-0.5">
                     Problem
