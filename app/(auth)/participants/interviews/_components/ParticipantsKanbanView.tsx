@@ -82,10 +82,13 @@ function CardField({
       <span className="text-sm font-semibold shrink-0">{label}:</span>
       {asBadge && filled ? (
         // The base Badge is `whitespace-nowrap shrink-0`, which pushes long labels
-        // past the card edge — let this one wrap and shrink instead.
+        // past the card edge — let this one wrap and shrink instead. It must keep
+        // its automatic min-width though: `min-w-0` here let the box shrink below
+        // its longest word, and the base `overflow-hidden` then clipped the text
+        // mid-letter. Shrinking stops at min-content, so it wraps instead.
         <Badge
           style={badgeColor ? { backgroundColor: badgeColor } : undefined}
-          className="bg-[#EEEFF5] text-[#111827] min-w-0 shrink whitespace-normal text-right leading-snug"
+          className="bg-[#EEEFF5] text-[#111827] shrink whitespace-normal break-words text-right leading-snug"
         >
           {value}
         </Badge>
@@ -209,58 +212,69 @@ function KanbanBoard({
   onReviewClick?: (participant: Participant) => void;
 }) {
   return (
-    <div className="flex flex-row gap-4 overflow-x-auto h-full">
-      {columns.map(({ key, label }, index) => {
-        const cards = getColumnCards(key);
-        const colors = getColumnColors(key);
-        const isFirst = index === 0;
-        return (
-          <div
-            key={key}
-            className="flex flex-col min-w-[300px] bg-[#FFFFFF] rounded-xl border-2 border-[#FFFFFF] overflow-hidden h-full"
-          >
+    // The scroller is the outer div and the row is `w-max mx-auto`: with room to
+    // spare the auto margins centre the board, and once the columns outgrow the
+    // viewport they collapse to zero so the whole row stays scrollable from its
+    // left edge. `justify-center` here would make that left overflow unreachable.
+    <div className="overflow-x-auto h-full">
+      <div className="flex flex-row gap-4 h-full w-max mx-auto">
+        {columns.map(({ key, label }, index) => {
+          const cards = getColumnCards(key);
+          const colors = getColumnColors(key);
+          const isFirst = index === 0;
+          return (
             <div
-              style={{ backgroundColor: colors.header }}
-              className="flex items-center justify-between px-3 h-10 border-b border-gray-200"
+              key={key}
+              // Fixed, not `min-w`: a flex item sizes to its content above the
+              // floor, so the fullest column — usually Documented — used to
+              // outgrow its neighbours.
+              className="flex flex-col w-[340px] shrink-0 bg-[#FFFFFF] rounded-xl border-2 border-[#FFFFFF] overflow-hidden h-full"
             >
-              <span className="text-xs font-semibold text-[#111827]">
-                {label}
-              </span>
-              {isFirst && onAddClick && (
-                <button
-                  onClick={onAddClick}
-                  className="w-6 h-6 rounded-full bg-[#111827] text-white flex items-center justify-center hover:bg-[#374151] transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              )}
+              <div
+                style={{ backgroundColor: colors.header }}
+                className="flex items-center justify-between px-3 h-10 border-b border-gray-200"
+              >
+                <span className="text-xs font-semibold text-[#111827]">
+                  {label}
+                </span>
+                {isFirst && onAddClick && (
+                  <button
+                    onClick={onAddClick}
+                    className="w-6 h-6 rounded-full bg-[#111827] text-white flex items-center justify-center hover:bg-[#374151] transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-2 p-4 overflow-y-auto flex-1 min-h-0">
+                {cards.map((participant) => (
+                  <ParticipantCard
+                    key={participant.id}
+                    participant={participant}
+                    color={colors.card}
+                    headerColor={colors.header}
+                    hideRelationship={hideRelationship}
+                    onCardClick={() => onCardClick?.(participant)}
+                    onEditClick={
+                      onEditClick ? () => onEditClick(participant) : undefined
+                    }
+                    onReviewClick={
+                      onReviewClick
+                        ? () => onReviewClick(participant)
+                        : undefined
+                    }
+                  />
+                ))}
+                {cards.length === 0 && (
+                  <p className="text-xs text-gray-400 text-center mt-4">
+                    No participants
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="flex flex-col gap-2 p-4 overflow-y-auto flex-1 min-h-0">
-              {cards.map((participant) => (
-                <ParticipantCard
-                  key={participant.id}
-                  participant={participant}
-                  color={colors.card}
-                  headerColor={colors.header}
-                  hideRelationship={hideRelationship}
-                  onCardClick={() => onCardClick?.(participant)}
-                  onEditClick={
-                    onEditClick ? () => onEditClick(participant) : undefined
-                  }
-                  onReviewClick={
-                    onReviewClick ? () => onReviewClick(participant) : undefined
-                  }
-                />
-              ))}
-              {cards.length === 0 && (
-                <p className="text-xs text-gray-400 text-center mt-4">
-                  No participants
-                </p>
-              )}
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

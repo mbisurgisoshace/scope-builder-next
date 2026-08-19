@@ -1,4 +1,4 @@
-import ParticipantsKanbanView from "./_components/ParticipantsKanbanView";
+import { InterviewsTabs } from "./_components/InterviewsTabs";
 import { MilestoneHeader } from "@/components/ProblemJourneyMap/components/MilestoneHeader";
 import { MilestoneSelectionProvider } from "@/components/ProblemJourneyMap/MilestoneSelectionContext";
 import { SubStepProgressProvider } from "@/components/ProblemJourneyMap/SubStepProgressContext";
@@ -11,6 +11,7 @@ import {
   getAvailableMilestones,
   getReviewedMilestones,
 } from "@/services/milestoneAccess";
+import { getSubStepProgress } from "@/services/getStarted";
 import { checkRole } from "@/lib/auth";
 import { MIN_PAYER_INTERVIEWS } from "@/lib/milestones";
 
@@ -23,6 +24,7 @@ export default async function ParticipantsInterviewPage() {
     isMentor,
     reviewedMilestones,
     availableMilestones,
+    subStepProgress,
   ] = await Promise.all([
     getParticipantTags(),
     getJobTitles(),
@@ -31,6 +33,10 @@ export default async function ParticipantsInterviewPage() {
     checkRole("mentor"),
     getReviewedMilestones(),
     getAvailableMilestones(),
+    // Seeds SubStepProgressProvider. The Interview Prep tab gates on these, so
+    // fetching them here rather than after mount keeps the tab from opening
+    // locked and filling in a beat later.
+    getSubStepProgress(),
   ]);
 
   return (
@@ -38,9 +44,7 @@ export default async function ParticipantsInterviewPage() {
     // provider. Nothing else on this page consumes the selection — it only drives
     // which milestone the header expands.
     <MilestoneSelectionProvider>
-      {/* Sub-step progress is read-only here — the steps card that writes it
-          lives on the Instructions tab of /user-journey-map. */}
-      <SubStepProgressProvider>
+      <SubStepProgressProvider initialProgress={subStepProgress}>
         <div className="flex flex-col h-full overflow-hidden">
           <MilestoneHeader
             payerInterviews={MIN_PAYER_INTERVIEWS}
@@ -48,13 +52,12 @@ export default async function ParticipantsInterviewPage() {
             reviewedMilestones={reviewedMilestones}
             availableMilestones={availableMilestones}
           />
-          <div className="flex-1 min-h-0 px-8 py-4">
-            <ParticipantsKanbanView
-              tags={tags}
-              jobTitles={jobTitles}
-              canReview={isAdmin || isMentor}
-            />
-          </div>
+          <InterviewsTabs
+            tags={tags}
+            jobTitles={jobTitles}
+            canReview={isAdmin || isMentor}
+            availableMilestones={availableMilestones}
+          />
         </div>
       </SubStepProgressProvider>
     </MilestoneSelectionProvider>
