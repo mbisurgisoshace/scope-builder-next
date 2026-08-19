@@ -99,7 +99,7 @@ function TriggerNodeInner({ id, data }: NodeProps) {
   // node, which re-runs the tree layout mid-keystroke. Pinned to the same width as
   // an Action card, the text wraps and only the height grows.
   return (
-    <div className="group/card nopan nodrag pointer-events-auto w-[370px] bg-[#E2E2E8] border-2 border-white rounded-xl p-4 relative shadow-[0_1px_3px_0_rgba(16,24,40,0.06),0_6px_14px_-2px_rgba(16,24,40,0.12)]">
+    <div className="group/card nopan nodrag pointer-events-auto w-[370px] bg-[#E6DEFA] border-2 border-[#CFD3E0] rounded-xl p-4 relative shadow-[0_1px_3px_0_rgba(16,24,40,0.06),0_6px_14px_-2px_rgba(16,24,40,0.12)]">
       <Handle
         id="left"
         type="target"
@@ -169,7 +169,7 @@ function TriggerNodeInner({ id, data }: NodeProps) {
         value={nodeData.content ?? ""}
         placeholder="Type your trigger..."
         readOnly={readOnly}
-        className="nodrag nopan w-full text-base md:text-base text-gray-800 bg-transparent resize-none placeholder-gray-500 focus:outline-none leading-snug"
+        className="nodrag nopan w-full text-base md:text-base text-gray-800 bg-transparent border-[#B9BDC9] resize-none placeholder-gray-500 focus:outline-none leading-snug"
         onChange={(e) => updateNodeData(id, { content: e.target.value })}
       />
 

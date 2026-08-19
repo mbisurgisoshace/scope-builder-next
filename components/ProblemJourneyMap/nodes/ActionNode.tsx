@@ -65,10 +65,12 @@ function ProblemCard({
   return (
     <div
       onClick={handleClick}
-      className="mt-3 pt-3 border-t border-gray-300 cursor-pointer group"
+      className="mt-3 pt-3 border-t border-[#B9BDC9] cursor-pointer group"
     >
       <div className="flex items-center justify-between mb-1.5">
-        <p className="text-base text-gray-600">What is the problem/pain?</p>
+        <p className="text-base font-semibold text-gray-600 underline decoration-dotted underline-offset-4">
+          What is the problem/pain?
+        </p>
         {canDelete && (
           <button
             onClick={handleDelete}
@@ -81,7 +83,7 @@ function ProblemCard({
       </div>
 
       <div
-        className={`bg-[#F3F3F6] rounded-lg p-3 ${
+        className={`rounded-lg p-3 ${
           isSelected ? "ring-1 ring-[#6A35FF]" : ""
         }`}
       >
@@ -195,7 +197,7 @@ function ActionNodeInner({ id, data }: NodeProps) {
 
   return (
     <div
-      className={`group/card nopan nodrag pointer-events-auto w-[370px] bg-[#E6DEFA] border-2 rounded-xl p-4 relative shadow-[0_1px_3px_0_rgba(16,24,40,0.06),0_6px_14px_-2px_rgba(16,24,40,0.12)] ${isNodeSelected ? "border-purple-500" : "border-white"}`}
+      className={`group/card nopan nodrag pointer-events-auto w-[370px] bg-[#C8ECE6] border-2 rounded-xl p-4 relative shadow-[0_1px_3px_0_rgba(16,24,40,0.06),0_6px_14px_-2px_rgba(16,24,40,0.12)] ${isNodeSelected ? "border-purple-500" : "border-[#CFD3E0]"}`}
     >
       <Handle
         id="left"
@@ -240,7 +242,7 @@ function ActionNodeInner({ id, data }: NodeProps) {
       </div>
 
       <Textarea
-        className="nodrag nopan w-full text-base md:text-base text-gray-800 bg-transparent resize-none placeholder-gray-500 focus:outline-none leading-snug"
+        className="nodrag nopan w-full text-base md:text-base text-gray-800 bg-transparent border-[#B9BDC9] resize-none placeholder-gray-500 focus:outline-none leading-snug"
         placeholder="Type your action..."
         value={nodeData.content ?? ""}
         readOnly={readOnly}

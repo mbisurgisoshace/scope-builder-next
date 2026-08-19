@@ -66,10 +66,10 @@ const CLIP_ARROW = `polygon(0 0, calc(100% - ${ARROW}) 0, 100% 50%, calc(100% - 
 const CLIP_ARROW_FLAT_LEFT = `polygon(0 0, calc(100% - ${ARROW}) 0, 100% 50%, calc(100% - ${ARROW}) 100%, 0 100%)`;
 
 const INDIGO = "#6935FD";
-const CHEVRON_GRAY = "#C9CDD9"; // divider / tip outline on the gray blocks
-const CHEVRON_INDIGO = "#C3B0F5"; // divider outline between tinted sub-steps
-const CHEVRON_GREEN = "#A8D5B5"; // divider outline on completed sub-steps
-const GRAY_TEXT = "#9CA3AF";
+const CHEVRON_GRAY = "#B9BDC9"; // divider / tip outline on the gray blocks
+const CHEVRON_INDIGO = "#B3A0E4"; // divider outline between tinted sub-steps
+const CHEVRON_GREEN = "#98C5A5"; // divider outline on completed sub-steps
+const GRAY_TEXT = "#6E7689";
 const INDIGO_LABEL = "#C7D2FE"; // indigo-200, used for the milestone title
 
 // Reviewed milestones swap indigo for green on the label block only — the
@@ -84,13 +84,13 @@ const GREEN_SOLID_LABEL = "#C7EBD5"; // its title text, mirroring INDIGO_LABEL
 const GREEN_BLOCK = "#D7EFE0"; // unselected reviewed milestone
 const GREEN_BLOCK_HOVER = "#C6E7D3";
 const GREEN_BLOCK_NUMBER = "#1F7A4C"; // its "#N" caption
-const GREEN_BLOCK_LABEL = "#2F9E63"; // its title text
+const GREEN_BLOCK_LABEL = "#178E55"; // its title text
 
 const INDIGO_TINT = "#F1ECFF"; // sub-step cells of the selected milestone
 const GREEN_TINT = "#E7F7EC"; // completed sub-step cells
-const GREEN_TEXT = "#2F9E63"; // "Completed" check + label (matches --progress-done)
+const GREEN_TEXT = "#178E55"; // "Completed" check + label — one notch under --progress-done
 const BLOCK_GRAY = "#EFF0F4"; // unselected milestone blocks
-const GRAY_LABEL = "#697288"; // "#N" caption on unselected blocks
+const GRAY_LABEL = "#4E5566"; // "#N" caption on unselected blocks
 
 // Shared transition for every animated property so resize, color and content
 // reveal all move together. easeInOut cubic-bezier, ~280ms.
@@ -100,15 +100,15 @@ const INSTANT = { duration: 0 } as const;
 /**
  * One arrow-shaped cell of the strip. Two stacked clipped layers:
  *
- *   - the outer element, clipped to the full arrow and painted `edge` — the 1px
+ *   - the outer element, clipped to the full arrow and painted `edge` — the
  *     outline color;
- *   - an absolute fill layer, clipped to the same arrow but inset 1px on the
- *     right only, painted `fill`.
+ *   - an absolute fill layer, clipped to the same arrow but inset `edgeWidth` on
+ *     the right only, painted `fill`.
  *
- * The 1px the fill doesn't cover is the diagonal border along the tip. The notch
- * side is left flush on purpose: a notch always sits on top of the previous
- * segment's tip, which has already drawn that line, so outlining both would make
- * every divider read 2px.
+ * The strip the fill doesn't cover (`edgeWidth`, 1px by default) is the diagonal
+ * border along the tip. The notch side is left flush on purpose: a notch always
+ * sits on top of the previous segment's tip, which has already drawn that line,
+ * so outlining both would make every divider read double.
  *
  * Horizontal borders are NOT drawn here — the milestone block paints its own
  * top/bottom rules across all of its segments, matching the old behaviour where
@@ -134,6 +134,7 @@ const INSTANT = { duration: 0 } as const;
 function ArrowSegment({
   fill,
   edge,
+  edgeWidth = 1,
   notched,
   overlap,
   transition,
@@ -143,9 +144,13 @@ function ArrowSegment({
 }: {
   /** Interior color of the arrow. */
   fill: string;
-  /** 1px outline along the tip diagonal. Pass the same value as `fill` for no
+  /** Outline along the tip diagonal. Pass the same value as `fill` for no
    *  visible divider. */
   edge: string;
+  /** Horizontal thickness of that outline, in px. 1 for the internal chevron
+   *  dividers; 2 for a segment whose tip is the milestone block's own outer
+   *  border, so it matches the 2px top/bottom rules the block paints. */
+  edgeWidth?: number;
   /** Bite a notch out of the left edge. False only for the very first block. */
   notched: boolean;
   /** Pull left by one arrow depth so this segment's notch lands on its
@@ -186,7 +191,7 @@ function ArrowSegment({
           top: 0,
           bottom: 0,
           left: 0,
-          right: 1,
+          right: edgeWidth,
           clipPath,
         }}
       />
@@ -240,6 +245,10 @@ function SubStepCell({
     <ArrowSegment
       fill={bg}
       edge={isLast ? accent : divider}
+      // The last cell's tip is the whole block's tip, so it carries the block's
+      // outer border rather than an internal chevron divider — 2px, matching the
+      // top/bottom rules. The dividers between cells stay 1px.
+      edgeWidth={isLast ? 2 : 1}
       notched
       overlap
       transition={transition}
@@ -252,7 +261,7 @@ function SubStepCell({
           the cell wide on one. */}
       <span
         style={isLocked ? { color: GRAY_LABEL } : undefined}
-        className="relative h-[35px] block line-clamp-2 max-w-[112px] text-center text-xs font-medium leading-tight text-gray-700 xl:max-w-[132px] xl:text-sm"
+        className="relative h-[35px] block line-clamp-2 max-w-[112px] text-center text-xs font-medium leading-tight text-gray-800 xl:max-w-[132px] xl:text-sm"
       >
         {subStep.label}
       </span>
@@ -600,20 +609,22 @@ export function MilestoneHeader({
                 {/* Top / bottom (and, on the first block, left) rules. Drawn at
                     block level rather than per segment so an expanded milestone
                     gets one continuous accent outline instead of one per cell;
-                    the block's clip-path terminates them on the diagonals. */}
+                    the block's clip-path terminates them on the diagonals. 2px
+                    so the selected block's outline reads as a border rather than
+                    a hairline — the last sub-step's tip diagonal matches it. */}
                 <motion.div
                   aria-hidden
                   initial={false}
                   transition={transition}
                   animate={{ backgroundColor: blockBorder }}
-                  className="pointer-events-none absolute inset-x-0 top-0 z-20 h-px"
+                  className="pointer-events-none absolute inset-x-0 top-0 z-20 h-0.5"
                 />
                 <motion.div
                   aria-hidden
                   initial={false}
                   transition={transition}
                   animate={{ backgroundColor: blockBorder }}
-                  className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-px"
+                  className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-0.5"
                 />
                 {isFirst && (
                   <motion.div
@@ -621,7 +632,7 @@ export function MilestoneHeader({
                     initial={false}
                     transition={transition}
                     animate={{ backgroundColor: blockBorder }}
-                    className="pointer-events-none absolute inset-y-0 left-0 z-20 w-px"
+                    className="pointer-events-none absolute inset-y-0 left-0 z-20 w-0.5"
                   />
                 )}
               </motion.div>
