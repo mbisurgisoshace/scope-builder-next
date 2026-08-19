@@ -5,23 +5,35 @@ import { ActionLabel } from "@/components/ProblemJourneyMap/components/Interview
 import { AnswerInput } from "./AnswerInput";
 import type { AnswerableProblem } from "./types";
 
-interface ProblemAnswerColumnProps {
+/**
+ * Narrowest a question tile is allowed to get. `auto-fill` packs as many of these
+ * as the card's own width allows — so the column count follows the card rather
+ * than the viewport, and survives a sidebar opening beside it.
+ */
+const QUESTION_MIN_WIDTH = "17rem";
+
+interface ProblemAnswerCardProps {
   problem: AnswerableProblem;
   onAnswerChange: (questionId: string, value: string) => void;
   onAnswerCommit: (questionId: string, value?: string) => void;
   readOnly?: boolean;
 }
 
-export function ProblemAnswerColumn({
+/**
+ * One problem as a single card: a grey summary band across the top, and every
+ * question for that problem tiled beneath it in a responsive grid.
+ */
+export function ProblemAnswerCard({
   problem,
   onAnswerChange,
   onAnswerCommit,
   readOnly = false,
-}: ProblemAnswerColumnProps) {
+}: ProblemAnswerCardProps) {
   return (
-    <div className="flex w-full flex-col">
-      {/* Problem summary — read-only; it's authored on the journey map. */}
-      <div className="rounded-lg bg-[#F5F5F8] p-4">
+    <div className="w-full overflow-hidden rounded-xl border border-[#E4E5ED] bg-white">
+      {/* Problem summary — read-only; it's authored on the journey map. Full-bleed
+          so the band reads as the card's header rather than a nested block. */}
+      <div className="bg-[#F5F5F8] px-5 py-4">
         {/* The action this problem hangs off — context only, so it sits above
             the pill rather than competing with the problem itself. */}
         <ActionLabel action={problem.action} className="mb-2" />
@@ -43,16 +55,29 @@ export function ProblemAnswerColumn({
         <p className="mt-3 text-sm text-[#1F2430]">{problem.description}</p>
       </div>
 
-      <div className="mt-6 flex flex-col gap-6">
+      <div
+        className="grid gap-4 p-5"
+        style={{
+          gridTemplateColumns: `repeat(auto-fill, minmax(min(${QUESTION_MIN_WIDTH}, 100%), 1fr))`,
+        }}
+      >
         {problem.questions.map((question) => (
-          <div key={question.questionId} className="flex gap-3">
-            <span className="mt-2 w-4 shrink-0 text-sm font-medium text-[#6A35FF]">
-              {question.index}
-            </span>
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <p className="text-sm font-medium text-[#1F2430]">
+          <div
+            key={question.questionId}
+            className="flex flex-col gap-3 rounded-lg bg-[#F5F5F8] p-4"
+          >
+            <div className="flex gap-2">
+              <span className="text-sm font-medium text-[#6A35FF]">
+                {question.index}
+              </span>
+              <p className="min-w-0 flex-1 text-sm font-medium text-[#1F2430]">
                 {question.title}
               </p>
+            </div>
+            {/* Grid cells stretch to the tallest tile in their row, so pushing the
+                input down keeps every answer in a row on the same line even when
+                the questions above them wrap to different heights. */}
+            <div className="mt-auto">
               <AnswerInput
                 question={question}
                 value={question.answer}
@@ -63,18 +88,6 @@ export function ProblemAnswerColumn({
             </div>
           </div>
         ))}
-
-        {/* Inert: questions are authored on the Interview Prep. tab, not mid-interview. */}
-        {!readOnly && (
-          <div className="flex gap-3">
-            <span className="w-4 shrink-0 text-sm font-medium text-[#B7BAC5]">
-              {problem.questions.length + 1}
-            </span>
-            <span className="text-sm font-medium text-[#6A35FF]">
-              + Add question
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );

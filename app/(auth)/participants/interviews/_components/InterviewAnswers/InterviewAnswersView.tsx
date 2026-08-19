@@ -13,7 +13,7 @@ import {
   upsertProblemInterviewAnswer,
 } from "@/services/interviewPrep";
 
-import { ProblemAnswerColumn } from "./ProblemAnswerColumn";
+import { ProblemAnswerCard } from "./ProblemAnswerCard";
 import type { AnswerableProblem } from "./types";
 
 interface InterviewAnswersViewProps {
@@ -232,9 +232,11 @@ export function InterviewAnswersView({
         </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-8 py-8">
-          <div className="mx-auto flex w-full max-w-3xl flex-col gap-10">
+          {/* Capped rather than edge-to-edge: past ~1600px the question tiles just
+              keep multiplying across a row and the card stops reading as one thing. */}
+          <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
             {problems.map((problem) => (
-              <ProblemAnswerColumn
+              <ProblemAnswerCard
                 key={problem.id}
                 problem={problem}
                 readOnly={readOnly}
