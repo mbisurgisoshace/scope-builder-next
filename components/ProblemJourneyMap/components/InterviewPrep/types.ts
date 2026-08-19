@@ -6,12 +6,17 @@ export interface DropdownOption {
 }
 
 export interface InterviewQuestion {
+  /** ProblemInterviewQuestion row id — every rendered question is already persisted. */
+  id: string;
   /** The interview question the user is authoring. Empty string = not yet written. */
   title: string;
   responseType: ResponseType;
   /** Only meaningful when responseType === "dropdown". */
   options: DropdownOption[];
 }
+
+/** A question being written but not yet saved, so it has no row id yet. */
+export type InterviewQuestionDraft = Omit<InterviewQuestion, "id">;
 
 export interface Hypothesis {
   id: string;
@@ -27,7 +32,8 @@ export interface Hypothesis {
   source: string;
   /** Confidence out of 5. Display-only. */
   confidence: number;
-  question: InterviewQuestion;
+  /** Ordered; may be empty — the row itself comes from the canvas, not the DB. */
+  questions: InterviewQuestion[];
 }
 
 export interface ProblemBlock {

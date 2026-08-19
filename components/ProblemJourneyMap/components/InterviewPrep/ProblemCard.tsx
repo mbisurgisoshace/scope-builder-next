@@ -1,37 +1,31 @@
 "use client";
 
-import { Plus } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-
 import { ActionLabel } from "./ActionLabel";
 import { HypothesisRow } from "./HypothesisRow";
-import type { InterviewQuestion, ProblemBlock } from "./types";
+import type { InterviewQuestionDraft, ProblemBlock } from "./types";
 
 interface ProblemCardProps {
   block: ProblemBlock;
-  onQuestionChange: (
+  onQuestionCreate: (
     hypothesisId: string,
-    patch: Partial<InterviewQuestion>,
-  ) => void;
-  onQuestionCommit: (
+    value: InterviewQuestionDraft,
+  ) => Promise<void>;
+  onQuestionUpdate: (
     hypothesisId: string,
-    patch?: Partial<InterviewQuestion>,
-  ) => void;
+    id: string,
+    value: InterviewQuestionDraft,
+  ) => Promise<void>;
+  onQuestionDelete: (hypothesisId: string, id: string) => Promise<void>;
   readOnly?: boolean;
 }
 
 export function ProblemCard({
   block,
-  onQuestionChange,
-  onQuestionCommit,
+  onQuestionCreate,
+  onQuestionUpdate,
+  onQuestionDelete,
   readOnly = false,
 }: ProblemCardProps) {
-  const totalCount = block.hypotheses.length;
-  const answeredCount = block.hypotheses.filter((h) =>
-    h.question.title.trim(),
-  ).length;
-
   return (
     <div className="rounded-2xl bg-white shadow-sm">
       <div className="flex">
@@ -56,10 +50,6 @@ export function ProblemCard({
               ))}
             </ul>
           )}
-          {/* <p className="text-sm font-bold text-[#1F2430]">
-            {answeredCount}/{totalCount}{" "}
-            <span className="font-normal text-[#697288]">Questions</span>
-          </p> */}
         </aside>
 
         {/* Right area — hypothesis / interview-question rows. */}
@@ -86,27 +76,18 @@ export function ProblemCard({
               <HypothesisRow
                 hypothesis={hypothesis}
                 readOnly={readOnly}
-                onQuestionChange={(patch) =>
-                  onQuestionChange(hypothesis.id, patch)
+                onQuestionCreate={(value) =>
+                  onQuestionCreate(hypothesis.id, value)
                 }
-                onQuestionCommit={(patch) =>
-                  onQuestionCommit(hypothesis.id, patch)
+                onQuestionUpdate={(id, value) =>
+                  onQuestionUpdate(hypothesis.id, id, value)
                 }
+                onQuestionDelete={(id) => onQuestionDelete(hypothesis.id, id)}
               />
             </div>
           ))}
         </div>
       </div>
-
-      {/* Add custom question — centered dark pill at the bottom. */}
-      {!readOnly && (
-        <div className="flex justify-center py-5">
-          <Button className="rounded-full bg-[#1F2430] px-5 text-white hover:bg-[#2B3140]">
-            <Plus className="h-4 w-4" />
-            Add custom question
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

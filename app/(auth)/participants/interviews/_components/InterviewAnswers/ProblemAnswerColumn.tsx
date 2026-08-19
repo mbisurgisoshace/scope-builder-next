@@ -64,7 +64,7 @@ export function ProblemAnswerColumn({
           </div>
         ))}
 
-        {/* Inert for now, matching the prep tab's "Add custom question". */}
+        {/* Inert: questions are authored on the Interview Prep. tab, not mid-interview. */}
         {!readOnly && (
           <div className="flex gap-3">
             <span className="w-4 shrink-0 text-sm font-medium text-[#B7BAC5]">

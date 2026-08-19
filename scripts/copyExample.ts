@@ -156,6 +156,7 @@ async function copyDatabase(sourceOrgId: string, exampleNumber: number) {
           title: q.title,
           response_type: q.response_type,
           options: q.options as Prisma.InputJsonValue[],
+          sort_order: q.sort_order,
           org_id: exOrg,
           example_number: exampleNumber,
         },

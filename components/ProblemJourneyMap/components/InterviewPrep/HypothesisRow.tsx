@@ -3,20 +3,22 @@
 import { ArrowRight } from "lucide-react";
 
 import { StarRating } from "../StarRating";
-import { QuestionEditor } from "./QuestionEditor";
-import type { Hypothesis, InterviewQuestion } from "./types";
+import { QuestionList } from "./QuestionList";
+import type { Hypothesis, InterviewQuestionDraft } from "./types";
 
 interface HypothesisRowProps {
   hypothesis: Hypothesis;
-  onQuestionChange: (patch: Partial<InterviewQuestion>) => void;
-  onQuestionCommit: (patch?: Partial<InterviewQuestion>) => void;
+  onQuestionCreate: (value: InterviewQuestionDraft) => Promise<void>;
+  onQuestionUpdate: (id: string, value: InterviewQuestionDraft) => Promise<void>;
+  onQuestionDelete: (id: string) => Promise<void>;
   readOnly?: boolean;
 }
 
 export function HypothesisRow({
   hypothesis,
-  onQuestionChange,
-  onQuestionCommit,
+  onQuestionCreate,
+  onQuestionUpdate,
+  onQuestionDelete,
   readOnly = false,
 }: HypothesisRowProps) {
   return (
@@ -50,12 +52,13 @@ export function HypothesisRow({
         </div>
       </div>
 
-      {/* Right: the interview question editor. */}
+      {/* Right: the interview questions authored against this hypothesis. */}
       <div className="px-6 py-6 pl-10">
-        <QuestionEditor
-          question={hypothesis.question}
-          onChange={onQuestionChange}
-          onCommit={onQuestionCommit}
+        <QuestionList
+          questions={hypothesis.questions}
+          onCreate={onQuestionCreate}
+          onUpdate={onQuestionUpdate}
+          onDelete={onQuestionDelete}
           readOnly={readOnly}
         />
       </div>

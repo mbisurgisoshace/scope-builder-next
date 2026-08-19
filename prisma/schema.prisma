@@ -580,9 +580,11 @@ enum InterviewResponseType {
   dropdown
 }
 
-// The interview question a user writes against one hypothesis-marked question of a
-// journey-map problem. The problem itself lives in Liveblocks storage, so the columns
-// below address it by id rather than by relation.
+// One of the interview questions a user writes against a hypothesis-marked question of
+// a journey-map problem. The problem itself lives in Liveblocks storage, so the columns
+// below address it by id rather than by relation. A hypothesis can carry several of
+// these, so `bank_question_id` groups rows by hypothesis rather than identifying one —
+// rows are addressed by their own `id`, and ordered within a group by `sort_order`.
 model ProblemInterviewQuestion {
   id               String                @id @default(cuid())
   org_id           String
@@ -592,6 +594,7 @@ model ProblemInterviewQuestion {
   title            String                @default("")
   response_type    InterviewResponseType @default(text)
   options          Json[] // [{ id, label }], only meaningful for response_type=dropdown
+  sort_order       Int                   @default(0) // position within one hypothesis
   example_number   Int? // NULL = real data, N = example set N
 
   created_at DateTime @default(now())
@@ -599,7 +602,7 @@ model ProblemInterviewQuestion {
 
   answers ProblemInterviewAnswer[]
 
-  @@unique([org_id, node_id, problem_id, bank_question_id])
+  @@index([org_id, node_id, problem_id, bank_question_id])
   @@index([org_id])
   @@index([example_number])
   @@map("problem_interview_questions")

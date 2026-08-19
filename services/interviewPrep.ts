@@ -10,7 +10,7 @@ import { exampleRoomId } from "@/lib/examples";
 import { BANK_QUESTIONS } from "@/components/ProblemJourneyMap/questionBank";
 import type {
   DropdownOption,
-  Hypothesis,
+  InterviewQuestion,
   ProblemBlock,
   ResponseType,
 } from "@/components/ProblemJourneyMap/components/InterviewPrep/types";
@@ -23,13 +23,21 @@ import type {
 // file only allows async-function value exports, and Next's checker doesn't
 // erase re-export lists before enforcing that. Alias declarations are erased.
 export type InterviewPrepBlock = ProblemBlock;
+export type InterviewPrepQuestion = InterviewQuestion;
 export type InterviewAnswersProblem = AnswerableProblem;
 export type InterviewAnswersQuestion = AnswerableQuestion;
 
-export type InterviewQuestionInput = {
+export type InterviewQuestionCreateInput = {
   nodeId: string;
   problemId: string;
   bankQuestionId: string;
+  title?: string;
+  responseType?: ResponseType;
+  options?: DropdownOption[];
+};
+
+export type InterviewQuestionUpdateInput = {
+  id: string;
   title?: string;
   responseType?: ResponseType;
   options?: DropdownOption[];
@@ -129,13 +137,6 @@ function toDropdownOptions(raw: unknown): DropdownOption[] {
   });
 }
 
-// Carries the ProblemInterviewQuestion row id, which ProblemBlock drops — the answer
-// rows are keyed by it, so the answering flow can't do without it.
-type LoadedHypothesis = Hypothesis & { questionId: string | null };
-type LoadedBlock = Omit<ProblemBlock, "hypotheses"> & {
-  hypotheses: LoadedHypothesis[];
-};
-
 /**
  * Not exported, and it must stay that way: every exported async function in a
  * "use server" file is a public endpoint, so an exported helper taking a room id +
@@ -146,12 +147,16 @@ type LoadedBlock = Omit<ProblemBlock, "hypotheses"> & {
 async function loadProblemBlocksFrom(
   roomId: string,
   questionWhere: Prisma.ProblemInterviewQuestionWhereInput,
-): Promise<LoadedBlock[]> {
+): Promise<ProblemBlock[]> {
   const [rawStorage, saved] = await Promise.all([
     // The "json" overload returns plain objects; the default one returns nested
     // { liveblocksType, data } wrappers that would need unwrapping at every level.
     liveblocks.getStorageDocument(roomId, "json"),
-    prisma.problemInterviewQuestion.findMany({ where: questionWhere }),
+    prisma.problemInterviewQuestion.findMany({
+      where: questionWhere,
+      // Ordered here so each hypothesis's bucket below comes out in authoring order.
+      orderBy: [{ sort_order: "asc" }, { created_at: "asc" }],
+    }),
   ]);
 
   // Storage is declared as LiveList<LiveObject<any>>, so this arrives as readonly any[].
@@ -160,12 +165,15 @@ async function loadProblemBlocksFrom(
     journeyEdges?: StoredEdge[];
   };
 
-  const savedByKey = new Map(
-    saved.map((row) => [
-      `${row.node_id}:${row.problem_id}:${row.bank_question_id}`,
-      row,
-    ]),
-  );
+  // One hypothesis can hold several questions, so this groups rather than indexes.
+  // `saved` already arrives ordered, so each bucket keeps that order.
+  const savedByKey = new Map<string, typeof saved>();
+  for (const row of saved) {
+    const key = `${row.node_id}:${row.problem_id}:${row.bank_question_id}`;
+    const bucket = savedByKey.get(key);
+    if (bucket) bucket.push(row);
+    else savedByKey.set(key, [row]);
+  }
 
   // Logically deleted cards drop out here, which covers prep and both answering
   // flows at once. Their `problem_interview_questions` rows are left in place —
@@ -175,7 +183,7 @@ async function loadProblemBlocksFrom(
     storage.journeyEdges ?? [],
   );
 
-  const blocks: LoadedBlock[] = [];
+  const blocks: ProblemBlock[] = [];
 
   for (const node of actionNodes) {
     if (!node.id) continue;
@@ -192,22 +200,22 @@ async function loadProblemBlocksFrom(
           if (!bankQuestion) return [];
 
           const bankQuestionId = q.bankQuestionId!;
-          const row = savedByKey.get(`${node.id}:${problem.id}:${bankQuestionId}`);
+          const rows = savedByKey.get(`${node.id}:${problem.id}:${bankQuestionId}`) ?? [];
 
           return [
             {
               id: `${problem.id}:${bankQuestionId}`,
               bankQuestionId,
-              questionId: row?.id ?? null,
               prompt: bankQuestion.text,
               answer: Array.isArray(q.answer) ? q.answer.join(", ") : (q.answer ?? ""),
               source: q.source ?? "",
               confidence: q.confidence ?? 0,
-              question: {
-                title: row?.title ?? "",
-                responseType: (row?.response_type ?? "text") as ResponseType,
-                options: toDropdownOptions(row?.options),
-              },
+              questions: rows.map((row) => ({
+                id: row.id,
+                title: row.title,
+                responseType: row.response_type as ResponseType,
+                options: toDropdownOptions(row.options),
+              })),
             },
           ];
         })
@@ -306,18 +314,20 @@ export async function getExampleInterviewAnswersData(
  * question ids, so this is filter-agnostic.
  */
 async function buildAnswerableProblems(
-  blocks: LoadedBlock[],
+  blocks: ProblemBlock[],
   participantId: string,
 ): Promise<AnswerableProblem[]> {
   const answerable = blocks.flatMap((block) => {
-    const authored = block.hypotheses.filter(
-      (h) => h.questionId !== null && h.question.title.trim() !== "",
+    // Flattened across hypotheses: a hypothesis can hold several questions, and the
+    // interviewer works through one flat list per problem.
+    const authored = block.hypotheses.flatMap((h) =>
+      h.questions.filter((q) => q.title.trim() !== ""),
     );
     return authored.length > 0 ? [{ block, authored }] : [];
   });
 
   const questionIds = answerable.flatMap(({ authored }) =>
-    authored.map((h) => h.questionId!),
+    authored.map((q) => q.id),
   );
 
   const answers = questionIds.length
@@ -336,13 +346,13 @@ async function buildAnswerableProblems(
     tags: block.tags,
     // Numbered after filtering, so dropping an unauthored question can't leave the
     // list reading "1. 3. 4." — same reasoning as the prep numbering above.
-    questions: authored.map((h, i) => ({
-      questionId: h.questionId!,
+    questions: authored.map((q, i) => ({
+      questionId: q.id,
       index: i + 1,
-      title: h.question.title,
-      responseType: h.question.responseType,
-      options: h.question.options,
-      answer: answerByQuestionId.get(h.questionId!) ?? "",
+      title: q.title,
+      responseType: q.responseType,
+      options: q.options,
+      answer: answerByQuestionId.get(q.id) ?? "",
     })),
   }));
 }
@@ -388,9 +398,13 @@ export async function upsertProblemInterviewAnswer(
   // tree while the interviewer is still typing.
 }
 
-export async function upsertProblemInterviewQuestion(
-  input: InterviewQuestionInput,
-) {
+/**
+ * Append a question to one hypothesis. Returns the created row in its client shape so
+ * the caller picks up the new id without refetching the whole tab.
+ */
+export async function createProblemInterviewQuestion(
+  input: InterviewQuestionCreateInput,
+): Promise<InterviewQuestion> {
   const orgId = await requireOrg();
 
   const { nodeId, problemId, bankQuestionId, title, responseType, options } = input;
@@ -399,16 +413,19 @@ export async function upsertProblemInterviewQuestion(
   // index-signature-based Json input type.
   const jsonOptions = options as Prisma.InputJsonValue[] | undefined;
 
-  await prisma.problemInterviewQuestion.upsert({
+  // Appended after whatever this hypothesis already holds.
+  const { _max } = await prisma.problemInterviewQuestion.aggregate({
     where: {
-      org_id_node_id_problem_id_bank_question_id: {
-        org_id: orgId,
-        node_id: nodeId,
-        problem_id: problemId,
-        bank_question_id: bankQuestionId,
-      },
+      org_id: orgId,
+      node_id: nodeId,
+      problem_id: problemId,
+      bank_question_id: bankQuestionId,
     },
-    create: {
+    _max: { sort_order: true },
+  });
+
+  const created = await prisma.problemInterviewQuestion.create({
+    data: {
       org_id: orgId,
       node_id: nodeId,
       problem_id: problemId,
@@ -416,11 +433,41 @@ export async function upsertProblemInterviewQuestion(
       title: title ?? "",
       response_type: responseType ?? "text",
       options: jsonOptions ?? [],
+      sort_order: (_max.sort_order ?? -1) + 1,
     },
-    update: {
+  });
+
+  return {
+    id: created.id,
+    title: created.title,
+    responseType: created.response_type as ResponseType,
+    options: toDropdownOptions(created.options),
+  };
+}
+
+export async function updateProblemInterviewQuestion(
+  input: InterviewQuestionUpdateInput,
+): Promise<void> {
+  const orgId = await requireOrg();
+
+  const { id, title, responseType, options } = input;
+  const jsonOptions = options as Prisma.InputJsonValue[] | undefined;
+
+  // The id comes from the client, so `org_id` has to be part of the match or it would
+  // address another org's row. updateMany makes a non-matching id a no-op, not a throw.
+  await prisma.problemInterviewQuestion.updateMany({
+    where: { id, org_id: orgId },
+    data: {
       ...(title !== undefined ? { title } : {}),
       ...(responseType !== undefined ? { response_type: responseType } : {}),
       ...(jsonOptions !== undefined ? { options: jsonOptions } : {}),
     },
   });
+}
+
+/** Deleting a question cascades to every participant's answer to it. */
+export async function deleteProblemInterviewQuestion(id: string): Promise<void> {
+  const orgId = await requireOrg();
+
+  await prisma.problemInterviewQuestion.deleteMany({ where: { id, org_id: orgId } });
 }

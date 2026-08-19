@@ -1,18 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Loader } from "@/components/ui/loader";
 import {
+  createProblemInterviewQuestion,
+  deleteProblemInterviewQuestion,
   getInterviewPrepData,
   getExampleInterviewPrepData,
-  upsertProblemInterviewQuestion,
+  updateProblemInterviewQuestion,
 } from "@/services/interviewPrep";
 
 import { INTERVIEW_PREP_SUB_STEP } from "@/lib/milestones";
 import { LockedRegion, SubStepLockBadge } from "../LockedRegion";
 import { ProblemCard } from "./ProblemCard";
-import type { InterviewQuestion, ProblemBlock } from "./types";
+import type {
+  InterviewQuestion,
+  InterviewQuestionDraft,
+  ProblemBlock,
+} from "./types";
 
 interface InterviewPrepProps {
   readOnly?: boolean;
@@ -32,11 +38,6 @@ export function InterviewPrep({
   const isReadOnly = readOnly || locked;
   const [blocks, setBlocks] = useState<ProblemBlock[] | null>(null);
 
-  // Mirrors `blocks` so a commit always persists the latest value rather than whatever
-  // the handler closed over before the last keystroke.
-  const blocksRef = useRef<ProblemBlock[] | null>(null);
-  blocksRef.current = blocks;
-
   // Problems come from the journey-map canvas, which is org-wide, so load once on mount.
   useEffect(() => {
     let active = true;
@@ -52,11 +53,13 @@ export function InterviewPrep({
     };
   }, [exampleNumber]);
 
-  const handleQuestionChange = useCallback(
+  // Rewrites one hypothesis's question list in place. Every mutation below is a
+  // whole-list replacement, so they all funnel through here.
+  const patchQuestions = useCallback(
     (
       blockId: string,
       hypothesisId: string,
-      patch: Partial<InterviewQuestion>,
+      update: (questions: InterviewQuestion[]) => InterviewQuestion[],
     ) => {
       setBlocks((prev) =>
         (prev ?? []).map((block) =>
@@ -67,7 +70,7 @@ export function InterviewPrep({
                 hypotheses: block.hypotheses.map((hyp) =>
                   hyp.id !== hypothesisId
                     ? hyp
-                    : { ...hyp, question: { ...hyp.question, ...patch } },
+                    : { ...hyp, questions: update(hyp.questions) },
                 ),
               },
         ),
@@ -76,31 +79,59 @@ export function InterviewPrep({
     [],
   );
 
-  const handleQuestionCommit = useCallback(
-    (
+  const handleQuestionCreate = useCallback(
+    async (
       blockId: string,
       hypothesisId: string,
-      patch?: Partial<InterviewQuestion>,
+      value: InterviewQuestionDraft,
     ) => {
       if (isReadOnly) return;
-      const block = blocksRef.current?.find((b) => b.id === blockId);
+      const block = blocks?.find((b) => b.id === blockId);
       const hypothesis = block?.hypotheses.find((h) => h.id === hypothesisId);
       if (!block || !hypothesis) return;
 
-      // A caller that commits in the same tick as its edit hasn't re-rendered yet, so
-      // the patch — not the ref — carries the new value.
-      const question = { ...hypothesis.question, ...patch };
-
-      void upsertProblemInterviewQuestion({
+      // Awaited rather than optimistic: the row id only exists once the server has
+      // written it, and every later edit addresses the question by that id.
+      const created = await createProblemInterviewQuestion({
         nodeId: block.nodeId,
         problemId: block.id,
         bankQuestionId: hypothesis.bankQuestionId,
-        title: question.title,
-        responseType: question.responseType,
-        options: question.options,
+        ...value,
       });
+
+      patchQuestions(blockId, hypothesisId, (questions) => [
+        ...questions,
+        created,
+      ]);
     },
-    [isReadOnly],
+    [blocks, isReadOnly, patchQuestions],
+  );
+
+  const handleQuestionUpdate = useCallback(
+    async (
+      blockId: string,
+      hypothesisId: string,
+      id: string,
+      value: InterviewQuestionDraft,
+    ) => {
+      if (isReadOnly) return;
+      patchQuestions(blockId, hypothesisId, (questions) =>
+        questions.map((q) => (q.id === id ? { ...q, ...value } : q)),
+      );
+      await updateProblemInterviewQuestion({ id, ...value });
+    },
+    [isReadOnly, patchQuestions],
+  );
+
+  const handleQuestionDelete = useCallback(
+    async (blockId: string, hypothesisId: string, id: string) => {
+      if (isReadOnly) return;
+      await deleteProblemInterviewQuestion(id);
+      patchQuestions(blockId, hypothesisId, (questions) =>
+        questions.filter((q) => q.id !== id),
+      );
+    },
+    [isReadOnly, patchQuestions],
   );
 
   if (!blocks) {
@@ -146,11 +177,14 @@ export function InterviewPrep({
                 key={block.id}
                 block={block}
                 readOnly={isReadOnly}
-                onQuestionChange={(hypothesisId, patch) =>
-                  handleQuestionChange(block.id, hypothesisId, patch)
+                onQuestionCreate={(hypothesisId, value) =>
+                  handleQuestionCreate(block.id, hypothesisId, value)
                 }
-                onQuestionCommit={(hypothesisId, patch) =>
-                  handleQuestionCommit(block.id, hypothesisId, patch)
+                onQuestionUpdate={(hypothesisId, id, value) =>
+                  handleQuestionUpdate(block.id, hypothesisId, id, value)
+                }
+                onQuestionDelete={(hypothesisId, id) =>
+                  handleQuestionDelete(block.id, hypothesisId, id)
                 }
               />
             ))

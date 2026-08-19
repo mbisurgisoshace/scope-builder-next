@@ -3,40 +3,29 @@
 import { GripVertical, Plus, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 
 import type { DropdownOption } from "./types";
 
 interface DropdownOptionsEditorProps {
   options: DropdownOption[];
-  /** `commit` distinguishes a keystroke from a change that should persist right away. */
-  onChange: (
-    options: DropdownOption[],
-    meta: { commit: boolean },
-  ) => void;
-  readOnly?: boolean;
+  /** Plain draft state — nothing here persists until the form is saved. */
+  onChange: (options: DropdownOption[]) => void;
 }
 
 export function DropdownOptionsEditor({
   options,
   onChange,
-  readOnly = false,
 }: DropdownOptionsEditorProps) {
   const updateLabel = (id: string, label: string) => {
-    onChange(
-      options.map((opt) => (opt.id === id ? { ...opt, label } : opt)),
-      { commit: false },
-    );
+    onChange(options.map((opt) => (opt.id === id ? { ...opt, label } : opt)));
   };
 
   const removeOption = (id: string) => {
-    onChange(options.filter((opt) => opt.id !== id), { commit: true });
+    onChange(options.filter((opt) => opt.id !== id));
   };
 
   const addOption = () => {
-    onChange([...options, { id: crypto.randomUUID(), label: "" }], {
-      commit: true,
-    });
+    onChange([...options, { id: crypto.randomUUID(), label: "" }]);
   };
 
   return (
@@ -44,48 +33,38 @@ export function DropdownOptionsEditor({
       {options.map((option) => (
         <div key={option.id} className="flex items-center gap-2">
           {/* Drag handle — visual only for now (reorder is deferred). */}
-          {!readOnly && (
-            <button
-              type="button"
-              aria-label="Reorder option"
-              className="flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-md text-[#6E7689] hover:bg-[#F1F2F6]"
-            >
-              <GripVertical className="h-4 w-4" />
-            </button>
-          )}
+          <button
+            type="button"
+            aria-label="Reorder option"
+            className="flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-md text-[#6E7689] hover:bg-[#F1F2F6]"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
           <Input
             value={option.label}
-            readOnly={readOnly}
             onChange={(e) => updateLabel(option.id, e.target.value)}
-            onBlur={() => onChange(options, { commit: true })}
             placeholder="Enter dropdown option"
             className="h-9 bg-white text-base"
           />
-          {!readOnly && (
-            <button
-              type="button"
-              aria-label="Remove option"
-              onClick={() => removeOption(option.id)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#6E7689] hover:bg-[#F1F2F6] hover:text-[#4B4560]"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+          <button
+            type="button"
+            aria-label="Remove option"
+            onClick={() => removeOption(option.id)}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#6E7689] hover:bg-[#F1F2F6] hover:text-[#4B4560]"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       ))}
 
-      {!readOnly && (
-        <button
-          type="button"
-          onClick={addOption}
-          className={cn(
-            "inline-flex w-fit items-center gap-1 pl-10 text-base font-semibold text-[#6A35FF] hover:underline",
-          )}
-        >
-          <Plus className="h-4 w-4" />
-          Add option
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={addOption}
+        className="inline-flex w-fit items-center gap-1 pl-10 text-base font-semibold text-[#6A35FF] hover:underline"
+      >
+        <Plus className="h-4 w-4" />
+        Add option
+      </button>
     </div>
   );
 }
