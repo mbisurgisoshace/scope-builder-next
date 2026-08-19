@@ -1,8 +1,19 @@
 "use client";
 
+import { DndContext, type DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
 import { ActionLabel } from "./ActionLabel";
+import { DragHandle } from "./DragHandle";
 import { HypothesisRow } from "./HypothesisRow";
-import type { InterviewQuestionDraft, ProblemBlock } from "./types";
+import { useSortableSensors } from "./useSortableSensors";
+import type { Hypothesis, InterviewQuestionDraft, ProblemBlock } from "./types";
 
 interface ProblemCardProps {
   block: ProblemBlock;
@@ -16,6 +27,12 @@ interface ProblemCardProps {
     value: InterviewQuestionDraft,
   ) => Promise<void>;
   onQuestionDelete: (hypothesisId: string, id: string) => Promise<void>;
+  onQuestionReorder: (
+    hypothesisId: string,
+    orderedIds: string[],
+  ) => Promise<void>;
+  /** Receives the block's hypothesis ids in their new order. */
+  onHypothesisReorder: (orderedIds: string[]) => Promise<void>;
   readOnly?: boolean;
 }
 
@@ -24,8 +41,21 @@ export function ProblemCard({
   onQuestionCreate,
   onQuestionUpdate,
   onQuestionDelete,
+  onQuestionReorder,
+  onHypothesisReorder,
   readOnly = false,
 }: ProblemCardProps) {
+  const sensors = useSortableSensors();
+  const hypothesisIds = block.hypotheses.map((h) => h.id);
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const from = hypothesisIds.indexOf(String(active.id));
+    const to = hypothesisIds.indexOf(String(over.id));
+    if (from === -1 || to === -1) return;
+    void onHypothesisReorder(arrayMove(hypothesisIds, from, to));
+  };
+
   return (
     <div className="rounded-2xl bg-white shadow-sm">
       <div className="flex">
@@ -64,30 +94,98 @@ export function ProblemCard({
             </span>
           </div>
 
-          {block.hypotheses.map((hypothesis, i) => (
-            <div
-              key={hypothesis.id}
-              className={
-                i < block.hypotheses.length - 1
-                  ? "border-b border-[#CFD3E0]"
-                  : undefined
-              }
+          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+            <SortableContext
+              items={hypothesisIds}
+              strategy={verticalListSortingStrategy}
             >
-              <HypothesisRow
-                hypothesis={hypothesis}
-                readOnly={readOnly}
-                onQuestionCreate={(value) =>
-                  onQuestionCreate(hypothesis.id, value)
-                }
-                onQuestionUpdate={(id, value) =>
-                  onQuestionUpdate(hypothesis.id, id, value)
-                }
-                onQuestionDelete={(id) => onQuestionDelete(hypothesis.id, id)}
-              />
-            </div>
-          ))}
+              {block.hypotheses.map((hypothesis, i) => (
+                <SortableHypothesis
+                  key={hypothesis.id}
+                  hypothesis={hypothesis}
+                  isLast={i === block.hypotheses.length - 1}
+                  readOnly={readOnly}
+                  onQuestionCreate={(value) =>
+                    onQuestionCreate(hypothesis.id, value)
+                  }
+                  onQuestionUpdate={(id, value) =>
+                    onQuestionUpdate(hypothesis.id, id, value)
+                  }
+                  onQuestionDelete={(id) =>
+                    onQuestionDelete(hypothesis.id, id)
+                  }
+                  onQuestionReorder={(orderedIds) =>
+                    onQuestionReorder(hypothesis.id, orderedIds)
+                  }
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
+    </div>
+  );
+}
+
+interface SortableHypothesisProps {
+  hypothesis: Hypothesis;
+  isLast: boolean;
+  onQuestionCreate: (value: InterviewQuestionDraft) => Promise<void>;
+  onQuestionUpdate: (id: string, value: InterviewQuestionDraft) => Promise<void>;
+  onQuestionDelete: (id: string) => Promise<void>;
+  onQuestionReorder: (orderedIds: string[]) => Promise<void>;
+  readOnly?: boolean;
+}
+
+/**
+ * Owns the sortable wiring so `HypothesisRow` stays a plain presentational row that
+ * doesn't need to know it's inside a `SortableContext`.
+ */
+function SortableHypothesis({
+  hypothesis,
+  isLast,
+  readOnly = false,
+  ...handlers
+}: SortableHypothesisProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: hypothesis.id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      // Translate, not Transform: rows vary in height with their question count, and
+      // Transform bakes in a scale of (hovered height / own height), which visibly
+      // stretches the dragged row to the size of whatever it is passing over.
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={[
+        !isLast ? "border-b border-[#CFD3E0]" : "",
+        // Lifted above its neighbours so the row being dragged isn't clipped by the
+        // next one's border.
+        isDragging ? "relative z-10 bg-white shadow-md" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <HypothesisRow
+        hypothesis={hypothesis}
+        readOnly={readOnly}
+        dragHandle={
+          !readOnly && (
+            <DragHandle
+              attributes={attributes}
+              listeners={listeners}
+              label="Reorder hypothesis"
+            />
+          )
+        }
+        {...handlers}
+      />
     </div>
   );
 }

@@ -8,6 +8,8 @@ import {
   deleteProblemInterviewQuestion,
   getInterviewPrepData,
   getExampleInterviewPrepData,
+  reorderProblemHypotheses,
+  reorderProblemInterviewQuestions,
   updateProblemInterviewQuestion,
 } from "@/services/interviewPrep";
 
@@ -134,6 +136,46 @@ export function InterviewPrep({
     [isReadOnly, patchQuestions],
   );
 
+  // Both reorders apply locally first: the drop has already told us the final order, so
+  // there is nothing to wait for the server to tell us.
+  const handleQuestionReorder = useCallback(
+    async (blockId: string, hypothesisId: string, orderedIds: string[]) => {
+      if (isReadOnly) return;
+      patchQuestions(blockId, hypothesisId, (questions) =>
+        orderedIds.flatMap((id) => questions.find((q) => q.id === id) ?? []),
+      );
+      await reorderProblemInterviewQuestions(orderedIds);
+    },
+    [isReadOnly, patchQuestions],
+  );
+
+  const handleHypothesisReorder = useCallback(
+    async (blockId: string, orderedIds: string[]) => {
+      if (isReadOnly) return;
+      const block = blocks?.find((b) => b.id === blockId);
+      if (!block) return;
+
+      const reordered = orderedIds.flatMap(
+        (id) => block.hypotheses.find((h) => h.id === id) ?? [],
+      );
+      // `index` is the number shown on the row, so it has to follow the drag.
+      const renumbered = reordered.map((h, i) => ({ ...h, index: i + 1 }));
+
+      setBlocks((prev) =>
+        (prev ?? []).map((b) =>
+          b.id !== blockId ? b : { ...b, hypotheses: renumbered },
+        ),
+      );
+
+      await reorderProblemHypotheses({
+        nodeId: block.nodeId,
+        problemId: block.id,
+        bankQuestionIds: renumbered.map((h) => h.bankQuestionId),
+      });
+    },
+    [blocks, isReadOnly],
+  );
+
   if (!blocks) {
     return (
       <div className="flex h-full w-full items-center justify-center">
@@ -185,6 +227,12 @@ export function InterviewPrep({
                 }
                 onQuestionDelete={(hypothesisId, id) =>
                   handleQuestionDelete(block.id, hypothesisId, id)
+                }
+                onQuestionReorder={(hypothesisId, orderedIds) =>
+                  handleQuestionReorder(block.id, hypothesisId, orderedIds)
+                }
+                onHypothesisReorder={(orderedIds) =>
+                  handleHypothesisReorder(block.id, orderedIds)
                 }
               />
             ))

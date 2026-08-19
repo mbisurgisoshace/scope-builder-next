@@ -43,6 +43,13 @@ export type InterviewQuestionUpdateInput = {
   options?: DropdownOption[];
 };
 
+export type InterviewHypothesisOrderInput = {
+  nodeId: string;
+  problemId: string;
+  /** The problem's hypotheses, in their new order. */
+  bankQuestionIds: string[];
+};
+
 export type InterviewAnswerInput = {
   questionId: string;
   participantId: string;
@@ -137,6 +144,9 @@ function toDropdownOptions(raw: unknown): DropdownOption[] {
   });
 }
 
+/** Scopes every DB read below. Both tables carry `org_id` and `example_number`. */
+type LoadScope = { org_id: string } | { example_number: number };
+
 /**
  * Not exported, and it must stay that way: every exported async function in a
  * "use server" file is a public endpoint, so an exported helper taking a room id +
@@ -146,17 +156,18 @@ function toDropdownOptions(raw: unknown): DropdownOption[] {
  */
 async function loadProblemBlocksFrom(
   roomId: string,
-  questionWhere: Prisma.ProblemInterviewQuestionWhereInput,
+  scope: LoadScope,
 ): Promise<ProblemBlock[]> {
-  const [rawStorage, saved] = await Promise.all([
+  const [rawStorage, saved, hypothesisOrder] = await Promise.all([
     // The "json" overload returns plain objects; the default one returns nested
     // { liveblocksType, data } wrappers that would need unwrapping at every level.
     liveblocks.getStorageDocument(roomId, "json"),
     prisma.problemInterviewQuestion.findMany({
-      where: questionWhere,
+      where: scope,
       // Ordered here so each hypothesis's bucket below comes out in authoring order.
       orderBy: [{ sort_order: "asc" }, { created_at: "asc" }],
     }),
+    prisma.problemHypothesisOrder.findMany({ where: scope }),
   ]);
 
   // Storage is declared as LiveList<LiveObject<any>>, so this arrives as readonly any[].
@@ -174,6 +185,13 @@ async function loadProblemBlocksFrom(
     if (bucket) bucket.push(row);
     else savedByKey.set(key, [row]);
   }
+
+  const orderByKey = new Map(
+    hypothesisOrder.map((row) => [
+      `${row.node_id}:${row.problem_id}:${row.bank_question_id}`,
+      row.sort_order,
+    ]),
+  );
 
   // Logically deleted cards drop out here, which covers prep and both answering
   // flows at once. Their `problem_interview_questions` rows are left in place —
@@ -219,7 +237,18 @@ async function loadProblemBlocksFrom(
             },
           ];
         })
-        // Numbered last so a question dropped by the bank lookup can't leave a gap.
+        // The prep tab's own ordering, which the canvas knows nothing about. Sort is
+        // stable, so a hypothesis with no stored order — added on the canvas since the
+        // last reorder — keeps its storage-array position and falls to the end.
+        .sort(
+          (a, b) =>
+            (orderByKey.get(`${node.id}:${problem.id}:${a.bankQuestionId}`) ??
+              Number.MAX_SAFE_INTEGER) -
+            (orderByKey.get(`${node.id}:${problem.id}:${b.bankQuestionId}`) ??
+              Number.MAX_SAFE_INTEGER),
+        )
+        // Numbered last so it reflects the final order, and so a question dropped by
+        // the bank lookup can't leave a gap.
         .map((h, i) => ({ ...h, index: i + 1 }));
 
       if (hypotheses.length === 0) continue;
@@ -470,4 +499,51 @@ export async function deleteProblemInterviewQuestion(id: string): Promise<void> 
   const orgId = await requireOrg();
 
   await prisma.problemInterviewQuestion.deleteMany({ where: { id, org_id: orgId } });
+}
+
+/**
+ * Reorder the questions of one hypothesis. `ids` is the full list in its new order;
+ * `org_id` is matched alongside each id because both arrive from the client.
+ */
+export async function reorderProblemInterviewQuestions(
+  ids: string[],
+): Promise<void> {
+  const orgId = await requireOrg();
+
+  await prisma.$transaction(
+    ids.map((id, index) =>
+      prisma.problemInterviewQuestion.updateMany({
+        where: { id, org_id: orgId },
+        data: { sort_order: index },
+      }),
+    ),
+  );
+}
+
+/**
+ * Reorder one problem's hypotheses. `bankQuestionIds` is the problem's full list in its
+ * new order — the whole problem is rewritten in one shot rather than patched, so the
+ * table can never drift into a half-ordered state and a repeated call is a no-op.
+ */
+export async function reorderProblemHypotheses(
+  input: InterviewHypothesisOrderInput,
+): Promise<void> {
+  const orgId = await requireOrg();
+
+  const { nodeId, problemId, bankQuestionIds } = input;
+
+  await prisma.$transaction([
+    prisma.problemHypothesisOrder.deleteMany({
+      where: { org_id: orgId, node_id: nodeId, problem_id: problemId },
+    }),
+    prisma.problemHypothesisOrder.createMany({
+      data: bankQuestionIds.map((bankQuestionId, index) => ({
+        org_id: orgId,
+        node_id: nodeId,
+        problem_id: problemId,
+        bank_question_id: bankQuestionId,
+        sort_order: index,
+      })),
+    }),
+  ]);
 }

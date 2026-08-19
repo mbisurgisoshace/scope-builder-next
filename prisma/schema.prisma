@@ -580,6 +580,31 @@ enum InterviewResponseType {
   dropdown
 }
 
+// The Interview Prep tab's own ordering of one problem's hypotheses. The hypotheses
+// themselves live in Liveblocks canvas storage, which has no order field and is never
+// written to from here — so this table is an overlay, and the canvas action sheet's own
+// numbering is deliberately independent of it. Addressed like ProblemInterviewQuestion,
+// but a separate table because a hypothesis with no questions has no row there and
+// still needs a position. A reorder rewrites every row of the problem at once, so a
+// problem is either fully ordered or not ordered at all.
+model ProblemHypothesisOrder {
+  id               String @id @default(cuid())
+  org_id           String
+  node_id          String
+  problem_id       String
+  bank_question_id String
+  sort_order       Int
+  example_number   Int? // NULL = real data, N = example set N
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([org_id, node_id, problem_id, bank_question_id])
+  @@index([org_id])
+  @@index([example_number])
+  @@map("problem_hypothesis_orders")
+}
+
 // One of the interview questions a user writes against a hypothesis-marked question of
 // a journey-map problem. The problem itself lives in Liveblocks storage, so the columns
 // below address it by id rather than by relation. A hypothesis can carry several of

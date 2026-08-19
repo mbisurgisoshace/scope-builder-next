@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 
 import { StarRating } from "../StarRating";
@@ -11,6 +12,9 @@ interface HypothesisRowProps {
   onQuestionCreate: (value: InterviewQuestionDraft) => Promise<void>;
   onQuestionUpdate: (id: string, value: InterviewQuestionDraft) => Promise<void>;
   onQuestionDelete: (id: string) => Promise<void>;
+  onQuestionReorder: (orderedIds: string[]) => Promise<void>;
+  /** Supplied by the sortable wrapper; absent in read-only mode. */
+  dragHandle?: ReactNode;
   readOnly?: boolean;
 }
 
@@ -19,12 +23,17 @@ export function HypothesisRow({
   onQuestionCreate,
   onQuestionUpdate,
   onQuestionDelete,
+  onQuestionReorder,
+  dragHandle,
   readOnly = false,
 }: HypothesisRowProps) {
   return (
     <div className="relative grid grid-cols-2">
       {/* Left: the hypothesis (read-only). */}
       <div className="flex gap-3 border-r border-[#CFD3E0] px-6 py-6">
+        {/* Pulled into the column's left padding so the number stays the row's
+            leftmost text and the rows don't shift when the handle is absent. */}
+        {dragHandle && <div className="-ml-4 -mt-1 shrink-0">{dragHandle}</div>}
         <span className="text-base font-bold text-[#1F2430]">
           {hypothesis.index}.
         </span>
@@ -59,6 +68,7 @@ export function HypothesisRow({
           onCreate={onQuestionCreate}
           onUpdate={onQuestionUpdate}
           onDelete={onQuestionDelete}
+          onReorder={onQuestionReorder}
           readOnly={readOnly}
         />
       </div>

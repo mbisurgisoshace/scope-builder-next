@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 
 import { responseTypeLabel } from "./responseTypes";
@@ -9,6 +10,8 @@ interface QuestionViewProps {
   question: InterviewQuestion;
   onEdit: () => void;
   onDelete: () => void;
+  /** Supplied by the sortable wrapper; absent in read-only mode. */
+  dragHandle?: ReactNode;
   readOnly?: boolean;
 }
 
@@ -16,16 +19,22 @@ export function QuestionView({
   question,
   onEdit,
   onDelete,
+  dragHandle,
   readOnly = false,
 }: QuestionViewProps) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-2">
-          <span className="text-base text-[#4E5566]">Question:</span>
-          <p className="text-base font-semibold text-[#1F2430]">
-            {question.title}
-          </p>
+        <div className="flex min-w-0 gap-2">
+          {/* Pulled into the column's left padding so the label stays flush with the
+              rest of the column whether or not the handle is there. */}
+          {dragHandle && <div className="-ml-10 -mt-1 shrink-0">{dragHandle}</div>}
+          <div className="flex min-w-0 flex-col gap-2">
+            <span className="text-base text-[#4E5566]">Question:</span>
+            <p className="text-base font-semibold text-[#1F2430]">
+              {question.title}
+            </p>
+          </div>
         </div>
         {!readOnly && (
           <div className="flex shrink-0 items-center gap-1">

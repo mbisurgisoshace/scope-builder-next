@@ -1,7 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Plus } from "lucide-react";
+import { DndContext, type DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import {
   AlertDialog,
@@ -14,8 +22,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+import { DragHandle } from "./DragHandle";
 import { QuestionForm } from "./QuestionForm";
 import { QuestionView } from "./QuestionView";
+import { useSortableSensors } from "./useSortableSensors";
 import type { InterviewQuestion, InterviewQuestionDraft } from "./types";
 
 interface QuestionListProps {
@@ -23,6 +33,8 @@ interface QuestionListProps {
   onCreate: (value: InterviewQuestionDraft) => Promise<void>;
   onUpdate: (id: string, value: InterviewQuestionDraft) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  /** Receives this hypothesis's question ids in their new order. */
+  onReorder: (orderedIds: string[]) => Promise<void>;
   readOnly?: boolean;
 }
 
@@ -31,8 +43,10 @@ export function QuestionList({
   onCreate,
   onUpdate,
   onDelete,
+  onReorder,
   readOnly = false,
 }: QuestionListProps) {
+  const sensors = useSortableSensors();
   const [editingId, setEditingId] = useState<string | null>(null);
   // Local keys only — a draft becomes a real question (with a row id) on save.
   const [draftKeys, setDraftKeys] = useState<string[]>([]);
@@ -75,34 +89,63 @@ export function QuestionList({
     setPendingDelete(null);
   };
 
+  const questionIds = questions.map((q) => q.id);
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const from = questionIds.indexOf(String(active.id));
+    const to = questionIds.indexOf(String(over.id));
+    if (from === -1 || to === -1) return;
+    void onReorder(arrayMove(questionIds, from, to));
+  };
+
   if (readOnly && questions.length === 0) {
     return <p className="text-base text-[#6E7689]">No question yet</p>;
   }
 
   return (
     <div className="flex flex-col gap-5">
-      {questions.map((question) =>
-        editingId === question.id ? (
-          <QuestionForm
-            key={question.id}
-            initial={{
-              title: question.title,
-              responseType: question.responseType,
-              options: question.options,
-            }}
-            onSave={(value) => handleEditSave(question.id, value)}
-            onCancel={() => setEditingId(null)}
-          />
-        ) : (
-          <QuestionView
-            key={question.id}
-            question={question}
-            readOnly={readOnly}
-            onEdit={() => setEditingId(question.id)}
-            onDelete={() => setPendingDelete(question)}
-          />
-        ),
-      )}
+      {/* Scoped to this hypothesis, so a question can never be dropped onto another. */}
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <SortableContext
+          items={questionIds}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="flex flex-col gap-5">
+            {questions.map((question) => (
+              <SortableQuestion
+                key={question.id}
+                question={question}
+                // An open form must not be dragged out from under the cursor.
+                disabled={readOnly || editingId === question.id}
+                readOnly={readOnly}
+              >
+                {(dragHandle) =>
+                  editingId === question.id ? (
+                    <QuestionForm
+                      initial={{
+                        title: question.title,
+                        responseType: question.responseType,
+                        options: question.options,
+                      }}
+                      onSave={(value) => handleEditSave(question.id, value)}
+                      onCancel={() => setEditingId(null)}
+                    />
+                  ) : (
+                    <QuestionView
+                      question={question}
+                      readOnly={readOnly}
+                      dragHandle={dragHandle}
+                      onEdit={() => setEditingId(question.id)}
+                      onDelete={() => setPendingDelete(question)}
+                    />
+                  )
+                }
+              </SortableQuestion>
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       {showAutoDraft && <QuestionForm onSave={(v) => handleDraftSave(null, v)} />}
 
@@ -150,6 +193,55 @@ export function QuestionList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+interface SortableQuestionProps {
+  question: InterviewQuestion;
+  disabled: boolean;
+  readOnly: boolean;
+  /** Receives the handle to render, or nothing when dragging isn't available. */
+  children: (dragHandle: ReactNode) => ReactNode;
+}
+
+/**
+ * Owns the sortable wiring and hands the handle back to the caller, so the question can
+ * render as either a view or a form without either of them knowing about dnd-kit.
+ */
+function SortableQuestion({
+  question,
+  disabled,
+  readOnly,
+  children,
+}: SortableQuestionProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: question.id, disabled });
+
+  return (
+    <div
+      ref={setNodeRef}
+      // Translate, not Transform: questions vary in height (a dropdown lists its
+      // options), and Transform's scale would stretch the dragged one to match
+      // whichever question it is currently over.
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={isDragging ? "relative z-10 rounded-md bg-white shadow-md" : undefined}
+    >
+      {children(
+        readOnly ? null : (
+          <DragHandle
+            attributes={attributes}
+            listeners={listeners}
+            label="Reorder question"
+          />
+        ),
+      )}
     </div>
   );
 }
