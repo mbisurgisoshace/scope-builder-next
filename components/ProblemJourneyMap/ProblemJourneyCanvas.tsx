@@ -35,6 +35,7 @@ import {
   isSubStepUnlocked as isSubStepUnlockedFor,
   MARKET_QUESTIONS_MILESTONE,
   PROBLEMS_SUB_STEP,
+  SOLUTIONS_MILESTONE,
   SOURCE_CONFIDENCE_SUB_STEP,
 } from "@/lib/milestones";
 import { useSubStepProgress } from "./SubStepProgressContext";
@@ -114,6 +115,7 @@ function CanvasInner({
   //   1.3  description + type + pain-or-gain  (implied — the sheet is shut before)
   //   M2   the Market Questions and the bank they're added from
   //   2.1  each answer's source and confidence, and the hypothesis toggle
+  //   M4   the Solution tab in full — provisional, see `SOLUTIONS_MILESTONE`
   //
   // A locked section is greyed and read-only rather than absent, and its saved
   // values sit untouched behind it: the editor still hydrates from them and a
@@ -124,6 +126,7 @@ function CanvasInner({
     SOURCE_CONFIDENCE_SUB_STEP,
   );
   const hypothesisUnlocked = isSubStepUnlocked(HYPOTHESIS_SUB_STEP);
+  const solutionsUnlocked = isMilestoneUnlocked(SOLUTIONS_MILESTONE);
 
   const [selectedProblem, setSelectedProblem] =
     useState<SelectedProblem | null>(null);
@@ -275,6 +278,7 @@ function CanvasInner({
                 questionsUnlocked={questionsUnlocked}
                 sourceConfidenceUnlocked={sourceConfidenceUnlocked}
                 hypothesisUnlocked={hypothesisUnlocked}
+                solutionsUnlocked={solutionsUnlocked}
                 open={selectedProblem !== null}
                 onOpenChange={(open) => {
                   if (!open) setSelectedProblem(null);

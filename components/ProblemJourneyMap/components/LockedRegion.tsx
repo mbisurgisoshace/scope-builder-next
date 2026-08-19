@@ -6,8 +6,15 @@ import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { milestoneLabel, subStepLabel } from "@/lib/milestones";
 
+/** Shared by both badges below so a milestone gate and a sub-step gate are the
+ *  same chip at the same size wherever they land. Sized up from text-xs: these
+ *  are the one thing on a greyed section a team still has to be able to read. */
 const BADGE_CLASS =
-  "inline-flex items-center gap-1.5 rounded-full bg-[#F1ECFF] px-2.5 py-1 text-xs font-semibold text-[#6A35FF]";
+  "inline-flex items-center gap-2 rounded-full bg-[#F1ECFF] px-3 py-1.5 text-sm font-semibold text-[#6A35FF]";
+
+/** Matched to the badge text's cap height rather than its line box, so the lock
+ *  reads as the same weight as the words beside it. */
+const BADGE_ICON_CLASS = "size-4 shrink-0";
 
 /**
  * A chip announcing which milestone opens the region it sits in. Rendered beside
@@ -17,7 +24,7 @@ const BADGE_CLASS =
 export function LockBadge({ milestone }: { milestone: number }) {
   return (
     <span className={BADGE_CLASS}>
-      <Lock className="size-3 shrink-0" />
+      <Lock className={BADGE_ICON_CLASS} />
       Available in Milestone {milestone}: {milestoneLabel(milestone)}
     </span>
   );
@@ -32,7 +39,7 @@ export function LockBadge({ milestone }: { milestone: number }) {
 export function SubStepLockBadge({ subStep }: { subStep: string }) {
   return (
     <span className={BADGE_CLASS}>
-      <Lock className="size-3 shrink-0" />
+      <Lock className={BADGE_ICON_CLASS} />
       Complete {subStepLabel(subStep)} to unlock
     </span>
   );

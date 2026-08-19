@@ -33,7 +33,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { MARKET_QUESTIONS_MILESTONE } from "@/lib/milestones";
+import {
+  MARKET_QUESTIONS_MILESTONE,
+  SOLUTIONS_MILESTONE,
+} from "@/lib/milestones";
 import { LockBadge, LockedRegion } from "./LockedRegion";
 import { StarRating } from "./StarRating";
 import {
@@ -123,11 +126,6 @@ const SOURCE_OPTIONS = [
  * card can decide which one to land on. */
 export type ActionSheetTab = "problem" | "solution";
 
-/** The Solution tab ships visible but read-only until the feature is unlocked —
- * the tab is still reachable, it just can't be edited. Flip this (or swap it for a
- * prop/flag source) when Solutions goes live. */
-const SOLUTION_TAB_LOCKED: boolean = true;
-
 interface ActionNodeSheetProps {
   /** Pure viewer: inputs disabled, Save hidden, bank-of-questions hidden. */
   readOnly?: boolean;
@@ -147,6 +145,15 @@ interface ActionNodeSheetProps {
   sourceConfidenceUnlocked: boolean;
   /** `HYPOTHESIS_SUB_STEP`: the hypothesis toggle (problems only). */
   hypothesisUnlocked: boolean;
+  /**
+   * `SOLUTIONS_MILESTONE`: the whole Solution tab — description, classification,
+   * questions and bank alike. Unlike the three gates above, which stage the
+   * Problem tab section by section, this one covers a tab in full: it renders
+   * greyed and read-only behind a single badge, and the two gates it overlaps
+   * with (questions, source & confidence) stay silent underneath since this one
+   * opens later than either.
+   */
+  solutionsUnlocked: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   activeTab: ActionSheetTab;
@@ -692,6 +699,7 @@ export function ActionNodeSheet({
   questionsUnlocked,
   sourceConfidenceUnlocked,
   hypothesisUnlocked,
+  solutionsUnlocked,
   open,
   onOpenChange,
   activeTab,
@@ -708,8 +716,9 @@ export function ActionNodeSheet({
   onSaveSolution,
 }: ActionNodeSheetProps) {
   // The Solution tab is read-only whenever the whole sheet is (Examples pages) or
-  // while the Solutions feature is still locked.
-  const solutionReadOnly = readOnly || SOLUTION_TAB_LOCKED;
+  // while the Solutions milestone is still locked.
+  const solutionsLocked = !solutionsUnlocked;
+  const solutionReadOnly = readOnly || solutionsLocked;
 
   // A locked question can't be answered either, so the gate folds into the
   // read-only flag the inputs already take rather than being checked twice.
@@ -818,7 +827,7 @@ export function ActionNodeSheet({
   }
 
   function handleAddSolutionBankQuestion(questionId: string) {
-    if (!questionsUnlocked) return;
+    if (!questionsUnlocked || solutionsLocked) return;
     if (activeSolutionQuestionIds.includes(questionId)) return;
     const bq = SOLUTION_BANK_QUESTIONS.find((q) => q.id === questionId);
     const defaultAnswer: string | string[] =
@@ -936,7 +945,7 @@ export function ActionNodeSheet({
                 className="group text-sm rounded-sm"
               >
                 <span className="flex items-center gap-1.5">
-                  {value === "solution" && SOLUTION_TAB_LOCKED && (
+                  {value === "solution" && solutionsLocked && (
                     // Purple on the light inactive tab, white on the purple active one.
                     <LockIcon className="w-3 h-3 text-[#6A35FF] group-data-[state=active]:text-white" />
                   )}
@@ -1091,85 +1100,90 @@ export function ActionNodeSheet({
               </div>
             </TabsContent>
 
-            {/* ── Solution tab ── */}
+            {/* ── Solution tab ── The gate here covers the tab rather than one
+                section of it, so it reads the way a locked section of the Problem
+                tab does: one badge on the first header bar, everything below it
+                greyed and inert. */}
             <TabsContent value="solution" className="p-0">
               <div>
                 {/* What the solution? */}
-                <SectionHeader title="What the solution?" />
-                <div className={`${SECTION_PADDING} py-4`}>
-                  <span className="inline-block mb-2 text-sm font-semibold bg-[#2F9E63] text-white rounded-full px-2.5 py-0.5">
-                    Solution
-                  </span>
-                  <div className="flex gap-4 items-start">
-                    <textarea
-                      className="flex-1 self-stretch bg-white border border-gray-300 rounded-lg p-3 text-base text-gray-800 placeholder-gray-500 resize-none focus:outline-none focus:ring-1 focus:ring-[#6A35FF] leading-snug"
-                      rows={3}
-                      placeholder="Describe your solution..."
-                      value={solutionDraft}
-                      readOnly={solutionReadOnly}
-                      onChange={(e) => setSolutionDraft(e.target.value)}
-                    />
-                    {/* Same stacked column as the Problem tab above. */}
-                    <div className="flex flex-col gap-3 w-[200px] shrink-0">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-sm font-medium text-gray-700">
-                          Type of solution
-                        </span>
-                        <Select
-                          value={solutionType}
-                          onValueChange={setSolutionType}
-                          disabled={solutionReadOnly}
-                        >
-                          <SelectTrigger className="h-9 w-full text-base bg-white">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            {SOLUTION_TYPES.map((t) => (
-                              <SelectItem key={t} value={t}>
-                                {t}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-sm font-medium text-gray-700">
-                          Is it reliever or creator?
-                        </span>
-                        <Select
-                          value={solutionRelieverCreator}
-                          onValueChange={(v) =>
-                            setSolutionRelieverCreator(v as RelieverOrCreator)
-                          }
-                          disabled={solutionReadOnly}
-                        >
-                          <SelectTrigger className="h-9 w-full text-base bg-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {RELIEVER_OR_CREATOR_OPTIONS.map((o) => (
-                              <SelectItem key={o.value} value={o.value}>
-                                {o.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Market Questions */}
                 <SectionHeader
-                  title="Market Questions"
+                  title="What the solution?"
                   badge={
-                    !questionsUnlocked && (
-                      <LockBadge milestone={MARKET_QUESTIONS_MILESTONE} />
+                    solutionsLocked && (
+                      <LockBadge milestone={SOLUTIONS_MILESTONE} />
                     )
                   }
                 />
+                <LockedRegion locked={solutionsLocked}>
+                  <div className={`${SECTION_PADDING} py-4`}>
+                    <span className="inline-block mb-2 text-sm font-semibold bg-[#2F9E63] text-white rounded-full px-2.5 py-0.5">
+                      Solution
+                    </span>
+                    <div className="flex gap-4 items-start">
+                      <textarea
+                        className="flex-1 self-stretch bg-white border border-gray-300 rounded-lg p-3 text-base text-gray-800 placeholder-gray-500 resize-none focus:outline-none focus:ring-1 focus:ring-[#6A35FF] leading-snug"
+                        rows={3}
+                        placeholder="Describe your solution..."
+                        value={solutionDraft}
+                        readOnly={solutionReadOnly}
+                        onChange={(e) => setSolutionDraft(e.target.value)}
+                      />
+                      {/* Same stacked column as the Problem tab above. */}
+                      <div className="flex flex-col gap-3 w-[200px] shrink-0">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-medium text-gray-700">
+                            Type of solution
+                          </span>
+                          <Select
+                            value={solutionType}
+                            onValueChange={setSolutionType}
+                            disabled={solutionReadOnly}
+                          >
+                            <SelectTrigger className="h-9 w-full text-base bg-white">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white">
+                              {SOLUTION_TYPES.map((t) => (
+                                <SelectItem key={t} value={t}>
+                                  {t}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-medium text-gray-700">
+                            Is it reliever or creator?
+                          </span>
+                          <Select
+                            value={solutionRelieverCreator}
+                            onValueChange={(v) =>
+                              setSolutionRelieverCreator(v as RelieverOrCreator)
+                            }
+                            disabled={solutionReadOnly}
+                          >
+                            <SelectTrigger className="h-9 w-full text-base bg-white">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {RELIEVER_OR_CREATOR_OPTIONS.map((o) => (
+                                <SelectItem key={o.value} value={o.value}>
+                                  {o.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </LockedRegion>
 
-                <LockedRegion locked={!questionsUnlocked}>
+                {/* Market Questions */}
+                <SectionHeader title="Market Questions" />
+
+                <LockedRegion locked={solutionsLocked || !questionsUnlocked}>
                   <div className={SECTION_PADDING}>
                     {activeSolutionQuestionIds.map((qId, i) => {
                       const bq = SOLUTION_BANK_QUESTIONS.find(
@@ -1212,7 +1226,7 @@ export function ActionNodeSheet({
                     })}
                   </div>
 
-                  {!solutionReadOnly && (
+                  {!readOnly && (
                     <BankOfQuestions
                       questions={SOLUTION_BANK_QUESTIONS}
                       activeQuestionIds={activeSolutionQuestionIds}
@@ -1225,7 +1239,7 @@ export function ActionNodeSheet({
             </TabsContent>
           </div>
 
-          {!readOnly && !(activeTab === "solution" && SOLUTION_TAB_LOCKED) && (
+          {!readOnly && !(activeTab === "solution" && solutionsLocked) && (
             <div className="shrink-0 border-t p-2 flex items-center justify-center">
               {activeTab === "problem" ? (
                 <Button

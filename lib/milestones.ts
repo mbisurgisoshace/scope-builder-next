@@ -63,6 +63,18 @@ export const PROBLEMS_SUB_STEP = subStepKey(1, 3);
 export const MARKET_QUESTIONS_MILESTONE = 2;
 
 /**
+ * Milestone that opens the Solution tab of the Problem/Solution sheet — the
+ * solution description, its classification, and the market questions asked about
+ * it. Until then the tab is still reachable and still shows the whole editor, it
+ * just renders greyed and read-only behind its badge.
+ *
+ * Provisional: solutions are pencilled in against Milestone 4 so the gate has a
+ * real number to read, but where they land in the curriculum isn't settled. This
+ * constant is the one place to change when it moves.
+ */
+export const SOLUTIONS_MILESTONE = 4;
+
+/**
  * Sub-steps that open the evidence beside each answered question. Both are 2.1
  * "Expand on Pains/Gains": ticking it opens the source select, the confidence
  * stars and the hypothesis toggle in one go. They stay two constants because the
