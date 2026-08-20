@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   PlusIcon,
-  CircleHelpIcon,
   CheckIcon,
   LockIcon,
   ChevronLeftIcon,
@@ -15,11 +14,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { HelpPopover } from "@/components/ui/help-popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -37,6 +32,7 @@ import {
   MARKET_QUESTIONS_MILESTONE,
   SOLUTIONS_MILESTONE,
 } from "@/lib/milestones";
+import { type HelpKey } from "@/lib/helpContent";
 import { LockBadge, LockedRegion } from "./LockedRegion";
 import { StarRating } from "./StarRating";
 import {
@@ -368,47 +364,22 @@ const SECTION_PADDING = "px-6";
 function SectionHeader({
   title,
   badge,
-  help,
+  helpKey,
 }: {
   title: string;
   badge?: React.ReactNode;
   /**
-   * Help for the question, as an HTML fragment — paragraphs, lists and links
-   * are all styled by the popover. Author it as trusted copy only: it is
-   * injected as markup, never sanitised. Without it the heading is plain text.
+   * Names this section's help copy in `HELP_CONTENT`, which owns the text. With
+   * a key the question mark opens a popover; without one it is decoration.
    */
-  help?: string;
+  helpKey?: HelpKey;
 }) {
-  const heading = (
-    <span className="flex items-center gap-1.5">
-      <CircleHelpIcon className="w-4 h-4 text-gray-600 shrink-0" />
-      <span className="text-base font-semibold text-gray-800">{title}</span>
-    </span>
-  );
-
   return (
     <div
       className={`flex items-center gap-1.5 bg-[#F3F3F6] ${SECTION_PADDING} py-2.5`}
     >
-      {help ? (
-        <Popover>
-          {/* The whole heading is the target, icon included — the icon alone is
-              a 16px hit area, too small to hit reliably on a touch screen. */}
-          <PopoverTrigger asChild>
-            <button type="button" className="text-left cursor-pointer">
-              {heading}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            side="bottom"
-            align="start"
-            className="w-[min(24rem,calc(100vw-2rem))] text-sm leading-relaxed text-gray-700 [&_a]:text-[#6A35FF] [&_a]:underline [&_a]:underline-offset-2 [&_strong]:font-semibold [&_strong]:text-gray-900 [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mt-2 [&_ul]:mt-2 [&_p+p]:mt-2"
-            dangerouslySetInnerHTML={{ __html: help }}
-          />
-        </Popover>
-      ) : (
-        heading
-      )}
+      <HelpPopover helpKey={helpKey} label={title} />
+      <span className="text-base font-semibold text-gray-800">{title}</span>
       {badge && <span className="ml-auto shrink-0">{badge}</span>}
     </div>
   );
@@ -971,14 +942,7 @@ export function ActionNodeSheet({
                 {/* What the problem? */}
                 <SectionHeader
                   title="What is the pain/gain you intend to address?"
-                  help={`
-                    <p>Lorem ipsum dolor sit amet, <strong>consectetur adipiscing</strong> elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-                    <ul>
-                      <li>Ut enim ad minim veniam.</li>
-                      <li>Quis nostrud exercitation ullamco.</li>
-                    </ul>
-                    <p><a href="https://example.com" target="_blank" rel="noreferrer">Read more</a></p>
-                  `}
+                  helpKey="problem.painGain"
                 />
                 <div className={`${SECTION_PADDING} py-4`}>
                   <span className="inline-block mb-2 text-sm font-semibold bg-[#F5E7D0] text-[#7A5C33] rounded-full px-2.5 py-0.5">
@@ -1125,6 +1089,7 @@ export function ActionNodeSheet({
                 {/* What the solution? */}
                 <SectionHeader
                   title="What the solution?"
+                  helpKey="solution.description"
                   badge={
                     solutionsLocked && (
                       <LockBadge milestone={SOLUTIONS_MILESTONE} />
