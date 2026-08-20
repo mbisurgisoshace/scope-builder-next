@@ -1,7 +1,6 @@
 "use client";
 
-import { ActionLabel } from "@/components/ProblemJourneyMap/components/InterviewPrep/ActionLabel";
-
+import { ProblemHeaderBand } from "../ProblemHeaderBand";
 import { AnswerInput } from "./AnswerInput";
 import type { AnswerableProblem } from "./types";
 
@@ -31,29 +30,13 @@ export function ProblemAnswerCard({
 }: ProblemAnswerCardProps) {
   return (
     <div className="w-full overflow-hidden rounded-xl border border-[#E4E5ED] bg-white">
-      {/* Problem summary — read-only; it's authored on the journey map. Full-bleed
-          so the band reads as the card's header rather than a nested block. */}
-      <div className="bg-[#F5F5F8] px-5 py-4">
-        {/* The action this problem hangs off — context only, so it sits above
-            the pill rather than competing with the problem itself. */}
-        <ActionLabel action={problem.action} className="mb-2" />
-        <div className="flex items-start justify-between gap-4">
-          <span className="inline-flex w-fit shrink-0 items-center rounded-full border border-[#F0E4C9] bg-[#FBF3DE] px-2.5 py-0.5 text-xs font-medium text-[#8A6D1E]">
-            {problem.label}
-          </span>
-          {problem.tags.length > 0 && (
-            <ul className="flex flex-wrap items-center justify-end gap-3 text-xs text-[#4B4560]">
-              {problem.tags.map((tag) => (
-                <li key={tag} className="flex items-center gap-1.5">
-                  <span className="h-1 w-1 rounded-full bg-[#4B4560]" />
-                  <span className="font-semibold">{tag}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <p className="mt-3 text-sm text-[#1F2430]">{problem.description}</p>
-      </div>
+      {/* Full-bleed so the band reads as the card's header rather than a nested block. */}
+      <ProblemHeaderBand
+        action={problem.action}
+        label={problem.label}
+        description={problem.description}
+        tags={problem.tags}
+      />
 
       <div
         className="grid gap-4 p-5"

@@ -9,9 +9,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { ScalePicker } from "../ScalePicker";
 import type { AnswerableQuestion } from "./types";
-
-const SCALE_POINTS = [1, 2, 3, 4, 5];
 
 interface AnswerInputProps {
   question: AnswerableQuestion;
@@ -33,33 +32,18 @@ export function AnswerInput({
   readOnly = false,
 }: AnswerInputProps) {
   if (question.responseType === "scale") {
-    // 0 when unanswered, so no point reads as selected.
-    const numValue = value ? Number(value) : 0;
     return (
-      <div className="flex gap-1.5">
-        {SCALE_POINTS.map((n) => {
-          const selected = numValue === n;
-          return (
-            <button
-              key={n}
-              type="button"
-              disabled={readOnly}
-              onClick={() => {
-                const next = selected ? "" : String(n);
-                onChange(next);
-                onCommit(next);
-              }}
-              className={`h-9 w-9 rounded-lg border text-sm font-medium transition-colors disabled:cursor-default ${
-                selected
-                  ? "border-[#6A35FF] bg-[#F4F0FF] text-[#6A35FF]"
-                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-              }`}
-            >
-              {n}
-            </button>
-          );
-        })}
-      </div>
+      <ScalePicker
+        // 0 when unanswered, so no point reads as selected.
+        value={value ? Number(value) : 0}
+        disabled={readOnly}
+        onSelect={(point) => {
+          // Cleared comes back as 0, which is stored as an empty answer rather than "0".
+          const next = point === 0 ? "" : String(point);
+          onChange(next);
+          onCommit(next);
+        }}
+      />
     );
   }
 

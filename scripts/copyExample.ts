@@ -33,6 +33,7 @@ async function copyDatabase(sourceOrgId: string, exampleNumber: number) {
     await tx.problemInterviewAnswer.deleteMany({ where: { example_number: exampleNumber } });
     await tx.problemInterviewQuestion.deleteMany({ where: { example_number: exampleNumber } });
     await tx.problemHypothesisOrder.deleteMany({ where: { example_number: exampleNumber } });
+    await tx.problemHypothesisSummary.deleteMany({ where: { example_number: exampleNumber } });
     await tx.participant.deleteMany({ where: { example_number: exampleNumber } });
     await tx.participantTag.deleteMany({ where: { example_number: exampleNumber } });
     await tx.stakeholderJobTitles.deleteMany({ where: { example_number: exampleNumber } });
@@ -183,6 +184,24 @@ async function copyDatabase(sourceOrgId: string, exampleNumber: number) {
       });
     }
 
+    // Keyed the same way as the ordering rows above, so likewise no id remapping.
+    const hypothesisSummaries = await tx.problemHypothesisSummary.findMany({
+      where: { org_id: sourceOrgId },
+    });
+    for (const s of hypothesisSummaries) {
+      await tx.problemHypothesisSummary.create({
+        data: {
+          node_id: s.node_id,
+          problem_id: s.problem_id,
+          bank_question_id: s.bank_question_id,
+          summary: s.summary,
+          validation_level: s.validation_level,
+          org_id: exOrg,
+          example_number: exampleNumber,
+        },
+      });
+    }
+
     const answers = await tx.problemInterviewAnswer.findMany({ where: { org_id: sourceOrgId } });
     for (const a of answers) {
       const newQuestionId = questionIdMap.get(a.question_id);
@@ -203,7 +222,8 @@ async function copyDatabase(sourceOrgId: string, exampleNumber: number) {
       `DB: ${jobTitles.length} job titles, ${tags.length} tags, ${milestones.length} milestones, ` +
         `${stakeholderRows.length} stakeholder rows, ${segments.length} segments, ` +
         `${participants.length} participants, ${questions.length} questions, ` +
-        `${hypothesisOrder.length} hypothesis orders, ${answers.length} answers copied.`,
+        `${hypothesisOrder.length} hypothesis orders, ${hypothesisSummaries.length} hypothesis summaries, ` +
+        `${answers.length} answers copied.`,
       );
     },
     // Many sequential round-trips over the pooled connection — well past Prisma's

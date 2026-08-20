@@ -18,6 +18,11 @@ import type {
   AnswerableProblem,
   AnswerableQuestion,
 } from "@/app/(auth)/participants/interviews/_components/InterviewAnswers/types";
+import type {
+  SummaryHypothesis,
+  SummaryProblem,
+  SummaryQuestion,
+} from "@/app/(auth)/participants/interviews/_components/InterviewSummary/types";
 
 // Re-exported as type aliases (not an `export type {}` list) — a "use server"
 // file only allows async-function value exports, and Next's checker doesn't
@@ -26,6 +31,9 @@ export type InterviewPrepBlock = ProblemBlock;
 export type InterviewPrepQuestion = InterviewQuestion;
 export type InterviewAnswersProblem = AnswerableProblem;
 export type InterviewAnswersQuestion = AnswerableQuestion;
+export type InterviewSummaryProblem = SummaryProblem;
+export type InterviewSummaryHypothesis = SummaryHypothesis;
+export type InterviewSummaryQuestion = SummaryQuestion;
 
 export type InterviewQuestionCreateInput = {
   nodeId: string;
@@ -54,6 +62,16 @@ export type InterviewAnswerInput = {
   questionId: string;
   participantId: string;
   value: string;
+};
+
+export type HypothesisSummaryInput = {
+  nodeId: string;
+  problemId: string;
+  bankQuestionId: string;
+  /** Omitted leaves whatever is stored — the two fields are edited independently. */
+  summary?: string;
+  /** 1..5, or 0 to clear the rating. */
+  validationLevel?: number;
 };
 
 async function requireOrg() {
@@ -384,6 +402,191 @@ async function buildAnswerableProblems(
       answer: answerByQuestionId.get(q.id) ?? "",
     })),
   }));
+}
+
+/**
+ * Everything the Interview Summary tab reads: the same problems as the prep tab, but with
+ * each hypothesis carrying every interviewee's answer to its questions plus the team's own
+ * write-up and validation rating.
+ */
+export async function getInterviewSummaryData(): Promise<SummaryProblem[]> {
+  const orgId = await requireOrg();
+
+  const blocks = await loadProblemBlocksFrom(`problem-journey-${orgId}`, {
+    org_id: orgId,
+  });
+
+  return buildSummaryProblems(blocks, { org_id: orgId });
+}
+
+// Global read-only variant for the /examples/interviews page.
+export async function getExampleInterviewSummaryData(
+  exampleNumber: number,
+): Promise<SummaryProblem[]> {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const blocks = await loadProblemBlocksFrom(exampleRoomId(exampleNumber), {
+    example_number: exampleNumber,
+  });
+
+  return buildSummaryProblems(blocks, { example_number: exampleNumber });
+}
+
+/** How one participant's stored answer reads on screen. */
+function displayAnswer(value: string, question: InterviewQuestion): string {
+  if (question.responseType !== "dropdown") return value;
+
+  // The row stores the option id; a value left behind by a deleted or renamed option
+  // falls back to itself rather than rendering blank.
+  return question.options.find((o) => o.id === value)?.label ?? value;
+}
+
+/**
+ * Cross-participant sibling of `buildAnswerableProblems`: one pass over every authored
+ * question of every block, joined against *all* answers rather than one participant's.
+ * The caller has already scoped the blocks, and answers are looked up by the (already
+ * scoped) question ids, so only the summaries need the scope passed through.
+ */
+async function buildSummaryProblems(
+  blocks: ProblemBlock[],
+  scope: LoadScope,
+): Promise<SummaryProblem[]> {
+  // Hypotheses with nothing authored have nothing to summarize; a problem left with no
+  // hypotheses at all drops out the same way it does in the answering flow.
+  const summarizable = blocks.flatMap((block) => {
+    const hypotheses = block.hypotheses.flatMap((h) => {
+      const authored = h.questions.filter((q) => q.title.trim() !== "");
+      return authored.length > 0 ? [{ hypothesis: h, authored }] : [];
+    });
+    return hypotheses.length > 0 ? [{ block, hypotheses }] : [];
+  });
+
+  const questionIds = summarizable.flatMap(({ hypotheses }) =>
+    hypotheses.flatMap(({ authored }) => authored.map((q) => q.id)),
+  );
+
+  const [answers, summaries] = await Promise.all([
+    questionIds.length
+      ? prisma.problemInterviewAnswer.findMany({
+          // Unanswered questions are stored as empty rows by the answering view, and the
+          // summary only lists people who actually said something.
+          where: { question_id: { in: questionIds }, value: { not: "" } },
+          include: { participant: { select: { id: true, name: true } } },
+        })
+      : [],
+    prisma.problemHypothesisSummary.findMany({ where: scope }),
+  ]);
+
+  // Indexed off the element type, not `typeof answers`: the query above is a ternary, so
+  // its type is a union with `never[]` and pushing into that resolves to `never`.
+  const answersByQuestionId = new Map<string, (typeof answers)[number][]>();
+  for (const answer of answers) {
+    const bucket = answersByQuestionId.get(answer.question_id);
+    if (bucket) bucket.push(answer);
+    else answersByQuestionId.set(answer.question_id, [answer]);
+  }
+
+  const summaryByKey = new Map(
+    summaries.map((row) => [
+      `${row.node_id}:${row.problem_id}:${row.bank_question_id}`,
+      row,
+    ]),
+  );
+
+  return summarizable.map(({ block, hypotheses }) => ({
+    id: block.id,
+    action: block.action,
+    label: block.label,
+    description: block.description,
+    tags: block.tags,
+    hypotheses: hypotheses.map(({ hypothesis, authored }, i) => {
+      const stored = summaryByKey.get(
+        `${block.nodeId}:${block.id}:${hypothesis.bankQuestionId}`,
+      );
+
+      const questions: SummaryQuestion[] = authored.map((q, qIndex) => ({
+        questionId: q.id,
+        // Numbered within the hypothesis, after filtering — same reasoning as everywhere
+        // else here: an unauthored question must not leave a gap in the numbering.
+        index: qIndex + 1,
+        title: q.title,
+        responseType: q.responseType,
+        answers: (answersByQuestionId.get(q.id) ?? [])
+          .map((a) => ({
+            participantId: a.participant_id,
+            participantName: a.participant.name,
+            value: displayAnswer(a.value, q),
+          }))
+          .sort((a, b) => a.participantName.localeCompare(b.participantName)),
+      }));
+
+      // One interviewee who answered three of the hypothesis's questions counts once.
+      const respondents = new Set(
+        questions.flatMap((q) => q.answers.map((a) => a.participantId)),
+      );
+
+      return {
+        id: hypothesis.id,
+        nodeId: block.nodeId,
+        problemId: block.id,
+        bankQuestionId: hypothesis.bankQuestionId,
+        // Renumbered rather than reusing the block's index: a hypothesis dropped above
+        // for having no authored questions would otherwise leave a hole.
+        index: i + 1,
+        prompt: hypothesis.prompt,
+        questions,
+        summary: stored?.summary ?? "",
+        validationLevel: stored?.validation_level ?? 0,
+        respondentCount: respondents.size,
+      };
+    }),
+  }));
+}
+
+/**
+ * Write one hypothesis's summary and/or validation rating. The row is created on the first
+ * edit — a hypothesis nobody has written about simply has none.
+ */
+export async function upsertProblemHypothesisSummary(
+  input: HypothesisSummaryInput,
+): Promise<void> {
+  const orgId = await requireOrg();
+
+  const { nodeId, problemId, bankQuestionId, summary, validationLevel } = input;
+
+  // Out-of-range levels are clamped rather than rejected: the input arrives from the
+  // client, and 0 is the "not rated" the UI writes when a selected point is cleared.
+  const level =
+    validationLevel === undefined
+      ? undefined
+      : Math.min(5, Math.max(0, Math.round(validationLevel)));
+
+  const fields = {
+    ...(summary !== undefined ? { summary } : {}),
+    ...(level !== undefined ? { validation_level: level } : {}),
+  };
+
+  await prisma.problemHypothesisSummary.upsert({
+    where: {
+      org_id_node_id_problem_id_bank_question_id: {
+        org_id: orgId,
+        node_id: nodeId,
+        problem_id: problemId,
+        bank_question_id: bankQuestionId,
+      },
+    },
+    create: {
+      org_id: orgId,
+      node_id: nodeId,
+      problem_id: problemId,
+      bank_question_id: bankQuestionId,
+      ...fields,
+    },
+    update: fields,
+  });
+
+  // No revalidatePath, same as the answer upsert above: this fires on every blur.
 }
 
 export async function upsertProblemInterviewAnswer(

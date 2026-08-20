@@ -660,3 +660,31 @@ model ProblemInterviewAnswer {
   @@index([example_number])
   @@map("problem_interview_answers")
 }
+
+// What a team concluded about one hypothesis once its interviews were conducted: the
+// write-up of every interviewee's answers, and how strongly the hypothesis came out
+// validated. Addressed by the same node/problem/bank triple as ProblemHypothesisOrder —
+// the hypothesis lives in Liveblocks storage, so there is nothing here to relate to.
+// One row per hypothesis, created on the first edit; a hypothesis never written about
+// simply has no row and reads as empty + unrated.
+model ProblemHypothesisSummary {
+  id               String @id @default(cuid())
+  org_id           String
+  node_id          String
+  problem_id       String
+  bank_question_id String
+
+  // Free text, written on the Interview Summary tab.
+  summary          String @default("")
+  // 1..5, low to high. 0 = never rated, which is also what clearing the rating writes.
+  validation_level Int    @default(0)
+  example_number   Int? // NULL = real data, N = example set N
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([org_id, node_id, problem_id, bank_question_id])
+  @@index([org_id])
+  @@index([example_number])
+  @@map("problem_hypothesis_summaries")
+}

@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { EmptyTab, PageTabs } from "@/components/PageTabs";
+import { PageTabs } from "@/components/PageTabs";
 import { InterviewPrep } from "@/components/ProblemJourneyMap/components/InterviewPrep/InterviewPrep";
 import { useSubStepProgress } from "@/components/ProblemJourneyMap/SubStepProgressContext";
 import { INTERVIEW_PREP_SUB_STEP, isSubStepUnlocked } from "@/lib/milestones";
+import { InterviewSummary } from "./InterviewSummary/InterviewSummary";
 import ParticipantsKanbanView from "./ParticipantsKanbanView";
 
 // Its own key, not the journey map's `pjm-active-tab` — the two pages remember
@@ -109,7 +110,10 @@ export function InterviewsTabs({
             locked={interviewPrepLocked}
           />
         ) : (
-          <EmptyTab />
+          // Ungated for now — the summary is only useful once interviews have been
+          // conducted, but which sub-step should open it isn't settled. To gate it,
+          // follow `interviewPrepLocked` above plus a LockedRegion inside the tab.
+          <InterviewSummary readOnly={readOnly} exampleNumber={exampleNumber} />
         )}
       </div>
     </div>
