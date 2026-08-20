@@ -4,6 +4,9 @@ import type { ResponseType } from "@/components/ProblemJourneyMap/components/Int
 export interface SummaryAnswer {
   participantId: string;
   participantName: string;
+  /** When the interview happened, ISO. The participant's scheduled date — null when one
+   *  was never set, which is common for interviews logged after the fact. */
+  interviewDate: string | null;
   /** Dropdown answers arrive as the option's label, not its id. Never empty — the
    *  summary only lists people who actually answered. */
   value: string;
@@ -37,9 +40,17 @@ export interface SummaryHypothesis {
   summary: string;
   /** 1..5, or 0 when never rated. */
   validationLevel: number;
-  /** Distinct interviewees who answered any of the questions above. */
-  respondentCount: number;
+  /** Answers actually given, counted per question rather than per person: someone who
+   *  answered three of this hypothesis's questions adds three. */
+  answeredCount: number;
+  /** The other half of that count — one interviewee's silence on one question. Measured
+   *  against everyone who was interviewed at all, so it grows with the questions asked,
+   *  not just with the people asked. */
+  noAnswerCount: number;
 }
+
+/** How the answers under a hypothesis are ordered. Page-wide, not per problem. */
+export type AnswerOrder = "interviewee" | "date";
 
 export interface SummaryProblem {
   id: string;

@@ -472,7 +472,11 @@ async function buildSummaryProblems(
           // Unanswered questions are stored as empty rows by the answering view, and the
           // summary only lists people who actually said something.
           where: { question_id: { in: questionIds }, value: { not: "" } },
-          include: { participant: { select: { id: true, name: true } } },
+          include: {
+            participant: {
+              select: { id: true, name: true, scheduled_date: true },
+            },
+          },
         })
       : [],
     prisma.problemHypothesisSummary.findMany({ where: scope }),
@@ -493,6 +497,11 @@ async function buildSummaryProblems(
       row,
     ]),
   );
+
+  // Who counts as having been interviewed at all. Taken from the answers rather than the
+  // participant table on purpose: someone on the Interviewees board who never sat down for
+  // an interview has not left a question unanswered, they were simply never asked.
+  const interviewedCount = new Set(answers.map((a) => a.participant_id)).size;
 
   return summarizable.map(({ block, hypotheses }) => ({
     id: block.id,
@@ -516,14 +525,21 @@ async function buildSummaryProblems(
           .map((a) => ({
             participantId: a.participant_id,
             participantName: a.participant.name,
+            // Serialized here rather than passed as a Date: everything else on these
+            // types is a primitive, and the client only ever formats it.
+            interviewDate: a.participant.scheduled_date?.toISOString() ?? null,
             value: displayAnswer(a.value, q),
           }))
           .sort((a, b) => a.participantName.localeCompare(b.participantName)),
       }));
 
-      // One interviewee who answered three of the hypothesis's questions counts once.
-      const respondents = new Set(
-        questions.flatMap((q) => q.answers.map((a) => a.participantId)),
+      // Counted per question-and-person, not per person: an interviewee who answered three
+      // of the hypothesis's questions adds three, and the two counts together are every
+      // answer that could have been given here.
+      const answeredCount = questions.reduce((n, q) => n + q.answers.length, 0);
+      const noAnswerCount = Math.max(
+        0,
+        interviewedCount * questions.length - answeredCount,
       );
 
       return {
@@ -538,7 +554,8 @@ async function buildSummaryProblems(
         questions,
         summary: stored?.summary ?? "",
         validationLevel: stored?.validation_level ?? 0,
-        respondentCount: respondents.size,
+        answeredCount,
+        noAnswerCount,
       };
     }),
   }));

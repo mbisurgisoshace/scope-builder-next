@@ -3,10 +3,10 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { Loader } from "@/components/ui/loader";
+import { MasonryGrid } from "@/components/ui/masonry-grid";
 import { useMilestoneSelection } from "../../MilestoneSelectionContext";
 import { useGetStartedCards } from "../../GetStartedCardsContext";
 import { GetStartedCard } from "./GetStartedCard";
-import { MasonryGrid } from "./MasonryGrid";
 
 // Mirrors the shared transition used in MilestoneHeader.tsx so milestone
 // changes feel consistent across the header and its content.

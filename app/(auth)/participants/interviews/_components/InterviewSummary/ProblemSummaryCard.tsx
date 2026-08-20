@@ -1,64 +1,64 @@
 "use client";
 
-import { Fragment } from "react";
-
 import { ProblemHeaderBand } from "../ProblemHeaderBand";
 import { HypothesisSummaryBlock } from "./HypothesisSummaryBlock";
 import { HypothesisSummaryPanel } from "./HypothesisSummaryPanel";
-import type { SummaryProblem } from "./types";
+import type { AnswerOrder, SummaryProblem } from "./types";
 
-/** Width of the summary gutter. Fixed, so the card takes whatever is left. */
+/** Width of the summary column. Fixed, so the answers take whatever is left. */
 const PANEL_WIDTH = "340px";
 
 interface ProblemSummaryCardProps {
   problem: SummaryProblem;
   readOnly?: boolean;
+  /** View state owned by the tab, applied to every hypothesis on the page. */
+  showQuestions: boolean;
+  orderBy: AnswerOrder;
 }
 
 /**
- * One problem, with each of its hypotheses paired to its own summary panel in a gutter
- * to the right.
+ * One problem as a single card: its grey header band across the top, then one row per
+ * hypothesis, each row pairing the answers with the summary written about them.
  *
- * The card and the panels are items of one grid rather than a card div beside a column
- * of panels: that is what keeps a panel level with its hypothesis however many question
- * tiles that hypothesis happens to have. A wrapping card div would be a single grid item
- * and could not span the rows the panels sit in — so the card look is painted instead by
- * the left column's items sharing a continuous white background and border.
+ * The summary sits inside the card rather than in a gutter beside it — a summary belongs
+ * to the hypothesis it is about, so a rule between the two is the whole separation it
+ * needs. `items-stretch` is what makes that rule run the full height of the row however
+ * lopsided the two sides are.
  */
 export function ProblemSummaryCard({
   problem,
   readOnly = false,
+  showQuestions,
+  orderBy,
 }: ProblemSummaryCardProps) {
-  const lastIndex = problem.hypotheses.length - 1;
-
   return (
-    <div
-      // Column gap only: a row gap would break the left column's background into stripes.
-      // The panels get their vertical breathing room from their own wrapper instead.
-      className="grid gap-x-6"
-      style={{ gridTemplateColumns: `minmax(0,1fr) ${PANEL_WIDTH}` }}
-    >
+    <div className="overflow-hidden rounded-xl border border-[#E4E5ED] bg-white">
       <ProblemHeaderBand
         action={problem.action}
         label={problem.label}
         description={problem.description}
         tags={problem.tags}
-        className="col-start-1 rounded-t-xl border border-b-0 border-[#E4E5ED]"
       />
 
       {problem.hypotheses.map((hypothesis, i) => (
-        <Fragment key={hypothesis.id}>
-          <div
-            className={`col-start-1 border-x border-[#E4E5ED] bg-white ${
-              i > 0 ? "border-t" : ""
-            } ${i === lastIndex ? "rounded-b-xl border-b" : ""}`}
-          >
-            <HypothesisSummaryBlock hypothesis={hypothesis} />
+        <div
+          key={hypothesis.id}
+          className={`flex items-stretch ${i > 0 ? "border-t border-[#E4E5ED]" : ""}`}
+        >
+          <div className="min-w-0 flex-1">
+            <HypothesisSummaryBlock
+              hypothesis={hypothesis}
+              showQuestions={showQuestions}
+              orderBy={orderBy}
+            />
           </div>
-          <div className="col-start-2 pb-4">
+          <div
+            className="shrink-0 border-l border-[#E4E5ED]"
+            style={{ width: PANEL_WIDTH }}
+          >
             <HypothesisSummaryPanel hypothesis={hypothesis} readOnly={readOnly} />
           </div>
-        </Fragment>
+        </div>
       ))}
     </div>
   );

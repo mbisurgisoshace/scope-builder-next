@@ -29,7 +29,7 @@ export function HypothesisSummaryPanel({
   const [validationLevel, setValidationLevel] = useState(hypothesis.validationLevel);
   const [, startTransition] = useTransition();
 
-  const { nodeId, problemId, bankQuestionId, respondentCount } = hypothesis;
+  const { nodeId, problemId, bankQuestionId } = hypothesis;
 
   const commitSummary = () => {
     if (readOnly || summary === hypothesis.summary) return;
@@ -54,15 +54,12 @@ export function HypothesisSummaryPanel({
   };
 
   return (
-    <div className="flex h-fit flex-col gap-4 rounded-xl border border-[#E4E5ED] bg-white p-4">
-      <div>
-        <h4 className="text-sm font-semibold text-[#1F2430]">Summary</h4>
-        <p className="mt-0.5 text-xs text-[#697288]">
-          {respondentCount === 0
-            ? "No interviewees answered yet"
-            : `${respondentCount} interviewee${respondentCount === 1 ? "" : "s"} answered`}
-        </p>
-      </div>
+    // No border or background of its own: the card it sits in provides both, and the
+    // rule down its left edge is what marks it off from the answers.
+    <div className="flex h-fit flex-col gap-4 p-5">
+      {/* No respondent count here any more — it sits under the hypothesis it belongs to,
+          beside the answers being counted. */}
+      <h4 className="text-sm font-semibold text-[#1F2430]">Summary</h4>
 
       <Textarea
         value={summary}
