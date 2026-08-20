@@ -90,6 +90,9 @@ export function QuestionList({
   };
 
   const questionIds = questions.map((q) => q.id);
+  // A lone question has nowhere to move to, so the handle would only be clutter.
+  // Counts saved questions only — an open draft form isn't sortable.
+  const isSortable = !readOnly && questions.length > 1;
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return;
@@ -117,8 +120,8 @@ export function QuestionList({
                 key={question.id}
                 question={question}
                 // An open form must not be dragged out from under the cursor.
-                disabled={readOnly || editingId === question.id}
-                readOnly={readOnly}
+                disabled={!isSortable || editingId === question.id}
+                sortable={isSortable}
               >
                 {(dragHandle) =>
                   editingId === question.id ? (
@@ -200,7 +203,8 @@ export function QuestionList({
 interface SortableQuestionProps {
   question: InterviewQuestion;
   disabled: boolean;
-  readOnly: boolean;
+  /** False when there is nothing to reorder — the handle is left out entirely. */
+  sortable: boolean;
   /** Receives the handle to render, or nothing when dragging isn't available. */
   children: (dragHandle: ReactNode) => ReactNode;
 }
@@ -212,7 +216,7 @@ interface SortableQuestionProps {
 function SortableQuestion({
   question,
   disabled,
-  readOnly,
+  sortable,
   children,
 }: SortableQuestionProps) {
   const {
@@ -234,13 +238,13 @@ function SortableQuestion({
       className={isDragging ? "relative z-10 rounded-md bg-white shadow-md" : undefined}
     >
       {children(
-        readOnly ? null : (
+        sortable ? (
           <DragHandle
             attributes={attributes}
             listeners={listeners}
             label="Reorder question"
           />
-        ),
+        ) : null,
       )}
     </div>
   );

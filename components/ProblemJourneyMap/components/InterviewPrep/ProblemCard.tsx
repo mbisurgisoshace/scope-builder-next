@@ -47,6 +47,8 @@ export function ProblemCard({
 }: ProblemCardProps) {
   const sensors = useSortableSensors();
   const hypothesisIds = block.hypotheses.map((h) => h.id);
+  // A lone hypothesis has nowhere to move to, so the handle would only be clutter.
+  const isSortable = !readOnly && block.hypotheses.length > 1;
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return;
@@ -105,6 +107,7 @@ export function ProblemCard({
                   hypothesis={hypothesis}
                   isLast={i === block.hypotheses.length - 1}
                   readOnly={readOnly}
+                  sortable={isSortable}
                   onQuestionCreate={(value) =>
                     onQuestionCreate(hypothesis.id, value)
                   }
@@ -130,6 +133,8 @@ export function ProblemCard({
 interface SortableHypothesisProps {
   hypothesis: Hypothesis;
   isLast: boolean;
+  /** False when there is nothing to reorder — the handle is left out entirely. */
+  sortable: boolean;
   onQuestionCreate: (value: InterviewQuestionDraft) => Promise<void>;
   onQuestionUpdate: (id: string, value: InterviewQuestionDraft) => Promise<void>;
   onQuestionDelete: (id: string) => Promise<void>;
@@ -144,6 +149,7 @@ interface SortableHypothesisProps {
 function SortableHypothesis({
   hypothesis,
   isLast,
+  sortable,
   readOnly = false,
   ...handlers
 }: SortableHypothesisProps) {
@@ -154,7 +160,7 @@ function SortableHypothesis({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: hypothesis.id });
+  } = useSortable({ id: hypothesis.id, disabled: !sortable });
 
   return (
     <div
@@ -176,7 +182,7 @@ function SortableHypothesis({
         hypothesis={hypothesis}
         readOnly={readOnly}
         dragHandle={
-          !readOnly && (
+          sortable && (
             <DragHandle
               attributes={attributes}
               listeners={listeners}
