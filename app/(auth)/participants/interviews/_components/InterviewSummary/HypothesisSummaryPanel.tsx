@@ -5,8 +5,8 @@ import { useState, useTransition } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { upsertProblemHypothesisSummary } from "@/services/interviewPrep";
 
-import { ScalePicker } from "../ScalePicker";
 import type { SummaryHypothesis } from "./types";
+import { ValidationLevelSlider } from "./ValidationLevelSlider";
 
 interface HypothesisSummaryPanelProps {
   hypothesis: SummaryHypothesis;
@@ -74,7 +74,7 @@ export function HypothesisSummaryPanel({
         <span className="text-xs font-semibold text-[#4E5566]">
           How validated is this hypothesis?
         </span>
-        <ScalePicker
+        <ValidationLevelSlider
           value={validationLevel}
           disabled={readOnly}
           onSelect={commitLevel}
