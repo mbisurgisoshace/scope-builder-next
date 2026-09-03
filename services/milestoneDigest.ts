@@ -1,5 +1,5 @@
 import { isInCurrentCohort } from "@/lib/cohort";
-import { sendEmail, type SendEmailInput, type SendEmailResult } from "@/lib/mailjet";
+import { sendEmail, type SendEmailInput, type SendEmailResult } from "@/lib/email";
 import { milestoneDigestEmail } from "@/lib/emails/milestoneDigestEmail";
 import {
   buildDigestLines,
@@ -22,14 +22,14 @@ import {
  * just within one.
  *
  * The ordering is load → send → record, and the record step runs only on a
- * successful send: a Mailjet failure leaves the rows unreported so the next run
+ * successful send: a Resend failure leaves the rows unreported so the next run
  * picks them up again.
  */
 
 /**
  * Every side effect the job has, injectable so the selection, formatting and
  * send/record ordering can be tested without a database, a Clerk round trip or a
- * live Mailjet key. `defaultDeps()` is what production runs.
+ * live Resend key. `defaultDeps()` is what production runs.
  */
 export interface MilestoneDigestDeps {
   /** Milestones submitted for review, reported or not. */
@@ -201,10 +201,10 @@ export async function runMilestoneDigest(
     }
 
     const result = await deps.send({
-      to: [{ Email: recipient }],
+      to: [{ email: recipient }],
       subject,
-      textPart: text,
-      htmlPart: html,
+      text,
+      html,
     });
 
     // Nothing is recorded, so the next run retries the same milestones.

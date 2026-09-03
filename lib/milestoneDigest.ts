@@ -6,7 +6,7 @@ import { TZDate } from "@date-fns/tz";
  * review since the last digest.
  *
  * Everything here is data-only and side-effect free (no Prisma, no Clerk, no
- * Mailjet) so the selection and formatting rules can be tested without a database.
+ * Resend) so the selection and formatting rules can be tested without a database.
  * The orchestration lives in `services/milestoneDigest.ts`.
  */
 

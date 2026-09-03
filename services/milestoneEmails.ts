@@ -1,4 +1,4 @@
-import { sendEmail } from "@/lib/mailjet";
+import { sendEmail } from "@/lib/email";
 import { dedupeRecipients, getStartupContext } from "@/lib/startupRecipients";
 import { milestoneReviewedEmail } from "@/lib/emails/milestoneReviewedEmail";
 import { milestoneLabel } from "@/lib/milestones";
@@ -9,7 +9,7 @@ import { isMilestoneReviewedEmailEnabled } from "@/lib/milestoneDigest";
  *
  * Called from `reviewMilestone` behind `after()`, so it runs once the response is
  * already out. Nothing in here may throw: the review is committed by the time we
- * get called and a Mailjet hiccup must not surface as a failed review.
+ * get called and a Resend hiccup must not surface as a failed review.
  *
  * Gated on MILESTONE_REVIEWED_EMAIL_ENABLED so this path can be turned off from
  * config without a revert. Note it is NOT the counterpart of the daily digest:
@@ -56,8 +56,8 @@ export async function sendMilestoneReviewedEmail(
     const result = await sendEmail({
       to: recipients,
       subject,
-      textPart: text,
-      htmlPart: html,
+      text,
+      html,
     });
 
     if (!result.ok) {
