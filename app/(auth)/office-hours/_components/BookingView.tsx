@@ -16,12 +16,15 @@ import {
   updateBookingLink,
 } from "@/services/officeHours";
 import BookingLinkPopover from "./BookingLinkPopover";
+import SlotDetailsPopover from "./SlotDetailsPopover";
 import { MultiSelect } from "@/components/ui/multiselect";
 
 type SubSlotWithBooking = OfficeHourSubSlot & {
   booking: OfficeHourBooking | null;
 };
-type SlotWithSubSlots = OfficeHourSlot & { subSlots: SubSlotWithBooking[] };
+export type SlotWithSubSlots = OfficeHourSlot & {
+  subSlots: SubSlotWithBooking[];
+};
 
 type TimeBlock = {
   start_time: string;
@@ -29,13 +32,23 @@ type TimeBlock = {
   entries: {
     subSlotId: string;
     mentorName: string;
-    booking: Pick<OfficeHourBooking, "id" | "user_id" | "meeting_link"> | null;
+    /** The slot's owner is the signed-in user — only meaningful in read-only mode. */
+    isOwnSlot: boolean;
+    booking: Pick<
+      OfficeHourBooking,
+      "id" | "user_id" | "meeting_link" | "user_name"
+    > | null;
   }[];
 };
 
 interface BookingViewProps {
   initialSlots: SlotWithSubSlots[];
   currentUserId: string;
+  /**
+   * Instructors get the same schedule startups see, but they browse it rather
+   * than book on it: nothing is editable and booked slots name their booker.
+   */
+  readOnly?: boolean;
 }
 
 const WEEKS_PER_PAGE = 4;
@@ -43,6 +56,7 @@ const WEEKS_PER_PAGE = 4;
 export default function BookingView({
   initialSlots,
   currentUserId,
+  readOnly = false,
 }: BookingViewProps) {
   const [slots, setSlots] = useState<SlotWithSubSlots[]>(initialSlots);
   const [pageIndex, setPageIndex] = useState(0);
@@ -116,11 +130,13 @@ export default function BookingView({
         blockMap.get(key)!.entries.push({
           subSlotId: sub.id,
           mentorName: slot.mentor_name,
+          isOwnSlot: slot.user_id === currentUserId,
           booking: sub.booking
             ? {
                 id: sub.booking.id,
                 user_id: sub.booking.user_id,
                 meeting_link: sub.booking.meeting_link,
+                user_name: sub.booking.user_name,
               }
             : null,
         });
@@ -345,6 +361,29 @@ export default function BookingView({
                               </span>
                               <div className="flex flex-wrap gap-1.5">
                                 {block.entries.map((entry) => {
+                                  if (readOnly) {
+                                    return (
+                                      <SlotDetailsPopover
+                                        key={entry.subSlotId}
+                                        mentorName={entry.mentorName}
+                                        isOwnSlot={entry.isOwnSlot}
+                                        timeLabel={`${day.dayName} ${day.dayDate}, ${formatTimeDisplay(
+                                          block.start_time,
+                                        )} – ${formatTimeDisplay(block.end_time)}`}
+                                        booking={
+                                          entry.booking
+                                            ? {
+                                                userName:
+                                                  entry.booking.user_name,
+                                                meetingLink:
+                                                  entry.booking.meeting_link,
+                                              }
+                                            : null
+                                        }
+                                      />
+                                    );
+                                  }
+
                                   const isBookedByMe =
                                     entry.booking?.user_id === currentUserId;
                                   const isBookedByOther =
