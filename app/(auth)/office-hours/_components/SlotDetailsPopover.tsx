@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarCheck, CalendarClock, Video } from "lucide-react";
+import { CalendarCheck, CalendarClock, StickyNote, Video } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -13,7 +13,11 @@ interface SlotDetailsPopoverProps {
   /** The slot belongs to the signed-in instructor, so it gets the accent. */
   isOwnSlot: boolean;
   timeLabel: string;
-  booking: { userName: string | null; meetingLink: string | null } | null;
+  booking: {
+    userName: string | null;
+    meetingLink: string | null;
+    note: string | null;
+  } | null;
 }
 
 /**
@@ -84,6 +88,13 @@ export default function SlotDetailsPopover({
             <Video className="mt-px size-3.5 shrink-0" />
             {booking.meetingLink}
           </a>
+        )}
+
+        {booking?.note?.trim() && (
+          <div className="flex items-start gap-1.5 rounded-md bg-gray-50 p-2 text-xs text-gray-600">
+            <StickyNote className="mt-px size-3.5 shrink-0 text-gray-400" />
+            <p className="whitespace-pre-wrap break-words">{booking.note}</p>
+          </div>
         )}
       </PopoverContent>
     </Popover>

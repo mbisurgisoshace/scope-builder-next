@@ -298,13 +298,13 @@ export type BookSlotResult =
 export async function bookSlot(
   subSlotId: string,
   meetingLink: string,
+  note = "",
 ): Promise<BookSlotResult> {
   const { userId, orgId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const { meetingLink: validatedLink } = bookingLinkFormSchema.parse({
-    meetingLink,
-  });
+  const { meetingLink: validatedLink, note: validatedNote } =
+    bookingLinkFormSchema.parse({ meetingLink, note });
   const { name, email } = await getCurrentUserDisplayInfo();
 
   try {
@@ -319,6 +319,7 @@ export async function bookSlot(
         user_name: name,
         user_email: email,
         meeting_link: validatedLink,
+        note: validatedNote || null,
       },
     });
 
@@ -338,22 +339,39 @@ export async function bookSlot(
   }
 }
 
-export async function updateBookingLink(subSlotId: string, meetingLink: string) {
+export async function updateBooking(
+  subSlotId: string,
+  meetingLink: string,
+  note = "",
+) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const { meetingLink: validatedLink } = bookingLinkFormSchema.parse({
-    meetingLink,
+  const { meetingLink: validatedLink, note: validatedNote } =
+    bookingLinkFormSchema.parse({ meetingLink, note });
+
+  const existing = await prisma.officeHourBooking.findUnique({
+    where: { sub_slot_id: subSlotId, user_id: userId },
+    select: { meeting_link: true },
   });
+  // The note never reaches the calendar invite, so a note-only edit must not
+  // re-issue one — only a changed link bumps the sequence and re-sends.
+  const linkChanged = existing?.meeting_link !== validatedLink;
 
   const booking = await prisma.officeHourBooking.update({
     where: { sub_slot_id: subSlotId, user_id: userId },
-    // Bumped so the new invite replaces the calendar event instead of duplicating it.
-    data: { meeting_link: validatedLink, ics_sequence: { increment: 1 } },
+    data: {
+      meeting_link: validatedLink,
+      note: validatedNote || null,
+      // Bumped so the new invite replaces the calendar event instead of duplicating it.
+      ...(linkChanged ? { ics_sequence: { increment: 1 } } : {}),
+    },
   });
 
   revalidatePath("/office-hours");
-  after(() => sendBookingUpdate(booking.id));
+  if (linkChanged) {
+    after(() => sendBookingUpdate(booking.id));
+  }
   return booking;
 }
 

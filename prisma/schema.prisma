@@ -548,6 +548,7 @@ model OfficeHourBooking {
   user_name    String?
   user_email   String?
   meeting_link String?
+  note         String? // free-text context the booker leaves for the instructor
   ics_sequence Int               @default(0) // iCalendar SEQUENCE, bumped so updates replace the event
   created_at   DateTime          @default(now())
   updated_at   DateTime          @updatedAt

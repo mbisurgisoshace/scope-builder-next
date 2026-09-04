@@ -10,11 +10,7 @@ import {
   OfficeHourBooking,
 } from "@/lib/generated/prisma";
 import { generateWeeks, formatTimeDisplay } from "@/lib/officeHoursUtils";
-import {
-  bookSlot,
-  cancelBooking,
-  updateBookingLink,
-} from "@/services/officeHours";
+import { bookSlot, cancelBooking, updateBooking } from "@/services/officeHours";
 import BookingLinkPopover from "./BookingLinkPopover";
 import SlotDetailsPopover from "./SlotDetailsPopover";
 import { MultiSelect } from "@/components/ui/multiselect";
@@ -36,7 +32,7 @@ type TimeBlock = {
     isOwnSlot: boolean;
     booking: Pick<
       OfficeHourBooking,
-      "id" | "user_id" | "meeting_link" | "user_name"
+      "id" | "user_id" | "meeting_link" | "user_name" | "note"
     > | null;
   }[];
 };
@@ -137,6 +133,7 @@ export default function BookingView({
                 user_id: sub.booking.user_id,
                 meeting_link: sub.booking.meeting_link,
                 user_name: sub.booking.user_name,
+                note: sub.booking.note,
               }
             : null,
         });
@@ -147,7 +144,11 @@ export default function BookingView({
     );
   }
 
-  async function handleBook(subSlotId: string, meetingLink: string) {
+  async function handleBook(
+    subSlotId: string,
+    meetingLink: string,
+    note: string,
+  ) {
     setSlots((prev) =>
       prev.map((slot) => ({
         ...slot,
@@ -164,6 +165,7 @@ export default function BookingView({
                   user_name: null,
                   user_email: null,
                   meeting_link: meetingLink,
+                  note: note || null,
                   ics_sequence: 0,
                   created_at: new Date(),
                   updated_at: new Date(),
@@ -175,7 +177,7 @@ export default function BookingView({
     );
 
     try {
-      const result = await bookSlot(subSlotId, meetingLink);
+      const result = await bookSlot(subSlotId, meetingLink, note);
 
       if (result.status === "already_booked") {
         toast.error("This slot was just booked by someone else.");
@@ -202,7 +204,11 @@ export default function BookingView({
     }
   }
 
-  async function handleUpdateLink(subSlotId: string, meetingLink: string) {
+  async function handleUpdate(
+    subSlotId: string,
+    meetingLink: string,
+    note: string,
+  ) {
     const originalBooking =
       slots.flatMap((s) => s.subSlots).find((sub) => sub.id === subSlotId)
         ?.booking ?? null;
@@ -212,14 +218,21 @@ export default function BookingView({
         ...slot,
         subSlots: slot.subSlots.map((sub) =>
           sub.id === subSlotId && sub.booking
-            ? { ...sub, booking: { ...sub.booking, meeting_link: meetingLink } }
+            ? {
+                ...sub,
+                booking: {
+                  ...sub.booking,
+                  meeting_link: meetingLink,
+                  note: note || null,
+                },
+              }
             : sub,
         ),
       })),
     );
 
     try {
-      await updateBookingLink(subSlotId, meetingLink);
+      await updateBooking(subSlotId, meetingLink, note);
     } catch (err) {
       setSlots((prev) =>
         prev.map((slot) => ({
@@ -377,6 +390,7 @@ export default function BookingView({
                                                   entry.booking.user_name,
                                                 meetingLink:
                                                   entry.booking.meeting_link,
+                                                note: entry.booking.note,
                                               }
                                             : null
                                         }
@@ -395,10 +409,11 @@ export default function BookingView({
                                       mentorName={entry.mentorName}
                                       mode={isBookedByMe ? "manage" : "book"}
                                       currentLink={entry.booking?.meeting_link}
+                                      currentNote={entry.booking?.note}
                                       lastMeetingLink={lastMeetingLink}
                                       disabled={isBookedByOther}
                                       onBook={handleBook}
-                                      onUpdateLink={handleUpdateLink}
+                                      onUpdate={handleUpdate}
                                       onCancel={handleCancel}
                                     />
                                   );
