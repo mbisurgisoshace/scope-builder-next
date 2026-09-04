@@ -68,6 +68,11 @@ model Participant {
   pending_review         Boolean                  @default(false)
   scheduled_date         DateTime?
   example_number         Int? // NULL = real data, N = example set N
+  // Soft delete: NULL = live, a timestamp = removed from the product. Every read of
+  // this table filters on `deleted_at: null`, including the counts the milestone
+  // progress and instructor dashboards derive, so a deleted interview stops
+  // existing everywhere at once. Nothing in the app clears this back to NULL.
+  deleted_at             DateTime?
   created_at             DateTime                 @default(now())
   ParticipantRoom        ParticipantRoom?
   interview_responses    InterviewResponse[]
