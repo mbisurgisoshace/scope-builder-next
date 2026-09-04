@@ -1,7 +1,11 @@
 import { clerkClient } from "@clerk/nextjs/server";
 
 import { prisma } from "@/lib/prisma";
-import { sendEmail, type EmailRecipient } from "@/lib/email";
+import {
+  sendEmail,
+  type EmailRecipient,
+  type SendEmailResult,
+} from "@/lib/email";
 import {
   buildOfficeHourIcs,
   getOfficeHoursTimeZone,
@@ -13,6 +17,7 @@ import {
 import {
   bookingCancelledEmail,
   bookingConfirmationEmail,
+  bookingTimeZoneFixEmail,
   bookingUpdatedEmail,
   bookingWithdrawnEmail,
   type OfficeHourEmailParams,
@@ -46,9 +51,27 @@ export interface BookingEmailSnapshot {
 export async function getBookingEmailSnapshot(
   bookingId: string,
 ): Promise<BookingEmailSnapshot | null> {
+  // Explicit select rather than `include`: an environment whose schema is behind
+  // this codebase would otherwise fail on a column the emails never read.
   const booking = await prisma.officeHourBooking.findUnique({
     where: { id: bookingId },
-    include: { subSlot: { include: { slot: true } } },
+    select: {
+      id: true,
+      ics_sequence: true,
+      user_name: true,
+      user_email: true,
+      org_id: true,
+      meeting_link: true,
+      subSlot: {
+        select: {
+          start_time: true,
+          end_time: true,
+          slot: {
+            select: { user_id: true, mentor_name: true, date: true },
+          },
+        },
+      },
+    },
   });
 
   if (!booking) return null;
@@ -87,13 +110,29 @@ async function getMentorEmail(mentorUserId: string): Promise<string | null> {
   }
 }
 
+/** What a delivery attempt resolved to, for scripts that need to report on it. */
+export interface DeliveryOutcome {
+  recipients: EmailRecipient[];
+  eventTitle: string;
+  start: Date;
+  end: Date;
+  timeZone: string;
+  /** null when `dryRun` short-circuited before the send. */
+  result: SendEmailResult | null;
+}
+
 async function deliver(options: {
   snapshot: BookingEmailSnapshot;
   method: IcsMethod;
   sequence: number;
   render: (params: OfficeHourEmailParams) => RenderedEmail;
-}): Promise<void> {
-  const { snapshot, method, sequence, render } = options;
+  /** Test sends replace the resolved audience with a single address. */
+  overrideRecipients?: EmailRecipient[];
+  /** Resolve and render everything, then stop short of delivering. */
+  dryRun?: boolean;
+}): Promise<DeliveryOutcome> {
+  const { snapshot, method, sequence, render, overrideRecipients, dryRun } =
+    options;
 
   const timeZone = getOfficeHoursTimeZone();
   const start = slotInstant(snapshot.slotDate, snapshot.startTime, timeZone);
@@ -126,13 +165,22 @@ async function deliver(options: {
     candidates.push({ email: notifyEmail });
   }
 
-  const recipients = dedupeRecipients(candidates);
+  const recipients = overrideRecipients?.length
+    ? dedupeRecipients(overrideRecipients)
+    : dedupeRecipients(candidates);
 
   if (recipients.length === 0) {
     console.warn(
       `[office-hours-email] no recipients for booking ${snapshot.bookingId}`,
     );
-    return;
+    return {
+      recipients,
+      eventTitle,
+      start,
+      end,
+      timeZone,
+      result: { ok: false, error: "No recipients with an email address" },
+    };
   }
 
   const emailParams: OfficeHourEmailParams = {
@@ -167,7 +215,11 @@ async function deliver(options: {
     attendees: recipients.map((r) => ({ name: r.name, email: r.email })),
   });
 
-  await sendEmail({
+  if (dryRun) {
+    return { recipients, eventTitle, start, end, timeZone, result: null };
+  }
+
+  const result = await sendEmail({
     to: recipients,
     subject,
     text,
@@ -180,6 +232,8 @@ async function deliver(options: {
       },
     ],
   });
+
+  return { recipients, eventTitle, start, end, timeZone, result };
 }
 
 /** Fire-and-forget wrapper — email must never break a booking flow. */
@@ -230,6 +284,87 @@ export async function sendBookingCancellation(
       render: bookingCancelledEmail,
     });
   });
+}
+
+export type TimeZoneFixOutcome =
+  | { status: "missing"; bookingId: string }
+  | ({
+      status: "sent" | "dry-run" | "failed";
+      bookingId: string;
+      sequence: number;
+      snapshot: BookingEmailSnapshot;
+      sequencePersisted: boolean;
+    } & DeliveryOutcome);
+
+/**
+ * Re-sends a booking's invite with the corrected OFFICE_HOURS_TIMEZONE instant.
+ *
+ * Unlike the other senders this one does NOT swallow failures — the backfill
+ * script needs to report exactly which bookings went out and which didn't.
+ */
+export async function sendBookingTimeZoneFix(
+  bookingId: string,
+  options: {
+    /** Deliver to these addresses instead of the real audience (test runs). */
+    overrideRecipients?: EmailRecipient[];
+    /** Render and resolve recipients without delivering. */
+    dryRun?: boolean;
+    /**
+     * Write the bumped SEQUENCE back to the booking. Only the real run should:
+     * a test send must not consume a sequence number the real send then reuses.
+     */
+    persistSequence?: boolean;
+  } = {},
+): Promise<TimeZoneFixOutcome> {
+  const snapshot = await getBookingEmailSnapshot(bookingId);
+  if (!snapshot) return { status: "missing", bookingId };
+
+  // A strictly higher SEQUENCE on the same UID is what makes Google/Outlook
+  // move the existing event instead of creating a duplicate.
+  const sequence = snapshot.sequence + 1;
+
+  const outcome = await deliver({
+    snapshot,
+    method: "REQUEST",
+    sequence,
+    render: bookingTimeZoneFixEmail,
+    overrideRecipients: options.overrideRecipients,
+    dryRun: options.dryRun,
+  });
+
+  if (options.dryRun) {
+    return {
+      status: "dry-run",
+      bookingId,
+      sequence,
+      snapshot,
+      sequencePersisted: false,
+      ...outcome,
+    };
+  }
+
+  const sent = outcome.result?.ok === true;
+  let sequencePersisted = false;
+
+  if (sent && options.persistSequence) {
+    await prisma.officeHourBooking.update({
+      where: { id: bookingId },
+      data: { ics_sequence: sequence },
+      // `update` echoes the whole row by default, which would touch columns the
+      // emails never read — and fail wherever the schema is behind this code.
+      select: { id: true },
+    });
+    sequencePersisted = true;
+  }
+
+  return {
+    status: sent ? "sent" : "failed",
+    bookingId,
+    sequence,
+    snapshot,
+    sequencePersisted,
+    ...outcome,
+  };
 }
 
 /** The mentor deleted or retimed the slot out from under the booking. */

@@ -212,6 +212,31 @@ export function bookingUpdatedEmail(
   };
 }
 
+/**
+ * One-off correction for the bookings whose original invite was built before
+ * OFFICE_HOURS_TIMEZONE was set, so the .ics carried an Eastern instant for a
+ * Central slot. Same UID as the original with a higher SEQUENCE, so calendars
+ * move the existing event rather than adding a second one.
+ */
+export function bookingTimeZoneFixEmail(
+  params: OfficeHourEmailParams
+): RenderedEmail {
+  const options = {
+    heading: "Reconfirming Office Hour Time",
+    intro:
+      "We apologize for the time zone mix up. Please ignore the Eastern Time zone office hour email. Please use this one instead to add to your calendars. Thank you so much!",
+    params,
+    cancelled: false,
+    footer: "The attached invite replaces the previous one in your calendar.",
+  };
+
+  return {
+    subject: "Reconfirming Office Hour Time",
+    html: renderHtml(options),
+    text: renderText(options),
+  };
+}
+
 /** The mentor removed the availability — the participant did not cancel. */
 export function bookingWithdrawnEmail(
   params: OfficeHourEmailParams
