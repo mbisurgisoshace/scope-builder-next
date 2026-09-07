@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import dynamic from "next/dynamic";
 import { useAuth } from "@clerk/nextjs";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ContentState,
   EditorState,
@@ -34,7 +34,14 @@ import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Checkbox } from "./ui/checkbox";
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
-import { createNote, deleteNote, getNotes, updateNote } from "@/services/notes";
+import {
+  createNote,
+  deleteNote,
+  getNotes,
+  getUnreadNotesCount,
+  markNotesRead,
+  updateNote,
+} from "@/services/notes";
 import { uploadToSupabase } from "@/lib/uploadToSupabase";
 import Link from "next/link";
 
@@ -72,33 +79,53 @@ export default function Notes() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [shareWithStartup, setShareWithStartup] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>(
     [],
   );
 
+  const loadNotes = useCallback(async () => {
+    setIsLoading(true);
+
+    const notesData = await getNotes();
+    setNotes(
+      notesData.map((note) => ({
+        id: note.id,
+        org_id: note.org_id,
+        content: note.content,
+        user_id: note.user_id,
+        author: note.author_name,
+        share_with_startup: note.share_with_startup,
+        created_at: format(note.created_at, "MMM d, yyyy h:mm:ss a"),
+        attachments: note.attachments as Attachment[],
+      })),
+    );
+
+    setIsLoading(false);
+  }, []);
+
   useEffect(() => {
-    async function fetchNotes() {
-      setIsLoading(true);
+    loadNotes();
+  }, [orgId, orgRole, loadNotes]);
 
-      const notesData = await getNotes();
-      setNotes(
-        notesData.map((note) => ({
-          id: note.id,
-          org_id: note.org_id,
-          content: note.content,
-          user_id: note.user_id,
-          author: note.author_name,
-          share_with_startup: note.share_with_startup,
-          created_at: format(note.created_at, "MMM d, yyyy h:mm:ss a"),
-          attachments: note.attachments as Attachment[],
-        })),
-      );
+  // The header lives in a layout and never remounts as the user navigates, so
+  // the badge polls instead of relying on the mount fetch.
+  useEffect(() => {
+    let cancelled = false;
 
-      setIsLoading(false);
-    }
+    const refreshUnreadCount = async () => {
+      const count = await getUnreadNotesCount();
+      if (!cancelled) setUnreadCount(count);
+    };
 
-    fetchNotes();
+    refreshUnreadCount();
+    const interval = setInterval(refreshUnreadCount, 60_000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [orgId, orgRole]);
 
   const addNote = async () => {
@@ -219,17 +246,35 @@ export default function Notes() {
 
   return (
     <Sheet
-      onOpenChange={() => {
+      onOpenChange={async (open) => {
         setText("");
         setPendingAttachments([]);
         setShareWithStartup(false);
+
+        if (!open) return;
+
+        setUnreadCount(0);
+        // Refetch first, then stamp: a note that lands in between stays unread
+        // rather than being marked read without ever having been shown.
+        await loadNotes();
+        markNotesRead();
       }}
     >
-      <SheetTrigger asChild>
-        <Button size={"icon"} variant={"ghost"} className="cursor-pointer">
-          <MessageCircleIcon size={14} />
-        </Button>
-      </SheetTrigger>
+      <div className="relative">
+        <SheetTrigger asChild>
+          <Button size={"icon"} variant={"ghost"} className="cursor-pointer">
+            <MessageCircleIcon size={14} />
+          </Button>
+        </SheetTrigger>
+        {unreadCount > 0 && (
+          <span
+            aria-label={`${unreadCount} unread notes`}
+            className="pointer-events-none absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-white tabular-nums"
+          >
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </div>
       <SheetContent className="w-[450px] min-w-[450px] max-w-none">
         <SheetHeader>
           <SheetTitle>Notes</SheetTitle>

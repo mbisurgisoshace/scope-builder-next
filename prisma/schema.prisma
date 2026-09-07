@@ -494,7 +494,24 @@ model Note {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  @@index([org_id, created_at])
   @@map("notes")
+}
+
+// How far each member has read the notes of a startup. Unlike the other
+// trackers here this one is per-user, not just per-org: an instructor reads the
+// notes of many startups, and each member of a startup reads at their own pace.
+model NoteRead {
+  id           Int      @id @default(autoincrement())
+  org_id       String
+  user_id      String
+  last_read_at DateTime
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([user_id, org_id])
+  @@map("note_reads")
 }
 
 model InterviewMilestone {
