@@ -7,6 +7,8 @@ export interface OfficeHourEmailParams {
   end: Date;
   timeZone: string;
   meetingLink?: string | null;
+  /** What the booker wants to cover, written when they booked the slot. */
+  note?: string | null;
 }
 
 export interface RenderedEmail {
@@ -57,13 +59,16 @@ function toCompactUtc(date: Date): string {
 
 /** Visible fallback for clients that ignore the .ics attachment. */
 function googleCalendarUrl(params: OfficeHourEmailParams): string {
+  const details = [
+    params.meetingLink ? `Meeting link: ${params.meetingLink}` : null,
+    params.note?.trim() ? `Note: ${params.note.trim()}` : null,
+  ].filter(Boolean);
+
   const query = new URLSearchParams({
     action: "TEMPLATE",
     text: params.eventTitle,
     dates: `${toCompactUtc(params.start)}/${toCompactUtc(params.end)}`,
-    details: params.meetingLink
-      ? `Meeting link: ${params.meetingLink}`
-      : "Office hours session",
+    details: details.length > 0 ? details.join("\n\n") : "Office hours session",
   });
   if (params.meetingLink) query.set("location", params.meetingLink);
   return `https://calendar.google.com/calendar/render?${query.toString()}`;
@@ -103,6 +108,10 @@ function renderHtml(options: {
   const when = formatWhen(params.start, params.end, params.timeZone);
   const link = params.meetingLink?.trim();
   const linkIsUrl = !!link && URL.canParse(link);
+  const note = params.note?.trim();
+  // Notes are free text and often multi-line. `white-space` is unreliable across
+  // mail clients, so the line breaks become real <br>s.
+  const noteHtml = note ? escapeHtml(note).replace(/\r?\n/g, "<br />") : "";
 
   return `<div style="${WRAPPER_STYLE}">
   <div style="${CARD_STYLE}">
@@ -126,6 +135,13 @@ function renderHtml(options: {
           ? `<a href="${escapeHtml(link)}" style="${LINK_STYLE}">${escapeHtml(link)}</a>`
           : `<strong>${escapeHtml(link)}</strong>`
       }`
+          : ""
+      }
+      ${
+        note
+          ? `<div style="height:12px;"></div>
+      <span style="${LABEL_STYLE}">Note</span>
+      <span>${noteHtml}</span>`
           : ""
       }
     </div>
@@ -161,6 +177,10 @@ function renderText(options: {
 
   if (params.meetingLink?.trim()) {
     lines.push(`Meeting link: ${params.meetingLink.trim()}`);
+  }
+
+  if (params.note?.trim()) {
+    lines.push(`Note: ${params.note.trim()}`);
   }
 
   if (!cancelled) {

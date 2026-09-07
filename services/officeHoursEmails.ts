@@ -40,6 +40,8 @@ export interface BookingEmailSnapshot {
   attendeeEmail: string | null;
   orgId: string | null;
   meetingLink: string | null;
+  /** The booker's note to the instructor, if they left one. */
+  note: string | null;
   mentorUserId: string;
   mentorName: string;
   slotDate: Date;
@@ -62,6 +64,7 @@ export async function getBookingEmailSnapshot(
       user_email: true,
       org_id: true,
       meeting_link: true,
+      note: true,
       subSlot: {
         select: {
           start_time: true,
@@ -83,6 +86,7 @@ export async function getBookingEmailSnapshot(
     attendeeEmail: booking.user_email,
     orgId: booking.org_id,
     meetingLink: booking.meeting_link,
+    note: booking.note,
     mentorUserId: booking.subSlot.slot.user_id,
     mentorName: booking.subSlot.slot.mentor_name,
     slotDate: booking.subSlot.slot.date,
@@ -191,6 +195,7 @@ async function deliver(options: {
     end,
     timeZone,
     meetingLink: snapshot.meetingLink,
+    note: snapshot.note,
   };
   const { subject, html, text } = render(emailParams);
 
@@ -206,9 +211,15 @@ async function deliver(options: {
     start,
     end,
     summary: eventTitle,
-    description: snapshot.meetingLink
-      ? `Office hours with ${snapshot.mentorName}.\nMeeting link: ${snapshot.meetingLink}`
-      : `Office hours with ${snapshot.mentorName}.`,
+    // escapeText/foldLine in buildOfficeHourIcs handle the newlines and length,
+    // so a multi-line note is safe to drop in here.
+    description: [
+      `Office hours with ${snapshot.mentorName}.`,
+      snapshot.meetingLink ? `Meeting link: ${snapshot.meetingLink}` : null,
+      snapshot.note?.trim() ? `Note: ${snapshot.note.trim()}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n"),
     location: snapshot.meetingLink,
     url: snapshot.meetingLink,
     organizer: { name: snapshot.mentorName, email: organizerEmail },

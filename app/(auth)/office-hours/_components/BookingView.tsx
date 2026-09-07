@@ -32,7 +32,7 @@ type TimeBlock = {
     isOwnSlot: boolean;
     booking: Pick<
       OfficeHourBooking,
-      "id" | "user_id" | "meeting_link" | "user_name" | "note"
+      "id" | "user_id" | "org_id" | "meeting_link" | "user_name" | "note"
     > | null;
   }[];
 };
@@ -40,6 +40,11 @@ type TimeBlock = {
 interface BookingViewProps {
   initialSlots: SlotWithSubSlots[];
   currentUserId: string;
+  /**
+   * Booker org id → startup name, resolved server-side from Clerk. Only the
+   * read-only schedule names teams, so the booking view is handed nothing.
+   */
+  startupNames?: Record<string, string>;
   /**
    * Instructors get the same schedule startups see, but they browse it rather
    * than book on it: nothing is editable and booked slots name their booker.
@@ -52,11 +57,11 @@ const WEEKS_PER_PAGE = 4;
 export default function BookingView({
   initialSlots,
   currentUserId,
+  startupNames = {},
   readOnly = false,
 }: BookingViewProps) {
   const [slots, setSlots] = useState<SlotWithSubSlots[]>(initialSlots);
   const [pageIndex, setPageIndex] = useState(0);
-  const [selectedInstructors, setSelectedInstructors] = useState<string[]>([]);
 
   const programStart = parseISO(
     process.env.NEXT_PUBLIC_PROGRAM_START_DATE ?? "2026-01-01",
@@ -67,22 +72,61 @@ export default function BookingView({
 
   const weeks = generateWeeks(programStart, programEnd);
   const totalPages = Math.ceil(weeks.length / WEEKS_PER_PAGE);
-  const visibleWeeks = weeks.slice(
-    pageIndex * WEEKS_PER_PAGE,
-    pageIndex * WEEKS_PER_PAGE + WEEKS_PER_PAGE,
+
+  const weeksForPage = (page: number) =>
+    weeks.slice(page * WEEKS_PER_PAGE, page * WEEKS_PER_PAGE + WEEKS_PER_PAGE);
+
+  // The instructor's schedule shows appointments, not availability: an unbooked
+  // half-hour is something they publish in the editor, not something to browse
+  // here. Startups still need the open ones — that's what they book against.
+  const isVisibleSubSlot = (sub: SubSlotWithBooking) =>
+    !readOnly || !!sub.booking;
+
+  /** The instructors with slots on a given page — the filter's options there. */
+  const mentorsOnPage = (page: number) => {
+    const dates = new Set(
+      weeksForPage(page).flatMap((w) =>
+        w.days.map((d) => d.date.toDateString()),
+      ),
+    );
+    return new Set(
+      slots
+        .filter(
+          (s) =>
+            dates.has(new Date(s.date).toDateString()) &&
+            s.subSlots.some(isVisibleSubSlot),
+        )
+        .map((s) => s.mentor_name),
+    );
+  };
+
+  // Instructors browsing the schedule came for their own column, so it starts
+  // selected. Startups have no slots of their own, so they start unfiltered.
+  const ownMentorName = readOnly
+    ? (initialSlots.find((s) => s.user_id === currentUserId)?.mentor_name ??
+      null)
+    : null;
+
+  /** The default selection, minus anyone with nothing on that page to show. */
+  const defaultInstructorsForPage = (page: number) =>
+    ownMentorName && mentorsOnPage(page).has(ownMentorName)
+      ? [ownMentorName]
+      : [];
+
+  const [selectedInstructors, setSelectedInstructors] = useState<string[]>(() =>
+    defaultInstructorsForPage(0),
   );
 
-  const instructorOptions = useMemo(() => {
-    const visibleDates = new Set(
-      visibleWeeks.flatMap((w) => w.days.map((d) => d.date.toDateString())),
-    );
-    const visibleSlots = slots.filter((s) =>
-      visibleDates.has(new Date(s.date).toDateString()),
-    );
-    return [...new Set(visibleSlots.map((s) => s.mentor_name))]
-      .sort()
-      .map((name) => ({ label: name, value: name }));
-  }, [slots, visibleWeeks]);
+  const visibleWeeks = weeksForPage(pageIndex);
+
+  const instructorOptions = useMemo(
+    () =>
+      [...mentorsOnPage(pageIndex)]
+        .sort()
+        .map((name) => ({ label: name, value: name })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [slots, pageIndex],
+  );
 
   // Most recently touched link across the user's own bookings, offered as a
   // "use last meeting link" shortcut when booking a new slot.
@@ -115,6 +159,7 @@ export default function BookingView({
     const blockMap = new Map<string, TimeBlock>();
     for (const slot of daySlots) {
       for (const sub of slot.subSlots) {
+        if (!isVisibleSubSlot(sub)) continue;
         const key = `${sub.start_time}-${sub.end_time}`;
         if (!blockMap.has(key)) {
           blockMap.set(key, {
@@ -131,6 +176,7 @@ export default function BookingView({
             ? {
                 id: sub.booking.id,
                 user_id: sub.booking.user_id,
+                org_id: sub.booking.org_id,
                 meeting_link: sub.booking.meeting_link,
                 user_name: sub.booking.user_name,
                 note: sub.booking.note,
@@ -280,8 +326,9 @@ export default function BookingView({
       <div className="relative flex items-center justify-center mb-6">
         <button
           onClick={() => {
-            setPageIndex((p) => Math.max(0, p - 1));
-            setSelectedInstructors([]);
+            const next = Math.max(0, pageIndex - 1);
+            setPageIndex(next);
+            setSelectedInstructors(defaultInstructorsForPage(next));
           }}
           disabled={pageIndex === 0}
           className="absolute left-0 w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 disabled:opacity-30 hover:bg-gray-50 transition-colors"
@@ -297,8 +344,9 @@ export default function BookingView({
         </h1>
         <button
           onClick={() => {
-            setPageIndex((p) => Math.min(totalPages - 1, p + 1));
-            setSelectedInstructors([]);
+            const next = Math.min(totalPages - 1, pageIndex + 1);
+            setPageIndex(next);
+            setSelectedInstructors(defaultInstructorsForPage(next));
           }}
           disabled={pageIndex >= totalPages - 1}
           className="absolute right-0 w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 disabled:opacity-30 hover:bg-gray-50 transition-colors"
@@ -388,6 +436,12 @@ export default function BookingView({
                                             ? {
                                                 userName:
                                                   entry.booking.user_name,
+                                                startupName:
+                                                  (entry.booking.org_id &&
+                                                    startupNames[
+                                                      entry.booking.org_id
+                                                    ]) ||
+                                                  null,
                                                 meetingLink:
                                                   entry.booking.meeting_link,
                                                 note: entry.booking.note,

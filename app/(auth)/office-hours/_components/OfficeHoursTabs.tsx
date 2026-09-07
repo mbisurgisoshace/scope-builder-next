@@ -11,6 +11,8 @@ interface OfficeHoursTabsProps {
   ownSlots: AdminSlot[];
   /** Every instructor's slots, for the read-only schedule. */
   allSlots: SlotWithSubSlots[];
+  /** Booker org id → startup name, so the schedule can name each team. */
+  startupNames: Record<string, string>;
   currentUserId: string;
 }
 
@@ -22,6 +24,7 @@ interface OfficeHoursTabsProps {
 export default function OfficeHoursTabs({
   ownSlots,
   allSlots,
+  startupNames,
   currentUserId,
 }: OfficeHoursTabsProps) {
   const [tab, setTab] = useState("availability");
@@ -40,6 +43,7 @@ export default function OfficeHoursTabs({
       <TabsContent value="schedule" className="flex-1 min-h-0 mt-4">
         <BookingView
           initialSlots={allSlots}
+          startupNames={startupNames}
           currentUserId={currentUserId}
           readOnly
         />

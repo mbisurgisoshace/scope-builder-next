@@ -5,7 +5,7 @@ import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import { split30MinIntervals } from "@/lib/officeHoursUtils";
 import { bookingLinkFormSchema } from "@/schemas/officeHours";
 import { OfficeHourBooking, Prisma } from "@/lib/generated/prisma";
@@ -291,6 +291,38 @@ export async function getAllSlotsWithBookings() {
   return slots;
 }
 
+/**
+ * Startup names for the bookings on the schedule, keyed by Clerk org id. Names
+ * live in Clerk rather than the database, so this resolves them in one org
+ * listing instead of a round trip per booking. Unlike the milestone digest this
+ * spans every cohort — a booking from a past one should still say who made it.
+ */
+export async function getBookingStartupNames(): Promise<
+  Record<string, string>
+> {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const booked = await prisma.officeHourBooking.findMany({
+    where: { org_id: { not: null } },
+    select: { org_id: true },
+    distinct: ["org_id"],
+  });
+  const orgIds = new Set(booked.map((b) => b.org_id!));
+  if (orgIds.size === 0) return {};
+
+  const client = await clerkClient();
+  const organizations = await client.organizations.getOrganizationList({
+    limit: 200,
+  });
+
+  const names: Record<string, string> = {};
+  for (const org of organizations.data) {
+    if (orgIds.has(org.id) && org.name) names[org.id] = org.name;
+  }
+  return names;
+}
+
 export type BookSlotResult =
   | { status: "booked"; booking: OfficeHourBooking }
   | { status: "already_booked"; booking: OfficeHourBooking | null };
@@ -354,8 +386,9 @@ export async function updateBooking(
     where: { sub_slot_id: subSlotId, user_id: userId },
     select: { meeting_link: true },
   });
-  // The note never reaches the calendar invite, so a note-only edit must not
-  // re-issue one — only a changed link bumps the sequence and re-sends.
+  // Only a changed link bumps the sequence and re-sends. The note now rides
+  // along on the invite, but a note-only edit is not worth re-issuing a calendar
+  // event over — the instructor sees the current note on the schedule.
   const linkChanged = existing?.meeting_link !== validatedLink;
 
   const booking = await prisma.officeHourBooking.update({

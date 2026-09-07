@@ -1,6 +1,12 @@
 "use client";
 
-import { CalendarCheck, CalendarClock, StickyNote, Video } from "lucide-react";
+import {
+  Building2,
+  CalendarCheck,
+  CalendarClock,
+  StickyNote,
+  Video,
+} from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -15,6 +21,8 @@ interface SlotDetailsPopoverProps {
   timeLabel: string;
   booking: {
     userName: string | null;
+    /** The booker's startup, when their booking carried an org. */
+    startupName: string | null;
     meetingLink: string | null;
     note: string | null;
   } | null;
@@ -22,8 +30,9 @@ interface SlotDetailsPopoverProps {
 
 /**
  * The instructor-facing counterpart to BookingLinkPopover: same avatar, but the
- * schedule is read-only. Every slot opens a card — a booked one names whoever
- * signed up, a free one just says who is available and when.
+ * schedule is read-only. The card names whoever signed up. The schedule
+ * currently lists booked slots only, so the free-slot rendering is a fallback
+ * kept for when unbooked availability is shown alongside it again.
  */
 export default function SlotDetailsPopover({
   mentorName,
@@ -68,6 +77,13 @@ export default function SlotDetailsPopover({
                 : "Available"}
           </p>
         </div>
+
+        {booking?.startupName?.trim() && (
+          <p className="flex items-center gap-1.5 text-xs text-gray-500">
+            <Building2 className="size-3.5 shrink-0" />
+            <span className="break-words">{booking.startupName}</span>
+          </p>
+        )}
 
         <p className="flex items-center gap-1.5 text-xs text-gray-500">
           {booking ? (
