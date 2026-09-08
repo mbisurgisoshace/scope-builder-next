@@ -16,6 +16,7 @@ import {
 import { useNodeContentDraft } from "../hooks/useNodeContentDraft";
 import type { StakeholderRow } from "@/services/market";
 import { Textarea } from "@/components/ui/textarea";
+import { HelpPopover } from "@/components/ui/help-popover";
 import { STAKEHOLDERS_SUB_STEP } from "@/lib/milestones";
 
 // Resolve the node's selected stakeholder ids to rows, grouped by category in
@@ -107,11 +108,11 @@ function TriggerNodeInner({ id, data }: NodeProps) {
   // The card width is fixed rather than shrink-to-fit: the content textarea sizes
   // itself to its content, so on an auto-width card every character widens the
   // node, which re-runs the tree layout mid-keystroke. Wider than the 370px Action
-  // card because the title has to sit on one line beside the Stakeholders control;
-  // `useLayout` spaces children off each node's measured width, so the extra width
-  // just pushes this chain's children further right.
+  // card because the title has to sit on one line beside the Stakeholders control
+  // and the help icon; `useLayout` spaces children off each node's measured width,
+  // so the extra width just pushes this chain's children further right.
   return (
-    <div className="group/card nopan nodrag pointer-events-auto w-[510px] bg-[#E6DEFA] border-2 border-[#B9BDC9] rounded-xl p-4 relative shadow-[0_1px_3px_0_rgba(16,24,40,0.06),0_6px_14px_-2px_rgba(16,24,40,0.12)]">
+    <div className="group/card nopan nodrag pointer-events-auto w-[540px] bg-[#E6DEFA] border-2 border-[#B9BDC9] rounded-xl p-4 relative shadow-[0_1px_3px_0_rgba(16,24,40,0.06),0_6px_14px_-2px_rgba(16,24,40,0.12)]">
       <Handle
         id="left"
         type="target"
@@ -158,6 +159,14 @@ function TriggerNodeInner({ id, data }: NodeProps) {
               <Trash2Icon className="w-4 h-4" />
             </button>
           )}
+          {/* Last in the row so it sits in the card's top-right corner, and
+              outside the readOnly/unlock gates above — the help copy is worth
+              the same to someone who can only read the card. */}
+          <HelpPopover
+            helpKey="node.trigger"
+            label="Trigger / Motivation / Jobs to be Done"
+            align="end"
+          />
         </div>
       </div>
 
