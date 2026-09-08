@@ -106,10 +106,12 @@ function TriggerNodeInner({ id, data }: NodeProps) {
 
   // The card width is fixed rather than shrink-to-fit: the content textarea sizes
   // itself to its content, so on an auto-width card every character widens the
-  // node, which re-runs the tree layout mid-keystroke. Pinned to the same width as
-  // an Action card, the text wraps and only the height grows.
+  // node, which re-runs the tree layout mid-keystroke. Wider than the 370px Action
+  // card because the title has to sit on one line beside the Stakeholders control;
+  // `useLayout` spaces children off each node's measured width, so the extra width
+  // just pushes this chain's children further right.
   return (
-    <div className="group/card nopan nodrag pointer-events-auto w-[370px] bg-[#E6DEFA] border-2 border-[#B9BDC9] rounded-xl p-4 relative shadow-[0_1px_3px_0_rgba(16,24,40,0.06),0_6px_14px_-2px_rgba(16,24,40,0.12)]">
+    <div className="group/card nopan nodrag pointer-events-auto w-[510px] bg-[#E6DEFA] border-2 border-[#B9BDC9] rounded-xl p-4 relative shadow-[0_1px_3px_0_rgba(16,24,40,0.06),0_6px_14px_-2px_rgba(16,24,40,0.12)]">
       <Handle
         id="left"
         type="target"
@@ -124,8 +126,8 @@ function TriggerNodeInner({ id, data }: NodeProps) {
           <div className="w-[30px] h-[30px] bg-[#F4F0FF] rounded-full flex items-center justify-center flex-shrink-0">
             <TriggerIcon className="text-[#6A35FF]" />
           </div>
-          <span className="text-lg font-semibold text-[#111827] tracking-wide">
-            Trigger / Motivation
+          <span className="text-base font-semibold text-[#111827] whitespace-nowrap">
+            Trigger / Motivation / Jobs to be Done
           </span>
         </div>
         <div className="ml-auto flex items-center gap-2 flex-shrink-0">
@@ -133,7 +135,7 @@ function TriggerNodeInner({ id, data }: NodeProps) {
             <>
               <button
                 type="button"
-                className="nodrag nopan text-base font-medium text-[#6A35FF] whitespace-nowrap hover:underline"
+                className="nodrag nopan text-sm font-medium text-[#6A35FF] whitespace-nowrap hover:underline"
                 onClick={() => setShowPicker(true)}
               >
                 Stakeholders
