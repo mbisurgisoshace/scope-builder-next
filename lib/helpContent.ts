@@ -19,7 +19,7 @@ export const HELP_CONTENT = {
     <p><strong>Poorly written:</strong> Football coaches need an easier way to track and a mobile friendly way of teaching tackling. (Reason: It includes needs, solutions and technologies.)</p>
     <p><strong>Better:</strong> Football coaches want their players to tackle safely.</p>
     <p><strong>Important #1: </strong>A Job to Done should be written from a <u>stakeholder's perspective</u>. It <u>shouldn't be written as a generic event</u> where multiple stakeholders are involved. Remember, the intended Stakeholder is wanting/needing to get a job done.</p>
-    <p><strong>Important #2: </strong>Sometimes a certain event may happen which then may cause the stakeholder to want/need to get a job done. This original event is NOT the Job to be Done. It's just <u>context/</u>.</p>
+    <p><strong>Important #2: </strong>Sometimes a certain event may happen which then may cause the stakeholder to want/need to get a job done. This original event is NOT the Job to be Done. It's just <u>context</u>.</p>
   `,
   "node.action": `
     <p><strong>Action / Activity Explanation</strong></p>
@@ -30,6 +30,7 @@ export const HELP_CONTENT = {
       <li>Coach creates a one page visual to remember easily.</li>
       <li>Coach assigns practice tackle reps.</li>
     </ul>
+    <br/>
     <p><strong>Important #1: </strong>Similar to the Job to be Done, an Action / Activity is something that stakeholder actively does as part of a series of steps to get the job done. It's <u>not an event</u>. If there's a related event that happens around this step, it maybe written as [Context].</p>
     <p><strong>For Example:</strong></p>
     <p><strong>[Context]: </strong> Athletes are not able to meet with their Coaches during summer break. So Coaches must share any recommendations before semester ends.</p>
