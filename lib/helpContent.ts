@@ -54,7 +54,7 @@ export const HELP_CONTENT = {
     </ul>
     <p><a href="https://example.com" target="_blank" rel="noreferrer">Read more</a></p>
   `,
-  "market.stakeholder": `
+  "market.stakeholders": `
     <p>Whenever you're thinking of wanting to address a pain or a gain, always connect it to a Stakeholder.</p>
     <p>When thinking about a Stakeholder, be specific and identify individual roles and consider if the different roles have different pains / gains or the same.</p> 
     <p><strong>Example: </strong> (where different people in charge of coaching football may use the app)</p>  
@@ -73,7 +73,7 @@ export const HELP_CONTENT = {
       <li>College/HighSchool Coaches/Athletic Execs</li>
     </ul>  
     `,
-  "market.segment": `
+  "market.segments": `
     <p>Lorem ipsum dolor sit amet, <strong>consectetur adipiscing</strong> elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
     <ul>
       <li>Ut enim ad minim veniam.</li>
