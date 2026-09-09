@@ -71,7 +71,16 @@ export const HELP_CONTENT = {
     <p><u>Roles:</u></p>
     <ul>
       <li>College/HighSchool Coaches/Athletic Execs</li>
-    </ul>  
+    </ul> 
+    <br/>
+    <p><strong>Important #1: </strong>A single Role may wear multiple hats and therefore maybe listed under multiple Stakeholder Types.</p> 
+    <p><strong>Example: </strong>You may find at a College level, Assistant Coaches are the</p>
+    <ul>
+      <li>ones who make financial decisions about buying tools (Buyer/Decision Maker)
+      <li>primary users of the product (End User)
+      <li>person who is tasked with analyzing the different tools out there and picking one (Influencer)
+      <li>person other Stakeholders call when wanting to know which tool to get (Recommender).
+    </ul>
     `,
   "market.segments": `
     <p>Lorem ipsum dolor sit amet, <strong>consectetur adipiscing</strong> elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
