@@ -8,7 +8,11 @@ import { revalidatePath } from "next/cache";
 import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import { split30MinIntervals } from "@/lib/officeHoursUtils";
 import { bookingLinkFormSchema } from "@/schemas/officeHours";
-import { OfficeHourBooking, Prisma } from "@/lib/generated/prisma";
+import {
+  BookingOutcome,
+  OfficeHourBooking,
+  Prisma,
+} from "@/lib/generated/prisma";
 import { getStartupContext } from "@/lib/startupRecipients";
 import {
   getBookingEmailSnapshot,
@@ -428,4 +432,32 @@ export async function cancelBooking(subSlotId: string) {
   if (snapshot) {
     after(() => sendBookingCancellation(snapshot));
   }
+}
+
+/**
+ * Records how a session went, or clears the record when `outcome` is null. Only
+ * the instructor who owns the slot may mark it: the schedule shows everyone's
+ * bookings, but attendance is the slot owner's own bookkeeping. Deliberately
+ * silent — no email, no calendar bump, nothing the booker sees.
+ */
+export async function setBookingOutcome(
+  subSlotId: string,
+  outcome: BookingOutcome | null,
+) {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const booking = await prisma.officeHourBooking.findFirst({
+    where: { sub_slot_id: subSlotId, subSlot: { slot: { user_id: userId } } },
+    select: { id: true },
+  });
+  if (!booking) throw new Error("Booking not found on one of your slots.");
+
+  const updated = await prisma.officeHourBooking.update({
+    where: { id: booking.id },
+    data: { outcome },
+  });
+
+  revalidatePath("/office-hours");
+  return updated;
 }
