@@ -327,6 +327,31 @@ export async function getBookingStartupNames(): Promise<
   return names;
 }
 
+/**
+ * Attended office-hour sessions per startup, for the instructor-facing leaderboard.
+ * Keyed org id → count. Only bookings an instructor actually marked `attended` are
+ * counted, and like `getBookingStartupNames` this spans every cohort — the caller
+ * filters the orgs it renders. Orgs with none are absent; callers fall back to 0.
+ */
+export async function getAllAttendedCounts(): Promise<Record<string, number>> {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const rows = await prisma.officeHourBooking.groupBy({
+    by: ["org_id"],
+    where: { outcome: BookingOutcome.attended, org_id: { not: null } },
+    _count: { _all: true },
+  });
+
+  const byOrg: Record<string, number> = {};
+  for (const row of rows) {
+    if (!row.org_id) continue;
+    byOrg[row.org_id] = row._count._all;
+  }
+
+  return byOrg;
+}
+
 export type BookSlotResult =
   | { status: "booked"; booking: OfficeHourBooking }
   | { status: "already_booked"; booking: OfficeHourBooking | null };
