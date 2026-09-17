@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 
 import liveblocks from "@/lib/liveblocks";
+import { toCsv } from "@/lib/csv";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/lib/generated/prisma";
 import { exampleRoomId } from "@/lib/examples";
@@ -289,6 +290,10 @@ async function loadProblemBlocksFrom(
           problem.type ?? "",
           problem.painOrGain === "gain" ? "Gain" : "Pain",
         ].filter(Boolean),
+        // Carried raw alongside `tags` for the CSV export, which needs the two
+        // classifications as separate columns rather than one display array.
+        problemType: problem.type ?? "",
+        painOrGain: problem.painOrGain === "gain" ? "gain" : "pain",
         hypotheses,
       });
     }
@@ -314,6 +319,94 @@ export async function getExampleInterviewPrepData(
   return loadProblemBlocksFrom(exampleRoomId(exampleNumber), {
     example_number: exampleNumber,
   });
+}
+
+const CSV_HEADER = [
+  "Action",
+  "Problem",
+  "Problem Type",
+  "Pain/Gain",
+  "Market Question",
+  "Market Question Confidence",
+  "Market Question Source",
+  "Interview Question",
+  "Response Type",
+  "Response Options",
+];
+
+/** What the Response Options column holds, which depends entirely on the response type. */
+function responseOptionsCell(question: InterviewQuestion): string {
+  if (question.responseType === "dropdown") {
+    // Labels, not the stored option ids — the ids are internal.
+    return question.options.map((o) => o.label).join("; ");
+  }
+  // The scale is fixed at 1..5 everywhere (see ScalePicker's SCALE_POINTS).
+  return question.responseType === "scale" ? "1-5" : "";
+}
+
+/**
+ * The tree flattened to one row per interview question, with each level's columns
+ * repeated down the rows beneath it.
+ *
+ * A question whose title was never written is dropped — the same guard the answering and
+ * summary flows use. A hypothesis left with nothing authored still emits one row, with the
+ * three question columns empty, so a hole in the prep work is visible rather than silent.
+ */
+function buildInterviewQuestionRows(blocks: ProblemBlock[]): string[][] {
+  const rows: string[][] = [CSV_HEADER];
+
+  for (const block of blocks) {
+    const problemCells = [
+      block.action,
+      block.description,
+      block.problemType,
+      block.painOrGain === "gain" ? "Gain" : "Pain",
+    ];
+
+    for (const hypothesis of block.hypotheses) {
+      const marketCells = [
+        hypothesis.prompt,
+        // 0 is "unrated" rather than a score, so it reads as empty.
+        hypothesis.confidence > 0 ? String(hypothesis.confidence) : "",
+        hypothesis.source,
+      ];
+
+      const authored = hypothesis.questions.filter((q) => q.title.trim() !== "");
+
+      if (authored.length === 0) {
+        rows.push([...problemCells, ...marketCells, "", "", ""]);
+        continue;
+      }
+
+      for (const question of authored) {
+        rows.push([
+          ...problemCells,
+          ...marketCells,
+          question.title,
+          question.responseType,
+          responseOptionsCell(question),
+        ]);
+      }
+    }
+  }
+
+  return rows;
+}
+
+/**
+ * The whole interview question tree as CSV text, for the export button on the prep tab.
+ * Returns the text rather than a file — the client turns it into a download.
+ *
+ * No example variant: the /examples mirrors don't offer the export.
+ */
+export async function exportInterviewQuestionsCsv(): Promise<string> {
+  const orgId = await requireOrg();
+
+  const blocks = await loadProblemBlocksFrom(`problem-journey-${orgId}`, {
+    org_id: orgId,
+  });
+
+  return toCsv(buildInterviewQuestionRows(blocks));
 }
 
 /**
