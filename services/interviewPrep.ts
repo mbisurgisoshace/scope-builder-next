@@ -49,7 +49,11 @@ export type InterviewQuestionCreateInput = {
 export type SeedDefaultInterviewQuestionsInput = {
   nodeId: string;
   problemId: string;
-  /** The bank questions newly marked as hypotheses on this save. */
+  /**
+   * Every bank question currently marked as a hypothesis on this problem — not just
+   * the ones this save marked. Seeding is made idempotent server-side by the seed
+   * markers, so the caller doesn't have to work out which transition it just made.
+   */
   bankQuestionIds: string[];
 };
 
@@ -801,14 +805,31 @@ export async function createProblemInterviewQuestion(
   };
 }
 
+/** A row lost the race against a concurrent insert on the same unique key. */
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === "P2002"
+  );
+}
+
 /**
- * Give each newly marked hypothesis the default interview questions its bank question
- * carries, so the Interview Prep tab opens with something already written.
+ * Give each hypothesis the default interview questions its bank question carries, so the
+ * Interview Prep tab opens with something already written.
  *
- * Called from the canvas when a problem is saved, not from the prep tab: the seeded rows
- * are ordinary questions from then on, so this must run once and never re-run — a
- * hypothesis that already holds questions is left alone, which is also what keeps a
- * deleted default from coming back.
+ * Called from the canvas on every problem save with the problem's *whole* set of marked
+ * hypotheses, not just the ones that save marked: whether a hypothesis has been seeded is
+ * a fact about the data, not about the transition the client happened to observe. Marking
+ * a question before its bank question grew defaults, or toggling the flag off and back on
+ * inside one unsaved sheet session, would otherwise leave the seed permanently unreachable.
+ *
+ * Seeding happens exactly once per hypothesis, recorded by a `problem_hypothesis_seeds`
+ * row. That marker rather than "does it hold questions" is what makes it once-only: the
+ * seeded rows are ordinary questions from then on, and a team that deletes all of them
+ * must not get them back on the next save. A hypothesis that already holds questions is
+ * marked as seeded without writing any, so hand-written work never has defaults appended
+ * underneath it.
  */
 export async function seedDefaultInterviewQuestions(
   input: SeedDefaultInterviewQuestionsInput,
@@ -825,42 +846,64 @@ export async function seedDefaultInterviewQuestions(
   });
   if (withDefaults.length === 0) return;
 
-  const existing = await prisma.problemInterviewQuestion.findMany({
-    where: {
-      org_id: orgId,
-      node_id: nodeId,
-      problem_id: problemId,
-      bank_question_id: { in: withDefaults.map((w) => w.bankQuestionId) },
-    },
-    select: { bank_question_id: true },
-  });
-  const alreadySeeded = new Set(existing.map((row) => row.bank_question_id));
+  const scope = { org_id: orgId, node_id: nodeId, problem_id: problemId };
+  const candidateIds = withDefaults.map((w) => w.bankQuestionId);
 
-  const rows = withDefaults
-    .filter((w) => !alreadySeeded.has(w.bankQuestionId))
-    .flatMap(({ bankQuestionId, defaults }) =>
-      defaults.map((question, index) => ({
-        org_id: orgId,
-        node_id: nodeId,
-        problem_id: problemId,
-        bank_question_id: bankQuestionId,
-        title: question.title,
-        response_type: question.responseType,
-        // Option ids are minted per row rather than authored in the bank: they key a
-        // participant's stored answer, so two problems must not share them.
-        options: (question.responseType === "dropdown"
-          ? (question.options ?? []).map((label) => ({
-              id: randomUUID(),
-              label,
-            }))
-          : []) as Prisma.InputJsonValue[],
-        sort_order: index,
-      })),
-    );
+  const [seeds, authored] = await Promise.all([
+    prisma.problemHypothesisSeed.findMany({
+      where: { ...scope, bank_question_id: { in: candidateIds } },
+      select: { bank_question_id: true },
+    }),
+    prisma.problemInterviewQuestion.findMany({
+      where: { ...scope, bank_question_id: { in: candidateIds } },
+      select: { bank_question_id: true },
+    }),
+  ]);
 
-  if (rows.length === 0) return;
+  const alreadySeeded = new Set(seeds.map((row) => row.bank_question_id));
+  const alreadyAuthored = new Set(authored.map((row) => row.bank_question_id));
 
-  await prisma.problemInterviewQuestion.createMany({ data: rows });
+  const pending = withDefaults.filter(
+    (w) => !alreadySeeded.has(w.bankQuestionId),
+  );
+  if (pending.length === 0) return;
+
+  for (const { bankQuestionId, defaults } of pending) {
+    const rows = alreadyAuthored.has(bankQuestionId)
+      ? []
+      : defaults.map((question, index) => ({
+          ...scope,
+          bank_question_id: bankQuestionId,
+          title: question.title,
+          response_type: question.responseType,
+          // Option ids are minted per row rather than authored in the bank: they key a
+          // participant's stored answer, so two problems must not share them.
+          options: (question.responseType === "dropdown"
+            ? (question.options ?? []).map((label) => ({
+                id: randomUUID(),
+                label,
+              }))
+            : []) as Prisma.InputJsonValue[],
+          sort_order: index,
+        }));
+
+    // One hypothesis at a time, marker first: the unique key on the marker is what makes
+    // two saves racing on the same hypothesis produce one set of questions rather than
+    // two. The loser's insert throws before it has written anything, and the transaction
+    // takes the questions down with it.
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.problemHypothesisSeed.create({
+          data: { ...scope, bank_question_id: bankQuestionId },
+        });
+        if (rows.length > 0) {
+          await tx.problemInterviewQuestion.createMany({ data: rows });
+        }
+      });
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error;
+    }
+  }
 }
 
 export async function updateProblemInterviewQuestion(
