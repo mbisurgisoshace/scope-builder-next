@@ -103,6 +103,9 @@ export default function EditParticipantForm({
   const scheduledDate = form.watch("scheduled_date");
   // Submitting documentation for review only makes sense once it's conducted.
   const conducted = form.watch("conducted");
+  // Once an instructor has completed the review ("documented"), neither
+  // checkbox has anything left to change.
+  const reviewed = participant.status === "documented";
 
   async function onSubmit(values: z.infer<typeof participantFormSchema>) {
     await updateParticipant(participant.id, values);
@@ -133,7 +136,7 @@ export default function EditParticipantForm({
           className="space-y-8 p-4"
         >
           {/* Only offer "Conducted" once there's something to have conducted. */}
-          {scheduledDate && (
+          {scheduledDate && !reviewed && (
             <FormField
               control={form.control}
               name="conducted"
@@ -152,7 +155,7 @@ export default function EditParticipantForm({
             />
           )}
 
-          {scheduledDate && conducted && (
+          {scheduledDate && !reviewed && conducted && (
             <FormField
               control={form.control}
               name="pending_review"
